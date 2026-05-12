@@ -1,0 +1,2022 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../generated/prisma"
+  engineType             = "client"
+  runtime                = "vercel-edge"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+  previewFeatures        = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlanType {
+  FREE
+  STANDARD
+  PREMIUM
+  ENTERPRISE
+}
+
+enum CalendarEventType {
+  PLANNED // Standard holidays (e.g., festivals, semester breaks)
+  EMERGENCY // Emergency closures (e.g., weather, strikes)
+  INSTITUTION_SPECIFIC // Custom events (e.g., college fests, coaching workshops)
+}
+
+model AcademicCalendar {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // Event details
+  name      String // e.g., "Diwali Break", "Emergency Closure", "Tech Fest"
+  startDate DateTime // Start date of the holiday or event
+  endDate   DateTime // End date of the holiday or event
+
+  // Event categorization
+  type           CalendarEventType // PLANNED, SUDDEN, INSTITUTION_SPECIFIC
+  reason         String? // e.g., "Festival", "Weather Emergency", "Exam Prep"
+  isRecurring    Boolean           @default(false) // Whether the event repeats annually
+  createdBy      String // ID of the user who created the entry (admin/teacher)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  academicYear   AcademicYear?     @relation(fields: [academicYearId], references: [id])
+  academicYearId String?
+
+  @@unique([organizationId, startDate, endDate]) // Prevent duplicate entries for the same date range
+  @@index([organizationId, startDate, endDate]) // Optimize queries for date ranges
+  @@index([academicYearId])
+}
+
+enum YearType {
+  ANNUAL // For Schools (April–March)
+  SEMESTER // For Colleges/Universities
+  TRIMESTER // For IB/International Schools
+  BATCH // For Coaching/Training Programs
+}
+
+// #   Planing to change to fiscalYear 
+model AcademicYear {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String // "2024-25", "Batch Jan–May", etc.
+  startDate      DateTime
+  endDate        DateTime
+  type           YearType     @default(ANNUAL)
+  isCurrent      Boolean      @default(false)
+
+  // Meta Data
+  description        String?
+  complaints         AnonymousComplaint[]
+  notices            Notice[]
+  fees               Fee[]
+  teachingAssignment TeachingAssignment[]
+  studentAttendance  StudentAttendance[]
+  academicCalendar   AcademicCalendar[]
+  examSession        ExamSession[]
+  leaves             Leave[]
+  leads              Lead[]
+  feeCategories      FeeCategory[]
+  notifications      Notification[]
+  certificates       Certificate[]
+  reportCards        ReportCard[]
+  // StudentDocument
+  // ScheduledJob
+  // NotificationLog
+  // HallTicket
+  // ReportCard
+  // ExamResult
+  // ExamEnrollment
+  createdBy          String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isCurrent])
+}
+
+// model Institution {
+//   id   String @id @default(cuid())
+//   name String
+//   slug String @unique
+//   logo String?
+
+//   organizations Organization[]
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+enum OrganizationType {
+  SCHOOL
+  COLLEGE
+  COACHING_CLASS
+  UNIVERSITY
+  KINDERGARTEN
+  TRAINING_INSTITUTE
+  OTHER
+}
+
+model Organization {
+  id   String  @id @default(cuid())
+  name String
+  slug String  @unique
+  logo String?
+
+  contactEmail String? // admin or billing contact
+  contactPhone String? // admin or billing contact
+  website      String?
+
+  isActive         Boolean           @default(true)
+  isPaid           Boolean           @default(false)
+  plan             PlanType          @default(STANDARD)
+  planStartedAt    DateTime?
+  planExpiresAt    DateTime?
+  walletBalance    Int               @default(10000) // Paise  (100₹)
+  // Limits (can be used to restrict features based on plan)
+  maxStudents      Int? // set limits per plan
+  organizationType OrganizationType?
+
+  users                User[]
+  // members OrganizationMembership[]
+  notices              Notice[]
+  Student              Student[]
+  StudentDocument      StudentDocument[]
+  Grade                Grade[]
+  Section              Section[]
+  Fee                  Fee[]
+  FeeCategory          FeeCategory[]
+  FeePayment           FeePayment[]
+  AcademicCalendar     AcademicCalendar[]
+  AnonymousComplaint   AnonymousComplaint[]
+  Teacher              Teacher[]
+  Subject              Subject[]
+  TeachingAssignment   TeachingAssignment[]
+  AcademicYear         AcademicYear[]
+  scheduledJob         ScheduledJob[]
+  leaves               Leave[]
+  examSessions         ExamSession[]
+  exam                 Exam[]
+  hallTicket           HallTicket[]
+  leads                Lead[]
+  feeSenseAgent        FeeSenseAgent?
+  notificationSettings NotificationSetting[]
+  notifications        Notification[]
+  NotificationLog      NotificationLog[]
+  certificates         Certificate[]
+  reportCards          ReportCard[]
+
+  establishedYear Int?
+  createdBy       String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  metaIntegration MetaIntegration?
+
+  gradingScales GradingScale[]
+
+  @@index([id])
+  @@index([slug])
+}
+
+model User {
+  id           String  @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String  @unique
+  password     String?
+  profileImage String
+  role         Role    @default(STUDENT)
+  clerkId      String  @unique
+  isActive     Boolean @default(true)
+
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  // / Memberships - user can belong to multiple organizations
+  // memberships OrganizationMembership[]
+
+  teacher Teacher?
+  student Student?
+  parent  Parent?
+
+  feePayment FeePayment[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
+  leave         Leave[]
+  leadActivity  LeadActivity[]
+  assignedLeads Lead[]         @relation("LeadAssignedTo")
+  createdLeads  Lead[]         @relation("LeadCreatedBy")
+  deviceTokens  DeviceToken[]
+
+  @@index([id, clerkId])
+  @@index([organizationId])
+}
+
+model DeviceToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   String   @default("web") // web, android, ios
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Student {
+  id               String        @id @default(cuid())
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String        @unique
+  admissionDate    DateTime?
+  firstName        String
+  lastName         String
+  middleName       String?
+  motherName       String?
+  fullName         String?
+  dateOfBirth      DateTime
+  bloodGroup       BloodGroup?
+  address          String?
+  caste            String?
+  subCaste         String?
+  profileImage     String?
+  rollNumber       String
+  phoneNumber      String
+  whatsAppNumber   String
+  email            String
+  emergencyContact String
+  gender           Gender
+  status           StudentStatus @default(ACTIVE)
+
+  section   Section @relation(fields: [sectionId], references: [id])
+  sectionId String
+  gradeId   String
+  grade     Grade   @relation(fields: [gradeId], references: [id])
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+
+  Fee               Fee[]
+  parents           ParentStudent[]
+  StudentAttendance StudentAttendance[]
+  StudentDocument   StudentDocument[]
+  // assignments    Assignment[]
+  // complaints     Complaint[]
+
+  notifications Notification[]
+  reportCard    ReportCard[]
+  hallTicket    HallTicket[]
+  examResult    ExamResult[]
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  examEnrollment    ExamEnrollment[]
+  // ===== Conversion back to Lead =====
+  convertedFromLead Lead?            @relation("LeadToStudent")
+
+  //  // Link through membership
+  // membershipId String @unique
+  // membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, rollNumber])
+  @@index([email]) // User lookup
+  @@index([phoneNumber])
+  @@index([rollNumber])
+  @@index([gradeId])
+  @@index([sectionId])
+}
+
+enum StudentStatus {
+  ACTIVE // Currently studying
+  INACTIVE // Temporarily inactive (leave, unpaid fees, etc.)
+  SUSPENDED // Disciplinary action
+  TRANSFERRED // Moved to another school
+  DROPPED // Left without completing
+  GRADUATED // Completed education
+  ALUMNI // Historical record (optional)
+}
+
+model Parent {
+  id     String  @id @default(cuid())
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
+
+  firstName      String
+  lastName       String
+  email          String @unique
+  phoneNumber    String
+  whatsAppNumber String
+
+  students ParentStudent[] // change to children
+  //  // Link through membership
+  // membershipId String @unique
+  // membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
+}
+
+model ParentStudent {
+  id           String   @id @default(cuid())
+  relationship String
+  student      Student  @relation(fields: [studentId], references: [id])
+  studentId    String
+  parent       Parent   @relation(fields: [parentId], references: [id])
+  parentId     String
+  isPrimary    Boolean? @default(false)
+  // @@unique([studentId, parentId])
+
+  @@index([relationship])
+  @@index([parentId, studentId])
+}
+
+model Teacher {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  employeeCode String?
+
+  employmentStatus EmploymentStatus @default(ACTIVE)
+  isActive         Boolean          @default(true)
+  joinedAt         DateTime?
+  leavingAt        DateTime?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  profile            TeacherProfile?
+  teachingAssignment TeachingAssignment[]
+  section            Section[]
+  // Link through membership instead of direct user
+  // membershipId String @unique
+  // membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  // salaries           Salary[]
+  // model TeacherAttendance {}
+  // model TeacherSalary {}
+  @@unique([employeeCode, organizationId])
+  @@index([organizationId, userId])
+  @@index([organizationId, isActive])
+  @@index([organizationId, employmentStatus])
+}
+
+model TeacherProfile {
+  id        String  @id @default(cuid())
+  teacherId String  @unique
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  contactEmail String
+  contactPhone String
+  address      String
+  city         String?
+  state        String?
+  dateOfBirth  DateTime
+
+  qualification     String
+  experienceInYears Int
+  resumeUrl         String?
+
+  joinedAt            DateTime
+  bio                 String?
+  teachingPhilosophy  String?
+  specializedSubjects String[]
+  preferredGrades     String[]
+  idProofUrl          String
+
+  linkedinPortfolio String?
+  languagesKnown    String[]
+  certificateUrls   String[]
+}
+
+model Grade {
+  id                 String               @id @default(cuid())
+  grade              String
+  organizationId     String
+  organization       Organization         @relation(fields: [organizationId], references: [id])
+  students           Student[]
+  section            Section[]
+  TeachingAssignment TeachingAssignment[]
+  exams              Exam[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@unique([id, organizationId])
+  @@index([organizationId, grade])
+}
+
+model Section {
+  id             String       @id @default(cuid())
+  name           String // e.g., "A", "B", "C"
+  gradeId        String
+  organizationId String
+  grade          Grade        @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  classTeacherId String?
+  classTeacher   Teacher?     @relation(fields: [classTeacherId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  students           Student[] // Students in this section
+  StudentAttendance  StudentAttendance[]
+  TeachingAssignment TeachingAssignment[]
+  exams              Exam[]
+
+  @@unique([id, organizationId])
+  @@unique([name, gradeId])
+  @@index([organizationId, name, gradeId])
+}
+
+model Subject {
+  id             String  @id @default(cuid())
+  name           String
+  code           String
+  isElective     Boolean @default(false)
+  description    String
+  organizationId String
+
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  teachingAssignments TeachingAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  exam      Exam[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, name, code])
+}
+
+model TeachingAssignment {
+  id String @id @default(cuid())
+
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId String
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+
+  // "Who" (Teacher), the "Where/What" (Section/Subject), and the "When" (Academic Year).
+  teacherId String
+  subjectId String
+  gradeId   String
+  sectionId String
+
+  status AssignmentStatus @default(PENDING)
+
+  // ✅ Complete relations
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+  grade   Grade   @relation(fields: [gradeId], references: [id])
+  section Section @relation(fields: [sectionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ✅ Proper unique constraint
+  @@unique([academicYearId, teacherId, subjectId, gradeId, sectionId])
+  @@index([teacherId])
+  @@index([subjectId, sectionId])
+  @@index([organizationId])
+}
+
+enum AssignmentStatus {
+  PENDING
+  ASSIGNED
+  COMPLETED
+  INACTIVE
+}
+
+enum EvaluationType {
+  TEST
+  EXAM
+  ASSIGNMENT
+  PROJECT
+  PRACTICAL
+  QUIZ
+  ORAL
+  INTERNAL
+  FINAL
+  OTHER
+}
+
+enum ExamMode {
+  ONLINE
+  OFFLINE
+  PRACTICAL
+  VIVA
+  TAKE_HOME
+}
+
+enum ExamStatus {
+  UPCOMING //SCHEDULED   // ✅ Better than UPCOMING
+  LIVE
+  COMPLETED
+  CANCELLED
+  //  POSTPONED   // Rescheduled
+}
+
+enum StudentExamStatus {
+  ENROLLED // Default for all students
+  HALL_TICKET_ISSUED
+  ATTENDED // Appeared for exam
+  ABSENT // Didn't appear
+  EXEMPT // Medical leave, etc.
+  DISQUALIFIED // Disciplinary action
+}
+
+model ExamSession {
+  id             String       @id @default(cuid())
+  title          String // "Midterm 2024"
+  description    String?
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  startDate      DateTime // Session Start
+  endDate        DateTime // Session End  
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  exams          Exam[]
+  reportCards    ReportCard[]
+  hallTickets    HallTicket[]
+
+  gradingScaleId String?
+  gradingScale   GradingScale? @relation(fields: [gradingScaleId], references: [id])
+
+  @@unique([academicYearId, title])
+  @@index([academicYearId])
+  @@index([startDate, endDate])
+}
+
+model Exam {
+  id                 String           @id @default(cuid())
+  title              String // "Maths Midterm"
+  description        String?
+  examSessionId      String
+  examSession        ExamSession      @relation(fields: [examSessionId], references: [id])
+  subjectId          String
+  subject            Subject          @relation(fields: [subjectId], references: [id])
+  gradeId            String
+  grade              Grade            @relation(fields: [gradeId], references: [id])
+  sectionId          String
+  section            Section          @relation(fields: [sectionId], references: [id])
+  // batchId           String? // Only For coaching batches (link to Batch model if exists) 
+  organizationId     String
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  maxMarks           Float
+  passingMarks       Float? // Optional threshold for pass/fail
+  weightage          Float?
+  evaluationType     EvaluationType
+  mode               ExamMode
+  status             ExamStatus       @default(UPCOMING)
+  instructions       String?
+  durationInMinutes  Int? // Minutes
+  venueMapUrl        String?
+  venue              String?
+  isResultsPublished Boolean          @default(false)
+  supervisors        String[] // Separate by comma 
+  startDate          DateTime // Specific exam start (overrides session if needed)
+  endDate            DateTime
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  hallTickets        HallTicket[]
+  examResult         ExamResult[] // renamed: examResult → examResults
+  examEnrollment     ExamEnrollment[] // renamed: examEnrollment → examEnrollments
+
+  // Optional: overrides the session-level scale for this specific exam only
+  // e.g. a practical exam uses a different rubric than written exams in the same session
+  gradingScaleId String?
+  gradingScale   GradingScale? @relation(fields: [gradingScaleId], references: [id])
+
+  // @@unique([examSessionId, subjectId, gradeId, sectionId])
+  @@unique([examSessionId, gradeId, sectionId, subjectId, title])
+  @@index([organizationId, status])
+  @@index([gradeId, sectionId])
+  @@index([gradingScaleId])
+  // @@index([batchId])
+  @@index([startDate, endDate])
+}
+
+model GradingScale {
+  id             String       @id @default(cuid())
+  name           String // e.g., "CBSE Secondary Rules", "College CGPA"
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  isDefault     Boolean       @default(false)
+  rounding      RoundingRule  @default(NEAREST)
+  passThreshold Float         @default(33.0)
+  pointsMode    PointsMode    @default(NONE)
+  allowGrace    Boolean       @default(false)
+  maxGraceMarks Int           @default(0)
+  // --- Relationships ---
+  bands         GradeBand[]
+  exams         Exam[] // A scale can be reused across exams
+  examSessions  ExamSession[] // Or applied to a whole session
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, isDefault])
+}
+
+model GradeBand {
+  id             String       @id @default(cuid())
+  gradingScaleId String
+  gradingScale   GradingScale @relation(fields: [gradingScaleId], references: [id], onDelete: Cascade)
+
+  label         String // A1, B, O, etc.
+  minPercentage Float
+  maxPercentage Float
+  points        Float? // For GPA/CGPA
+  description   String?
+
+  @@index([gradingScaleId])
+}
+
+enum RoundingRule {
+  NONE // Keep decimals (e.g., 32.5 stays 32.5)
+  UP // 32.1 -> 33
+  DOWN // 32.9 -> 32
+  NEAREST // 32.5 -> 33
+}
+
+enum PointsMode {
+  NONE
+  GPA
+  CGPA
+}
+
+model ExamEnrollment {
+  id                 String            @id @default(cuid())
+  studentId          String
+  examId             String
+  status             StudentExamStatus @default(ENROLLED)
+  enrolledAt         DateTime          @default(now())
+  enrolledBy         String? // User ID or Teacher ID who enrolled the student
+  exemptionReason    String? // Medical leave, etc.
+  hallTicketIssued   Boolean           @default(false)
+  hallTicketIssuedAt DateTime?
+
+  student Student @relation(fields: [studentId], references: [id])
+  exam    Exam    @relation(fields: [examId], references: [id])
+
+  @@unique([studentId, examId])
+  @@index([examId, status])
+}
+
+model ExamResult {
+  id            String   @id @default(cuid())
+  studentId     String
+  examId        String
+  obtainedMarks Float?
+  percentage    Float? // Auto-calculated
+  gradeLabel    String?
+  remarks       String?
+  isPassed      Boolean?
+  isAbsent      Boolean  @default(false)
+
+  student Student @relation(fields: [studentId], references: [id])
+  exam    Exam    @relation(fields: [examId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([examId, studentId])
+  @@index([examId])
+  @@index([studentId])
+}
+
+model HallTicket {
+  id               String    @id @default(cuid())
+  hallTicketNumber String?
+  studentId        String
+  examId           String?
+  examSessionId    String?
+  issuedAt         DateTime?
+  pdfUrl           String // S3 link with student details, QR code
+  qrCode           String?
+  generatedAt      DateTime  @default(now())
+  downloadedAt     DateTime? // Track downloads
+  expiryDate       DateTime? // Post-exam expiry
+  organizationId   String
+
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exam         Exam?        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examSession  ExamSession? @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, examId])
+  @@index([studentId, generatedAt])
+  @@index([organizationId])
+}
+
+model ReportCard {
+  id             String @id @default(cuid())
+  studentId      String
+  examSessionId  String
+  academicYearId String
+  organizationId String
+
+  // Academic Performance
+  totalMaxMarks Float // Sum of all exam max marks
+  totalObtained Float // Sum of obtained marks
+  percentage    Float // Auto-calculated
+  cgpa          Float? // If applicable
+
+  // Results
+  overallGrade String // A+, A, B+, etc.
+  resultStatus ResultStatus
+  classRank    Int? // Rank in class
+  gradeRank    Int? // Rank in grade
+
+  // Additional Details
+  attendancePercent Float? // Overall attendance
+  conductGrade      String? // A, B, C for conduct
+  remarks           String?
+  principalRemarks  String?
+
+  rank        Int? // Overall session rank
+  pdfUrl      String? // Generated PDF (e.g., S3 link)
+  generatedAt DateTime? // When PDF was created
+
+  student      Student      @relation(fields: [studentId], references: [id])
+  examSession  ExamSession  @relation(fields: [examSessionId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, examSessionId])
+  @@index([organizationId])
+  @@index([academicYearId])
+  @@index([studentId, academicYearId])
+}
+
+enum ResultStatus {
+  PASSED
+  FAILED
+  PROMOTED // Promoted to next class despite failure
+  COMPARTMENT // Failed in some subjects
+  WITHHELD // Results withheld due to issues
+}
+
+model StudentAttendance {
+  id String @id @default(cuid())
+
+  date       DateTime
+  status     AttendanceStatus
+  note       String?
+  recordedBy String
+
+  studentId String
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  student        Student      @relation(fields: [studentId], references: [id])
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, date])
+  @@index([academicYearId])
+  @@index([studentId])
+  @@index([date])
+  @@index([sectionId, date])
+}
+
+model StudentDocument {
+  id String @id @default(cuid())
+
+  type        DocumentType
+  fileName    String?
+  fileSize    Int? // (in bytes)
+  fileType    String?
+  documentUrl String
+
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId String
+
+  verified   Boolean   @default(false)
+  verifiedBy String? // Clerk ID or Admin ID who verified
+  verifiedAt DateTime?
+
+  rejected     Boolean   @default(false)
+  rejectedBy   String? // Clerk ID or Admin ID who verified
+  rejectedAt   DateTime?
+  rejectReason String?
+
+  uploadedBy String? // Clerk ID or Student/Parent ID (depends on who uploads)
+  uploadedAt DateTime @default(now())
+
+  note String?
+
+  isDeleted Boolean   @default(false) // Soft delete
+  deletedAt DateTime?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String
+
+  @@index([organizationId])
+  @@index([studentId, type])
+  @@index([verified, uploadedAt])
+}
+
+enum DocumentType {
+  AADHAAR
+  PAN
+  PASSPORT
+  BIRTH_CERTIFICATE
+  TRANSFER_CERTIFICATE
+  BANK_PASSBOOK
+  PARENT_ID
+  AGREEMENT
+}
+
+model FeeCategory {
+  id             String        @id @default(cuid())
+  name           String // e.g., "Yearly Fee", "Exam Fee", "Lab Fee", etc.
+  description    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  fees           Fee[]
+  Organization   Organization  @relation(fields: [organizationId], references: [id])
+  organizationId String
+  academicYear   AcademicYear? @relation(fields: [academicYearId], references: [id])
+  academicYearId String?
+
+  @@unique([name, organizationId, academicYearId])
+  @@index([organizationId])
+}
+
+model Fee {
+  id             String       @id @default(cuid())
+  totalFee       Float
+  paidAmount     Float        @default(0)
+  pendingAmount  Float?
+  dueDate        DateTime
+  status         FeeStatus    @default(UNPAID)
+  studentId      String
+  student        Student      @relation(fields: [studentId], references: [id])
+  feeCategoryId  String
+  feeCategory    FeeCategory  @relation(fields: [feeCategoryId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  payments       FeePayment[]
+
+  // breakdown      Json?
+  // breakdown: {
+  //   tuition: 18000,
+  //   exam: 2000,
+  //   library: 1000,
+  //   sports: 3000,
+  //   annualDay: 4000,
+  //   lab: 2000
+  // }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([organizationId])
+  @@index([academicYearId])
+  @@index([organizationId, academicYearId, status])
+}
+
+model FeePayment {
+  id             String        @id @default(cuid())
+  feeId          String
+  fee            Fee           @relation(fields: [feeId], references: [id])
+  amount         Float
+  status         PaymentStatus @default(UNPAID)
+  paymentMethod  PaymentMethod
+  paymentDate    DateTime      @default(now())
+  receiptNumber  String
+  note           String?
+  transactionId  String? // From payment gateway (UPI ref, bank ref, etc.)
+  payerId        String
+  payer          User          @relation(fields: [payerId], references: [id])
+  platformFee    Float?
+  // pgFee          Float?        // PhonePe/pg gateway fee (from settlement CSV)
+  // netReceived    Float?        // amount - pgFee (auto-calculated after reconciliation)
+  recordedBy     String? // Admin ID (optional, if needed)
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+
+  // Reconciliation tracking
+  // isReconciled   Boolean       @default(false)
+  // reconciledAt   DateTime?
+  // reconciledBy   String?       // User ID who performed reconciliation
+  // reconciliationNote String?   // Notes from auto/manual reconciliation
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  chequeDetail ChequeDetail?
+
+  // @@index([isReconciled, paymentDate])
+  @@unique([organizationId, receiptNumber])
+  @@unique([feeId, transactionId])
+  @@index([feeId])
+  @@index([paymentDate])
+  @@index([payerId])
+  @@index([status])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([paymentDate, status])
+}
+
+enum ChequeStatus {
+  PENDING
+  CLEARED
+  BOUNCED
+  CANCELLED
+}
+
+model ChequeDetail {
+  id           String     @id @default(cuid())
+  feePaymentId String     @unique
+  feePayment   FeePayment @relation(fields: [feePaymentId], references: [id], onDelete: Cascade)
+
+  // Core cheque fields
+  chequeNumber String
+  chequeDate   DateTime // Post-dated future date
+  bankName     String
+  branchName   String?
+  ifscCode     String?
+  micrCode     String?
+
+  // Account holder
+  accountHolderName  String
+  accountNumberLast4 String? // Masked — last 4 digits only
+
+  // Status lifecycle
+  status       ChequeStatus @default(PENDING)
+  bounceReason String? // Populated only when BOUNCED
+  clearedAt    DateTime? // When admin marks CLEARED
+  cancelledAt  DateTime? // When admin marks CANCELLED
+  remarks      String? // Admin notes
+  resolvedBy   String? // userId of admin who resolved
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([chequeDate])
+  @@index([feePaymentId])
+}
+
+// ADD to existing FeePayment model — one optional relation line:
+// ─────────────────────────────────────────────────────────────────────────────
+
+// model GatewaySettlement  {
+//   id             String           @id @default(cuid())
+//   organizationId String
+//   organization   Organization     @relation(fields: [organizationId], references: [id])
+
+//   gatewayRef     String?          // PhonePe settlementId / UTR number
+//   paymentMethod  PaymentMethod
+
+//   grossAmount    Float            // SUM(parentPaid) of batch
+//   pgFee          Float            // SUM(pgFee) of batch
+//   netAmount      Float            // grossAmount - pgFee
+//   shikshaProfit  Float            // SUM(platformFee) - pgFee
+
+//   expectedDate   DateTime         // T+2 expected bank credit
+//   settledAt      DateTime?        // actual bank credit timestamp
+//   status         GatewaySettlementStatus  @default(PENDING)
+
+//   payments       FeePayment[]
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   @@index([organizationId, expectedDate])
+//   @@index([organizationId, status])
+//   @@index([gatewayRef])
+// }
+// enum GatewaySettlementStatus  {
+//   PENDING
+//   PROCESSING
+//   SETTLED
+//   FAILED
+// }
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+  CHEQUE
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  UNPAID
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+  CHEQUE_PENDING
+}
+
+enum FeeStatus {
+  PAID
+  UNPAID
+  OVERDUE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  // Create After Stable Version
+  //   EXCUSED_ABSENT = 'EXCUSED_ABSENT',
+  // UNEXCUSED_ABSENT = 'UNEXCUSED_ABSENT',
+  // EARLY_DISMISSAL = 'EARLY_DISMISSAL',
+}
+
+model AnonymousComplaint {
+  id            String          @id @default(cuid())
+  trackingId    String          @unique
+  category      String
+  severity      Severity        @default(MEDIUM)
+  subject       String
+  description   String
+  evidenceUrls  String[]
+  submittedAt   DateTime        @default(now())
+  currentStatus ComplaintStatus @default(PENDING)
+
+  organizationId          String
+  organization            Organization              @relation(fields: [organizationId], references: [id])
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  ComplaintStatusTimeline ComplaintStatusTimeline[]
+  academicYear            AcademicYear?             @relation(fields: [academicYearId], references: [id])
+  academicYearId          String?
+}
+
+model ComplaintStatusTimeline {
+  id          String             @id @default(cuid())
+  complaintId String
+  note        String?
+  status      ComplaintStatus    @default(PENDING)
+  changedBy   String?
+  complaint   AnonymousComplaint @relation(fields: [complaintId], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([complaintId])
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ComplaintStatus {
+  PENDING
+  RESOLVED
+  CLOSED
+  UNDER_REVIEW
+  INVESTIGATING
+  REJECTED
+}
+
+model Notice {
+  id String @id @default(cuid())
+
+  title   String
+  content String
+  summary String?
+
+  startDate DateTime
+  endDate   DateTime
+
+  noticeType NoticeType
+  priority   NoticePriority @default(MEDIUM)
+  status     NoticeStatus   @default(DRAFT)
+
+  createdBy            String // Teacher userId
+  approvedBy           String? // Admin userId
+  approvedAt           DateTime?
+  publishedBy          String? // Who finally published (could be admin)
+  publishedAt          DateTime?
+  isPinned             Boolean   @default(false)
+  isUrgent             Boolean   @default(false)
+  emailNotification    Boolean   @default(true)
+  pushNotification     Boolean   @default(false)
+  whatsAppNotification Boolean   @default(false)
+  smsNotification      Boolean   @default(false)
+
+  targetRoles    Role[] // replaces targetAudience
+  targetGrades   String[] // gradeIds, empty = all
+  targetSections String[] // sectionIds, empty = all
+  attachments    NoticeAttachment[]
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status, noticeType])
+  @@index([noticeType, priority, status])
+  @@index([startDate, endDate])
+  @@index([academicYearId])
+  @@index([organizationId, academicYearId, status, createdAt])
+  @@index([organizationId, createdBy, status, createdAt])
+  @@index([organizationId, academicYearId, isPinned, status, createdAt(sort: Desc)])
+  @@index([status, endDate])
+}
+
+model NoticeAttachment {
+  id       String @id @default(cuid())
+  noticeId String
+  notice   Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  fileName   String
+  fileUrl    String
+  fileType   String // pdf, image/png, docx, etc.
+  fileSize   Int // in bytes
+  publicId   String
+  uploadedAt DateTime @default(now())
+}
+
+enum NoticeType {
+  GENERAL // plain circular
+  TRIP
+  EVENT // Annual Day, Sports Day
+  EXAM // Mid-term, practical, board
+  HOLIDAY // Diwali break, 
+  DEADLINE // Fee last date, form submission
+  TIMETABLE // revised class schedule
+  RESULT // published marks / report-cards
+}
+
+enum NoticePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NoticeStatus {
+  DRAFT
+  PENDING_REVIEW // When publishAt is set
+  PUBLISHED
+  REJECTED
+  EXPIRED
+  ARCHIVED
+}
+
+model NotificationSetting {
+  id               String           @id @default(cuid())
+  // Notification type identifier (e.g., "attendance", "fees", "exam_reminder")
+  notificationType NotificationType
+  label            String
+  description      String?
+
+  // Flexible channel configuration
+  // Stores { [channel]: { enabled: boolean, locked: boolean } }
+  channels  Json     @default("{}")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+
+  @@unique([organizationId, notificationType])
+  @@index([organizationId, notificationType])
+  @@index([organizationId, isActive])
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+// One row per recipient per event.
+// This is what powers the bell icon, unread count, and inbox.
+// Never duplicated per channel — one row, always.
+model Notification {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId    String?
+  studentId String?
+  parentId  String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent    Parent?  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  academicYearId String?
+  academicYear   AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  type    NotificationType
+  title   String
+  message String
+
+  // entityType String?
+  // entityId   String?
+
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  isDismissed Boolean   @default(false)
+  dismissedAt DateTime?
+
+  logs NotificationLog[]
+
+  idempotencyKey String @unique @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, userId, isRead, createdAt])
+  @@index([organizationId, studentId, isRead, createdAt])
+  @@index([organizationId, parentId, isRead, createdAt])
+  @@index([organizationId, type, createdAt])
+  // @@index([entityType, entityId])
+  @@index([organizationId, academicYearId, createdAt])
+}
+
+// One row per channel per send attempt.
+// This is what powers billing reports, ops dashboards,
+// failure alerts, and cost calculations.
+// Never read by end users. Never shown in the bell.
+model NotificationLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  notificationType NotificationType
+  channel          NotificationChannel
+  status           NotificationStatus  @default(PENDING)
+
+  to           String?
+  cost         Float   @default(0)
+  units        Int     @default(1)
+  retryCount   Int     @default(0)
+  maxRetries   Int     @default(3)
+  errorMessage String?
+
+  idempotencyKey String @unique @db.Text
+
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, sentAt])
+  @@index([organizationId, channel, status, sentAt])
+  @@index([organizationId, notificationType, sentAt])
+  @@index([notificationId])
+}
+
+enum NotificationType {
+  NOTICE
+  FEE
+  ATTENDANCE
+  DOCUMENT
+  GENERAL
+  EXAM
+  LEAVE
+  ACADEMIC_REPORT
+  GREETING
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+}
+
+model ScheduledJob {
+  id          String                @id @default(cuid())
+  data        Json
+  type        scheduledJobType
+  scheduledAt DateTime
+  executedAt  DateTime? // when processing started
+  completedAt DateTime? // when finished
+  channels    NotificationChannel[]
+
+  status String @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+
+  result Json?
+  error  String?
+
+  createdBy      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([scheduledAt])
+}
+
+enum scheduledJobType {
+  FEE_REMINDER
+  NOTICE
+  EXAM
+  ATTENDANCE_ALERT
+  DOCUMENT_REQUEST
+  GENERAL_ANNOUNCEMENT
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  RETIRED
+  TERMINATED
+  CONTRACTUAL
+  PROBATION
+  SUSPENDED
+}
+
+// FeedBackCollection
+// "TeacherFeedback",          // Missing - for teachers to give student feedback
+// "MonthlyAttendanceReport",  // Missing - AI-generated monthly summary of attendance
+// "FeedbackCategory",         // Optional - categorize feedback (e.g., Academics, Behavior)
+// "Assignment",            // Not in schema - could be needed for academic tracking
+// "AssignmentSubmission"    // Not in schema - could be needed for academic tracking
+//  Courses and Batches
+model Certificate {
+  id                String       @id @default(cuid())
+  CertificateNumber String       @unique // e.g. PRO/2026/937
+  CertificateType   String // bonafide, leaving, character, etc.
+  studentId         String
+  studentName       String
+  rollNo            String
+  grade             String
+  section           String
+  year              String
+  language          String       @default("ENGLISH")
+  issuedAt          DateTime     @default(now())
+  issuedBy          String?
+  issuedByName      String? // e.g. "John Doe"
+  metadata          Json? // Snapshot of data delivered (extra fields, student info, etc.)
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  academicYear      AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId    String
+  createdAt         DateTime     @default(now())
+
+  @@index([CertificateNumber])
+  @@index([organizationId, CertificateType])
+  @@index([studentId])
+  @@index([issuedBy])
+}
+
+//  Amazon Alexa  Integration
+
+// Teacher  : Salary / Payout, Leave Management, Assigned Leads , Profile , Write FeedBack , Give Assignments, Fill Exam Mark , Bio Attendance , 
+// Parent : View Fee Receipts , Download Receipts , Pay Fees , Parent Profile , SMS Notification , WhatsApp Notification , Setting Page 
+// Student : View Fee Receipts , Download Receipts , Pay Fees , Student Profile , SMS Notification , WhatsApp Notification , Setting Page , Dashboard
+// Admin : ALl Reports / AI Generated  View Fee Receipts , Download Receipts , Phonepay Payment Gateway Money , Admin Profile , SMS Notification , WhatsApp Notification , Setting Page , Organization Management
+
+// Student Bulk Import 
+// Payroll : myhisab
+// Payout : Corporate Bank Account || IFC CODE  Branch || Verify by consorn bank || 
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  ANNUAL
+  EMERGENCY
+  OTHER
+  VACATION
+  MATERNITY
+  PATERNITY
+  UNPAID
+  STUDY
+}
+
+model Leave {
+  id               String   @id @default(cuid())
+  startDate        DateTime
+  endDate          DateTime
+  totalDays        Int
+  reason           String
+  type             String // New
+  emergencyContact String // Phone number during leave
+
+  currentStatus LeaveStatus @default(PENDING)
+  approvedBy    String?
+  approvedAt    DateTime?
+  rejectedNote  String?
+  userId        String // userId (could be parent, teacher, student)
+
+  appliedBy User @relation(fields: [userId], references: [id])
+
+  statusTimeline LeaveStatusTimeline[] // Every approval/reject event
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId String
+
+  @@index([userId, currentStatus, organizationId, academicYearId])
+}
+
+model LeaveStatusTimeline {
+  id        String      @id @default(cuid())
+  leaveId   String
+  leave     Leave       @relation(fields: [leaveId], references: [id])
+  status    LeaveStatus @default(PENDING)
+  note      String?
+  changedBy String? // userId of who made the change
+  changedAt DateTime    @default(now())
+
+  @@index([leaveId])
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  // ===== Basic Information =====
+  imageUrl       String?
+  studentName    String
+  parentName     String?
+  phone          String
+  email          String?
+  whatsappNumber String?
+
+  // ===== Enquiry Details =====
+  enquiryFor    String  @default("")
+  currentSchool String?
+  address       String?
+  city          String?
+  state         String?
+  pinCode       String?
+
+  // ===== Lead Management =====
+  source   LeadSource   @default(WEBSITE)
+  status   LeadStatus   @default(NEW)
+  priority LeadPriority @default(MEDIUM)
+
+  // Lead scoring for prioritization (0-100)
+  score Int @default(0)
+
+  // ===== Assignment & Ownership =====
+  assignedToUserId String?
+  assignedTo       User?     @relation("LeadAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  assignedAt       DateTime?
+
+  // ===== Follow-up Tracking =====
+  nextFollowUpAt  DateTime?
+  lastContactedAt DateTime?
+  followUpCount   Int       @default(0)
+
+  // ===== Conversion Tracking =====
+  convertedAt          DateTime?
+  // Uncomment when Student model is ready
+  convertedToStudentId String?   @unique
+  convertedToStudent   Student?  @relation("LeadToStudent", fields: [convertedToStudentId], references: [id])
+  // Additional Info
+  notes                String?
+  requirements         String[] // ["Transportation", "Hostel", "Scholarship"]
+  budgetRange          String? // "50k-1L", "1L-2L", etc.
+
+  // Reason for closure (required for NOT_INTERESTED, INVALID)
+  closureReason String?
+
+  // Relations
+  activities              LeadActivity[]
+  communicationPreference LeadCommunicationPreference[]
+
+  // ===== Audit Fields =====
+  createdByUserId String?
+  createdBy       User?   @relation("LeadCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status, phone])
+  @@index([createdByUserId, nextFollowUpAt])
+  @@index([source, createdAt])
+}
+
+model LeadActivity {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  // Activity Details
+  type          LeadActivityType
+  title         String // "Called parent", "Sent brochure", "School visit"
+  description   String?
+  outcome       String? // "Interested", "Not reachable", "Will visit next week"
+  sentiment     Sentiment?
+  // When & Who
+  performedById String?
+  performedBy   User?            @relation(fields: [performedById], references: [id])
+  performedAt   DateTime         @default(now())
+
+  // Next Action
+  followUpDate DateTime?
+  followUpNote String?
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId, performedAt])
+  @@index([performedById])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  INTERESTED
+  VISIT_SCHEDULED
+  VISITED
+  PROPOSAL_SENT
+  NEGOTIATION
+  CONVERTED
+  NOT_INTERESTED
+  UNRESPONSIVE
+  INVALID
+  LOST
+  ON_HOLD
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  VIP
+}
+
+enum LeadSource {
+  WEBSITE
+  GOOGLE_ADS
+  FACEBOOK_ADS
+  INSTAGRAM_ADS
+  LINKEDIN_ADS
+  EMAIL_MARKETING
+  SEO_ORGANIC
+  SOCIAL_MEDIA
+  WALK_IN
+  PHONE_CALL
+  REFERRAL_PROGRAM
+  EDUCATION_FAIR
+  PRINT_MEDIA
+  RADIO
+  OUTDOOR_ADVERTISING
+  AGENT_PARTNER
+  ALUMNI_REFERRAL
+  WEBINAR
+  WORKSHOP
+  WORD_OF_MOUTH
+}
+
+enum LeadActivityType {
+  CALL
+  EMAIL
+  SMS
+  WHATSAPP
+  MEETING
+  VISIT
+  SCHOOL_TOUR
+  DEMO_CLASS
+  FOLLOW_UP
+  DOCUMENT_SENT
+  DOCUMENT_RECEIVED
+  APPLICATION_SUBMITTED
+  FEE_DISCUSSED
+  COUNSELING
+  PARENT_MEETING
+  STUDENT_INTERACTION
+  OTHER
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum LeadCommunicationPreference {
+  EMAIL
+  SMS
+  WHATSAPP
+  PHONE_CALL
+  NO_CONTACT
+}
+
+model MetaIntegration {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // OAuth connection details
+  metaUserId      String // Meta user ID who connected
+  pageId          String @unique // Facebook Page ID (used to route webhooks)
+  pageName        String // Display name e.g. "Delhi Public School"
+  pageAccessToken String // Long-lived Page Access Token (encrypted at rest!)
+
+  // Which lead forms are being synced
+  subscribedFormIds String[] // Meta Lead Form IDs
+
+  // Connection status
+  isActive       Boolean   @default(true)
+  connectedAt    DateTime  @default(now())
+  tokenExpiresAt DateTime? // null = never expires (page tokens)
+  lastSyncAt     DateTime?
+
+  // Audit
+  connectedByUserId String?
+  // connectedBy    User?    @relation(fields: [connectedByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageId]) // critical — webhook lookup by page_id
+  @@index([organizationId])
+}
+
+model FeeSenseAgent {
+  id             String       @id @default(cuid())
+  organizationId String       @unique // One per org
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String       @default("FeeSense AI Agent")
+  description    String?      @default("Intelligent fee collection assistant that analyzes payment patterns and sends personalized reminders")
+
+  isActive Boolean @default(true)
+
+  capabilities             String[]
+  // capabilities: [
+  //       "Fetch all Fees Data and check if any fee is pending or not",
+  //       "Analyzes payment patterns and identifies at-risk families",
+  //       "Sends personalized payment reminders via email and SMS",
+  //       "Generates daily reports with collection insights",
+  //       "Schedules voice calls for high-priority overdue fees",
+  //     ],
+  // FeeSense-specific configuration
+  riskScoreLowThreshold    Int      @default(30)
+  riskScoreMediumThreshold Int      @default(60)
+  riskScoreHighThreshold   Int      @default(80)
+  maxNotificationAttempts  Int      @default(3)
+  voiceCallThreshold       Int      @default(3) // Days overdue before call
+
+  // Notification preferences
+  enableEmailReminders Boolean @default(true)
+  enableSMSReminders   Boolean @default(true)
+  enableVoiceCalls     Boolean @default(false)
+  enableWhatsApp       Boolean @default(false)
+
+  // Scheduling
+  runFrequency AIAgentRunFrequency @default(DAILY)
+  scheduleTime String              @default("23:00") // HH:mm format
+
+  // // AI Model config
+  // aiModel     String @default("gpt-4")
+  // temperature Float  @default(0.7)
+
+  // Execution tracking
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  totalRuns      Int       @default(0)
+  successfulRuns Int       @default(0)
+  failedRuns     Int       @default(0)
+
+  // Relations
+  executionLogs FeeSenseExecutionLog[]
+  reports       FeeSenseReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, isActive])
+}
+
+model FeeSenseExecutionLog {
+  id      String        @id @default(cuid())
+  agentId String
+  agent   FeeSenseAgent @relation(fields: [agentId], references: [id])
+
+  startedAt   DateTime
+  completedAt DateTime?
+  status      AIAgentExecutionStatus // RUNNING, SUCCESS, FAILED, PARTIAL
+
+  // FeeSense-specific metrics
+  studentsAnalyzed    Int
+  remindersGenerated  Int
+  emailsSent          Int
+  smsSent             Int
+  voiceCallsScheduled Int
+  totalAmountOverdue  Float
+
+  errorMessage String?
+  errorDetails Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([agentId, startedAt])
+}
+
+model FeeSenseReport {
+  id String @id @default(cuid())
+
+  agentId String
+  agent   FeeSenseAgent @relation(fields: [agentId], references: [id])
+
+  reportDate DateTime
+
+  // Summary metrics
+  totalStudentsAtRisk Int
+  highRiskCount       Int
+  mediumRiskCount     Int
+  lowRiskCount        Int
+
+  totalOverdueAmount Float
+  paymentsReceived   Float // Since last report
+
+  // Outreach summary
+  emailsSent          Int
+  smsSent             Int
+  voiceCallsScheduled Int
+  responseRate        Float?
+
+  // Detailed insights (AI-generated)
+  insights Json
+  // Example: {
+  //   "trends": "Payment rates down 15% this week",
+  //   "recommendations": ["Focus on Grade 10 students", "Increase SMS frequency"],
+  //   "topRiskStudents": [...]
+  // }
+
+  sentToEmails String[] // Admin emails where report was sent
+
+  createdAt DateTime @default(now())
+
+  @@unique([agentId, reportDate])
+  @@index([agentId, reportDate])
+}
+
+enum AIAgentRunFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  ON_DEMAND
+}
+
+enum AIAgentExecutionStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+// model OrganizationMembership {
+//   id             String   @id @default(cuid())
+//   userId         String
+//   organizationId String
+//   role           MembershipRole
+
+//   // Membership status
+//   status         MembershipStatus @default(ACTIVE)
+//   permissions    String[] // Custom permissions
+
+//   // Invitation system (like Clerk)
+//   invitedByEmail String?    // Email of inviter
+//   invitedFromIp  String?
+//   invitationId   String?    @unique // For invitation links
+
+//   // Timestamps
+//   createdAt      DateTime   @default(now())
+//   updatedAt      DateTime   @updatedAt
+//   acceptedAt     DateTime?  // When user accepted invitation
+//   revokedAt      DateTime?  // When membership was revoked
+
+//   // Relations
+//   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+//   // Link to specific profile types
+//   teacher    Teacher?
+//   student    Student?
+//   parent     Parent?
+
+//   @@unique([userId, organizationId])
+//   @@index([organizationId, role])
+//   @@index([userId, status])
+//   @@index([invitationId])
+//   @@map("organization_memberships")
+// }
+
+// // Enhanced role system
+// enum MembershipRole {
+//   OWNER       // Full control, can delete org
+//   ADMIN       // Manage members, settings
+//   TEACHER     // Teaching staff
+//   STUDENT     // Student access
+//   PARENT      // Parent access  
+//   MEMBER      // Basic member
+//   GUEST       // Limited access
+// }
+
+// enum MembershipStatus {
+//   INVITED     // Invitation sent, not accepted
+//   ACTIVE      // Active member
+//   INACTIVE    // Member inactive
+//   REVOKED     // Access revoked
+//   DECLINED    // Invitation declined
+// }
+
+// // Define time periods/slots for the school
+// model TimePeriod {
+//   id             String       @id @default(cuid())
+
+//   name           String       // "Period 1", "Morning Assembly", "Lunch Break"
+//   startTime      String       // "09:00" (24-hour format)
+//   endTime        String       // "09:45"
+//   dayOfWeek      DayOfWeek    // MONDAY, TUESDAY, etc.
+//   periodOrder    Int          // 1, 2, 3... for sorting periods in a day
+//   periodType     PeriodType   @default(ACADEMIC)
+//   isActive       Boolean      @default(true)
+//   timetableEntries Timetable[]
+//   academicYearId String
+//   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+//   organizationId String
+//   organization   Organization @relation(fields: [organizationId], references: [id])
+
+//   createdAt      DateTime     @default(now())
+//   updatedAt      DateTime     @updatedAt
+
+//   @@unique([organizationId, academicYearId, dayOfWeek, startTime, endTime])
+//   @@index([organizationId, academicYearId, dayOfWeek, periodOrder])
+// }
+
+// // Main timetable model - connects teaching assignments with specific time periods
+// model Timetable {
+//   id                   String             @id @default(cuid())
+//   timePeriodId         String
+//   timePeriod           TimePeriod         @relation(fields: [timePeriodId], references: [id])
+//   roomNumber           String?            // Classroom/venue
+//   effectiveDate        DateTime           // When this schedule starts
+//   endDate              DateTime?          // When it ends (null = ongoing)
+//   status               TimetableStatus    @default(ACTIVE)
+//   notes                String?            // Special instructions
+//   isRecurring          Boolean            @default(true)
+//   organizationId       String
+//   organization         Organization       @relation(fields: [organizationId], references: [id])
+//   teachingAssignmentId String
+//   teachingAssignment   TeachingAssignment @relation(fields: [teachingAssignmentId], references: [id]) 
+//   academicYearId       String
+//   academicYear         AcademicYear       @relation(fields: [academicYearId], references: [id])
+
+//   createdBy            String             // Who created this entry
+//   createdAt            DateTime           @default(now())
+//   updatedAt            DateTime           @updatedAt
+
+//   // Prevent double-booking same room at same time
+//   @@unique([organizationId, timePeriodId, roomNumber, effectiveDate])
+
+//   // Prevent teacher double-booking
+//   @@unique([teachingAssignmentId, timePeriodId, effectiveDate])
+
+//   @@index([organizationId, academicYearId, status])
+//   @@index([teachingAssignmentId])
+//   @@index([timePeriodId])
+// }
+
+// // For handling special schedule changes/substitutions
+// model TimetableException {
+//   id               String          @id @default(cuid())
+//   organizationId   String
+//   organization     Organization    @relation(fields: [organizationId], references: [id])
+
+//   // Reference to the original timetable entry
+//   originalTimetableId String?
+//   originalTimetable   Timetable?      @relation(fields: [originalTimetableId], references: [id])
+
+//   // Exception details
+//   exceptionDate    DateTime        // Specific date of the exception
+//   exceptionType    ExceptionType   // CANCELLED, SUBSTITUTED, RESCHEDULED, ROOM_CHANGE
+
+//   // Substitute details (if applicable)
+//   substituteTeacherId    String?
+//   substituteTeacher      Teacher?         @relation(fields: [substituteTeacherId], references: [id])
+
+//   newTimePeriodId        String?
+//   newTimePeriod          TimePeriod?      @relation(fields: [newTimePeriodId], references: [id])
+
+//   newRoomNumber          String?
+
+//   // Reason and approval
+//   reason                 String
+//   approvedBy            String?
+//   approvedAt            DateTime?
+
+//   // Notification status
+//   notificationSent      Boolean          @default(false)
+
+//   createdBy             String
+//   createdAt             DateTime         @default(now())
+//   updatedAt             DateTime         @updatedAt
+
+//   @@index([organizationId, exceptionDate])
+//   @@index([originalTimetableId])
+// }
+// enum DayOfWeek {
+//   MONDAY
+//   TUESDAY
+//   WEDNESDAY
+//   THURSDAY
+//   FRIDAY
+//   SATURDAY
+//   SUNDAY
+// }
+
+// enum PeriodType {
+//   ACADEMIC       // Regular classes
+//   BREAK         // Recess, lunch break
+//   ASSEMBLY      // Morning assembly
+//   SPORTS        // Physical education
+//   EXTRA_CURRICULAR // Clubs, activities
+//   EXAM          // Examination periods
+// }
+
+// enum TimetableStatus {
+//   ACTIVE
+//   INACTIVE
+//   SUSPENDED
+//   COMPLETED
+// }
+
+// enum ExceptionType {
+//   CANCELLED
+//   SUBSTITUTED
+//   RESCHEDULED
+//   ROOM_CHANGE
+//   TEACHER_ABSENT
+// }

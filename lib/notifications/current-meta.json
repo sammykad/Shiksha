@@ -1,0 +1,671 @@
+{
+  "data": [
+    {
+      "name": "fee_created",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Fee Notice for {{1}}",
+          "example": {
+            "header_text": ["Sameer Kad"]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "A new fee has been created for {{1}} at {{6}}.\n\nCategory: {{2}}\nAmount: {{3}}\nDue Date: {{4}}\nStatus: {{5}}\n\nPlease make the payment before the due date to avoid penalties.",
+          "example": {
+            "body_text": [
+              [
+                "Sameer Kad",
+                "Tuition Fee",
+                "5000",
+                "30 April 2025",
+                "UNPAID",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Pay Now",
+              "url": "https://shiksha.cloud/dashboard/{{1}}",
+              "example": ["fees/pay"]
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "2074208323150067"
+    },
+    {
+      "name": "fee_due_today",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Fee Due Today for {{1}}",
+          "example": {
+            "header_text": ["Sameer Kad"]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "The fee of {{3}} for {{2}} is due today for {{1}} at {{4}}.\n\nPlease complete the payment today to avoid any penalties.",
+          "example": {
+            "body_text": [
+              [
+                "Sameer Kad",
+                "Tuition Fee",
+                "5000",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Pay Now",
+              "url": "https://shiksha.cloud/dashboard/{{1}}",
+              "example": ["fees/student/pay?feeId=demo-fee-123"]
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "3825647297566640"
+    },
+    {
+      "name": "fee_friendly_reminder",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Fee Reminder for {{1}}",
+          "example": {
+            "header_text": ["Sameer Kad"]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "A friendly reminder that a fee of {{3}} for {{2}} is due on {{4}} for {{1}} at {{5}}.\n\nPlease make the payment before the due date to avoid any late charges.",
+          "example": {
+            "body_text": [
+              [
+                "Sameer Kad",
+                "Tuition Fee",
+                "5000",
+                "30 April 2025",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Pay Now",
+              "url": "https://shiksha.cloud/dashboard/{{1}}",
+              "example": ["fees/student/pay?feeId=demo-fee-123"]
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "3366661816821979"
+    },
+    {
+      "name": "pdc_cheque_bounced",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Cheque Bounced"
+        },
+        {
+          "type": "BODY",
+          "text": "Cheque bounced for {{1}} at {{6}}.\n\nCheque Number: {{2}}\nAmount: {{3}}\nBank: {{4}}\nReason: {{5}}\n\nPlease contact the accounts office or complete payment through another method.",
+          "example": {
+            "body_text": [
+              [
+                "Sameer Kad",
+                "123456",
+                "₹5,000",
+                "HDFC Bank",
+                "Insufficient funds",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "1251059277197979"
+    },
+    {
+      "name": "pdc_cheque_recorded",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Cheque Recorded for {{1}}",
+          "example": {
+            "header_text": ["Sameer Kad"]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "Cheque received for {{1}} at {{6}}.\n\nCheque Number: {{2}}\nAmount: {{3}}\nCheque Date: {{4}}\nBank: {{5}}\n\nThe cheque has been recorded successfully.",
+          "example": {
+            "body_text": [
+              [
+                "Sameer Kad",
+                "123456",
+                "₹5,000",
+                "30 April 2026",
+                "HDFC Bank",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "990059163594686"
+    },
+    {
+      "name": "fee_overdue",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Overdue Fee for {{1}}",
+          "example": {
+            "header_text": ["Sameer Kad"]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "The fee of {{3}} for {{2}} is overdue for {{1}} at {{5}}.\n\nDue Date: {{4}}\n\nPlease complete the payment immediately to avoid further penalties.",
+          "example": {
+            "body_text": [
+              [
+                "Sameer Kad",
+                "Tuition Fee",
+                "₹5,000",
+                "30 April 2026",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Pay Now",
+              "url": "https://shiksha.cloud/dashboard/{{1}}",
+              "example": ["fees/student/pay?feeId=demo-fee-123"]
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "941659518772323"
+    },
+    {
+      "name": "general_notice",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Official Announcement"
+        },
+        {
+          "type": "BODY",
+          "text": "New notice from {{1}}:\n\n*{{2}}*\n\n{{3}}\n\nType: {{4}}\n\nPlease check the dashboard for full details.",
+          "example": {
+            "body_text": [
+              [
+                "Greenwood International",
+                "Urgent: Sports Day Postponed",
+                "Due to heavy rain, the sports day scheduled for tomorrow has been moved to Friday.",
+                "Event Update"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "View Notice",
+              "url": "https://shiksha.cloud/dashboard/notices/{{1}}",
+              "example": ["demo-notice-id-123"]
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "2176350049814123"
+    },
+    {
+      "name": "payment_success",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "DOCUMENT",
+          "example": {
+            "header_handle": [
+              "https://scontent.whatsapp.net/v/t61.29466-34/643607390_2762271070809284_925940757594972861_n.pdf?ccb=1-7&_nc_sid=8b1bef&_nc_ohc=PwIsH7g5hZAQ7kNvwFimk-Y&_nc_oc=AdqXeGNEL-uhD2clXbzRVphGhwETxl3G4no8J95HexESSrB8VuWDgdLbd0qEpg_Ojbc_aD01sQNQ-UoHmuWMRkTW&_nc_zt=3&_nc_ht=scontent.whatsapp.net&edm=AH51TzQEAAAA&_nc_gid=c5GyYVDnLaWg5tsJ6tMLHw&_nc_tpa=Q5bMBQGVkKF_cB4qITaleheI4meLIeDu4hfipndNW5_1rDgw6s2r_Ydg9igjvipUJJGgtdfI518-GQlEfw&oh=01_Q5Aa4gEmBO0w4a_Cwx5y2W3_1Fzim806bqtWRrCPyRaK5E0l2w&oe=6A227F20"
+            ]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "Hello, we have successfully received the payment of {{3}} for {{1}}'s {{2}} via {{4}}.\n\nYour receipt number is *{{5}}* , processed on {{6}}.\n\nThank you! {{7}} appreciates your prompt payment.",
+          "example": {
+            "body_text": [
+              [
+                "Rohan Sharma",
+                "Term 1 Fee",
+                "₹5,000",
+                "Online (PhonePe)",
+                "REC-ABCD123",
+                "14 Oct 2026",
+                "Delhi Public School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Visit website",
+              "url": "https://invalid.invalid/"
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "sub_category": "CUSTOM",
+      "is_primary_device_delivery_only": false,
+      "id": "2762271067475951"
+    },
+    {
+      "name": "payment_failed",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Payment Failed"
+        },
+        {
+          "type": "BODY",
+          "text": "Hello {{1}}, unfortunately the payment of {{2}} for {{3}} could not be processed.\n\nTransaction Reference: {{4}}\n\nPlease retry the payment from your dashboard at your earliest convenience.\n\nThank you for your cooperation, {{5}} team will be happy to assist you further.",
+          "example": {
+            "body_text": [
+              [
+                "Rohan Sharma",
+                "₹5,000",
+                "Term 1 Fee",
+                "TXN_20261014_ABC123",
+                "Delhi Public School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Retry Payment",
+              "url": "https://shiksha.cloud/dashboard"
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "1511809527214962"
+    },
+    {
+      "name": "emergency_holiday",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "*🚨 EMERGENCY HOLIDAY DECLARATION*\n\nIMPORTANT: We will remain closed on *{{1}}* due to *{{2}}*.\n\nReason: {{3}}\n\n— {{4}}\nThanks.",
+          "example": {
+            "body_text": [
+              [
+                "April 27th, 2026",
+                "Weather Emergency",
+                "Heavy Rainfall Warning",
+                "Nexus Academy"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "1276647317429934"
+    },
+    {
+      "name": "leave_rejected",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Leave Request Rejected"
+        },
+        {
+          "type": "BODY",
+          "text": "The {{1}} leave request submitted by {{2}} at {{7}} has not been approved.\n\nLeave Duration: {{3}} to {{4}} ({{5}} days)\nReason: {{6}}\n\nFor further assistance, please contact your administrator.",
+          "example": {
+            "body_text": [
+              [
+                "Casual",
+                "Rahul Sharma",
+                "01 May 2025",
+                "03 May 2025",
+                "3",
+                "Insufficient leave balance",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "4310982765783565"
+    },
+    {
+      "name": "student_absent",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Attendance Alert for: {{1}}",
+          "example": {
+            "header_text": ["Sameer Kad"]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "Absence recorded for {{1}} at {{6}} on {{2}} at {{3}}.\nGrade: {{4}}, Section: {{5}}.\n\nPlease ensure the reason for absence is informed to the school.",
+          "example": {
+            "body_text": [
+              [
+                "Sameer Kad",
+                "20-02-2025",
+                "10:30 AM",
+                "5th",
+                "A",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "987027567164480"
+    },
+    {
+      "name": "student_late",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Late Arrival Alert"
+        },
+        {
+          "type": "BODY",
+          "text": "Late arrival recorded for {{1}} at {{6}} on {{2}} at {{3}}.\nGrade: {{4}}, Section: {{5}}.\n\nPlease ensure punctuality to avoid disruption to classes.",
+          "example": {
+            "body_text": [
+              [
+                "Arjun Sharma",
+                "16 May 2025",
+                "09:05 AM",
+                "9",
+                "A",
+                "Greenwood International School"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "2231106207626111"
+    },
+    {
+      "name": "leave_approved",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Leave Request Approved"
+        },
+        {
+          "type": "BODY",
+          "text": "The {{1}} leave request submitted by {{2}} for {{7}} has been approved by {{3}}.\n\nLeave Duration: {{4}} to {{5}} ({{6}} days)\n\nFor any queries, please contact your administrator.",
+          "example": {
+            "body_text": [
+              [
+                "Casual",
+                "Rahul Sharma",
+                "Principal",
+                "01 May 2025",
+                "03 May 2025",
+                "3",
+                "Shiksha Cloud Academy"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "968806186085499"
+    },
+    {
+      "name": "document_rejected",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Document Verification"
+        },
+        {
+          "type": "BODY",
+          "text": "Hello {{1}}, the {{2}} ({{3}}) you submitted to {{4}} was rejected for the following reason:\n\n\"{{5}}\"\n\nPlease use the button below to re-upload the document. For assistance, reach us at {{6}}. \n\nThank you for your understanding.",
+          "example": {
+            "body_text": [
+              [
+                "Rahul Sharma",
+                "Aadhaar Card",
+                "aadhaar_rahul.pdf",
+                "Delhi Public School",
+                "Document is blurry and unreadable",
+                "+91 98765 43210"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Re-upload Now",
+              "url": "https://shiksha.cloud/dashboard/documents/"
+            }
+          ]
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "1310094681216986"
+    },
+    {
+      "name": "document_approved",
+      "parameter_format": "POSITIONAL",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hello {{1}}, your document *{{2}}* has been successfully verified and approved by {{3}}. ✅\n\nNo further action is required from your side.",
+          "example": {
+            "body_text": [
+              ["Rahul Sharma", "Aadhaar Card", "Delhi Public School"]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "System alert • Shiksha.cloud"
+        }
+      ],
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "is_primary_device_delivery_only": false,
+      "id": "4611113975837801"
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFIU3hyR0FKNEVYekgwUWZAqX095dTdQTlExaXJ1bkNZAcXJTYU50RVpzNzhlb01NNUFoWHIwYnhNRFVPT2lUWXAycjJWYUdLWGJ5dXVCSWdtbXVLbmF4SmZAn",
+      "after": "QVFIU1AwV0lYa052ZAG5TTkM2bjVWV0J1UEdBbG1xV0VnejlUMldHRWNBWkZAtRDE0V2hCQkJTYkhYTEE5d2U5YmhLZAWFTLWVIUzdZALVRXem1ER2FjaFNzR3pn"
+    }
+  }
+}

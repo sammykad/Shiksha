@@ -1,0 +1,49 @@
+import { getCurrentAcademicYearId } from '@/lib/academicYear';
+import prisma from '@/lib/db';
+import { getOrganizationId } from '@/lib/organization';
+
+export async function getFeeCategories() {
+  const organizationId = await getOrganizationId();
+  const academicYearId = await getCurrentAcademicYearId();
+  try {
+    const categories = await prisma.feeCategory.findMany({
+      where: {
+        organizationId,
+        // academicYearId,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return categories;
+  } catch (error) {
+    console.error('Failed to fetch fee categories:', error);
+    return [];
+  }
+}
+
+export async function getFeeCategory(id: string) {
+  try {
+    const category = await prisma.feeCategory.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        createdAt: true,
+      },
+    });
+
+    return category;
+  } catch (error) {
+    console.error('Failed to fetch fee category:', error);
+    return null;
+  }
+}

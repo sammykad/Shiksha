@@ -1,0 +1,150 @@
+'use server';
+
+import prisma from '@/lib/db';
+import { FeeStatus, PaymentStatus } from '@/generated/prisma/enums';
+import { getOrganizationId } from '@/lib/organization';
+import { offlinePaymentFormData, offlinePaymentSchema } from '@/lib/schemas';
+import { getCurrentUserId } from '@/lib/user';
+import { formatCurrencyIN } from '@/lib/utils';
+import { randomUUID } from 'crypto';
+import { revalidatePath } from 'next/cache';
+import { notify } from '@/lib/notifications/notify';
+import { preparePaymentReceipt } from './preparePaymentReceipt';
+
+export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
+  const userId = await getCurrentUserId();
+  const organizationId = await getOrganizationId();
+
+  const validatedData = offlinePaymentSchema.parse(data);
+
+  const fee = await prisma.fee.findUnique({
+    where: { id: validatedData.feeId },
+    select: {
+      id: true,
+      status: true,
+      totalFee: true,
+      paidAmount: true,
+      pendingAmount: true,
+      dueDate: true,
+      studentId: true,
+      feeCategoryId: true,
+      student: { select: { firstName: true, lastName: true } },
+      feeCategory: { select: { name: true } },
+    },
+  });
+
+  if (!fee) throw new Error('Fee not found');
+  if (fee.status === FeeStatus.PAID) throw new Error('Fee is already fully paid');
+
+  const pendingAmount = fee.pendingAmount ?? fee.totalFee - fee.paidAmount;
+
+  if (pendingAmount <= 0) throw new Error('Fee already paid');
+  if (validatedData.amount > pendingAmount) throw new Error('Payment amount exceeds remaining balance');
+
+  if (validatedData.payerId) {
+    const payer = await prisma.user.findUnique({
+      where: { id: validatedData.payerId },
+      select: { id: true },
+    });
+    if (!payer) throw new Error(`Payer ID '${validatedData.payerId}' does not exist.`);
+  }
+
+  const receiptNumber = `REC-${randomUUID().slice(0, 8).toUpperCase()}`;
+
+  // ── 2. Persist payment in a transaction ───────────────────────────────────
+  await prisma.$transaction(async (tx) => {
+    // Record the new payment
+    await tx.feePayment.create({
+      data: {
+        feeId: fee.id,
+        amount: validatedData.amount,
+        status: PaymentStatus.COMPLETED,
+        receiptNumber,
+        transactionId: validatedData.transactionId,
+        organizationId,
+        note: validatedData.note,
+        paymentMethod: validatedData.method,
+        platformFee: 0,
+        paymentDate: new Date(),
+        payerId: validatedData.payerId,
+        recordedBy: userId,
+      },
+    });
+
+    // Recalculate totals from ALL completed payments (source of truth)
+    const allCompletedPayments = await tx.feePayment.findMany({
+      where: { feeId: fee.id, status: PaymentStatus.COMPLETED },
+    });
+
+    const totalPaid = allCompletedPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPending = Math.max(fee.totalFee - totalPaid, 0);
+
+    // Determine correct fee status
+    let updatedStatus: FeeStatus;
+    if (totalPending === 0) {
+      updatedStatus = FeeStatus.PAID;
+    } else if (new Date(fee.dueDate) < new Date()) {
+      updatedStatus = FeeStatus.OVERDUE;
+    } else {
+      updatedStatus = FeeStatus.UNPAID;
+    }
+
+    // Persist the updated fee record
+    await tx.fee.update({
+      where: { id: fee.id },
+      data: { paidAmount: totalPaid, pendingAmount: totalPending, status: updatedStatus },
+    });
+
+    return { totalPaid, totalPending, updatedStatus };
+  });
+
+  // ── 3. Prepare receipt — fetches full data, builds FeeRecord, generates PDF ─
+  const { feeRecord, pdfBuffer } = await preparePaymentReceipt(fee.id, organizationId, {
+    amount: validatedData.amount,
+    paymentDate: new Date(),
+    paymentMethod: validatedData.method,
+    receiptNumber,
+    transactionId: validatedData.transactionId,
+    status: PaymentStatus.COMPLETED,
+    payerId: validatedData.payerId,
+  });
+
+  // ── 4. Send email + WhatsApp with the PDF attached ─────────────────────────
+  try {
+    await notify.fee.paymentSuccess({
+      feeId: fee.id,
+      // Stable, unique key scoped to this specific payment — not the fee
+      eventId: `fee:${fee.id}:payment:${receiptNumber}`,
+      recipients: [{ studentId: fee.studentId }],
+      attachment: {
+        filename: `Receipt-${receiptNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+      variables: {
+        studentName: `${feeRecord.student.firstName} ${feeRecord.student.lastName}`,
+        receiptNumber,
+        paymentMethod: validatedData.method,
+        // receiptUrl is the dashboard deep-link shown in email/push body text.
+        // The WhatsApp PDF attachment comes from pdfBuffer via Meta media upload.
+        // this URL is NOT used as the document link in the WA template header.
+        receiptUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/fees/?txn=${validatedData.transactionId}`,
+        feeName: feeRecord.feeCategory.name,
+        amount: validatedData.amount,
+        paidAt: new Date(),
+      },
+    });
+  } catch (notifyErr) {
+    // Payment is already persisted — notification failure must never bubble up
+    console.error('[recordOfflinePayment] Notification failed (non-fatal):', (notifyErr as Error).message);
+  };
+
+  // Step 5: Revalidate pages
+  revalidatePath('/dashboard/fees');
+  revalidatePath('/dashboard/fees/admin');
+
+  return {
+    success: true,
+    message: `Successfully recorded offline payment of ₹${formatCurrencyIN(validatedData.amount)}`,
+  };
+};
