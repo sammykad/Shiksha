@@ -40,8 +40,6 @@ import {
   Users,
   Loader2,
   X,
-  UploadIcon,
-  UploadCloud,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -173,17 +171,17 @@ export default function CreateStudentForm({ leadData, leadId, organizationId, ac
   const onSubmit = async (data: z.infer<typeof studentSchema>) => {
     try {
       setPending(true);
-      await createStudent(data, leadId); // ✅ parents are already inside `data`
+      const result = await createStudent(data, leadId); // ✅ parents are already inside `data`
 
 
-      toast.success('Student created successfully!');
+      toast.success(result.message ?? 'Student created successfully!');
       setProfileImage(null);
       setSelectedGradeId(null);
       // setDocuments([]);
       form.reset();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to create student');
+      toast.error(err instanceof Error ? err.message : 'Failed to create student');
     } finally {
       setPending(false);
     }

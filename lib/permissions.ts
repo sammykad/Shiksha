@@ -5,29 +5,30 @@
 // Compatible with: Clerk, Better Auth, NextAuth, Lucia, custom auth
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { Role } from "@/generated/prisma/enums";
+
 // ─────────────────────────────────────────────────────────────
 // 1. ROLE SYSTEM
 // ─────────────────────────────────────────────────────────────
 
-export type Role = 'admin' | 'teacher' | 'student' | 'parent'
 
 /** Role hierarchy — higher = more privileges. Used for min: checks. */
 export const ROLE_HIERARCHY: Readonly<Record<Role, number>> = {
-  admin: 4,
-  teacher: 3,
-  student: 2,
-  parent: 1,
+  [Role.ADMIN]: 4,
+  [Role.TEACHER]: 3,
+  [Role.STUDENT]: 2,
+  [Role.PARENT]: 1,
 } as const
 
 export const ROLE_META: Readonly<Record<Role, { label: string; icon: string; color: string }>> = {
-  admin: { label: 'Administrator', icon: '👑', color: '#7c3aed' },
-  teacher: { label: 'Teacher', icon: '👨‍🏫', color: '#2563eb' },
-  student: { label: 'Student', icon: '🎓', color: '#059669' },
-  parent: { label: 'Parent', icon: '👨‍👩‍👧', color: '#d97706' },
+  [Role.ADMIN]: { label: 'Administrator', icon: '👑', color: '#7c3aed' },
+  [Role.TEACHER]: { label: 'Teacher', icon: '👨‍🏫', color: '#2563eb' },
+  [Role.STUDENT]: { label: 'Student', icon: '🎓', color: '#059669' },
+  [Role.PARENT]: { label: 'Parent', icon: '👨‍👩‍👧', color: '#d97706' },
 } as const
 
 export const ROLE_CAPABILITIES: Readonly<Record<Role, Permission[]>> = {
-  admin: [
+  [Role.ADMIN]: [
     'org:manage', 'org:delete', 'org:settings:update',
     'users:manage', 'users:create', 'users:delete', 'users:view',
     'students:manage', 'students:create', 'students:delete', 'students:view',
@@ -51,7 +52,7 @@ export const ROLE_CAPABILITIES: Readonly<Record<Role, Permission[]>> = {
     'assignments:manage', 'assignments:view',
     'transport:view',
   ],
-  teacher: [
+  [Role.TEACHER]: [
     'students:manage', 'students:create', 'students:view',
     'grades:view', 'grades:manage:assigned',
     'subjects:view',
@@ -69,7 +70,7 @@ export const ROLE_CAPABILITIES: Readonly<Record<Role, Permission[]>> = {
     'gallery:view',
     'assignments:manage', 'assignments:view',
   ],
-  student: [
+  [Role.STUDENT]: [
     'attendance:view:own',
     'fees:view:own', 'fees:pay', 'fees:receipt:download',
     'exams:view', 'exams:results:view',
@@ -81,7 +82,7 @@ export const ROLE_CAPABILITIES: Readonly<Record<Role, Permission[]>> = {
     'gallery:view',
     'assignments:view', 'assignments:submit',
   ],
-  parent: [
+  [Role.PARENT]: [
     'children:view',
     'attendance:view:child',
     'fees:view:child', 'fees:pay:child',

@@ -234,7 +234,10 @@ export default function AdminRecentActivity({
       {/* ── Activity list ───────────────────────────────────────────── */}
       <CardContent className="pt-2 flex-1 flex flex-col min-h-0">
         <ScrollArea className="h-[400px] w-full">
-          <div className="rounded-xl border border-border overflow-hidden bg-card">
+          <div className={cn(
+            "rounded-xl border border-border overflow-hidden bg-card transition-all duration-300",
+            filteredActivities.length === 0 && "min-h-[380px] flex flex-col"
+          )}>
             <div className="divide-y divide-border">
               {filteredActivities.map((activity) => {
                 const Icon = activity.icon!;
@@ -326,14 +329,14 @@ export default function AdminRecentActivity({
             </div>
 
             {filteredActivities.length === 0 && (
-              <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
-                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
-                  <Activity className="w-7 h-7 text-muted-foreground" />
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 py-12 px-6 text-center animate-in fade-in zoom-in duration-500">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center border border-border/50 shadow-inner">
+                  <Activity className="w-8 h-8 text-muted-foreground/50" />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">No activities found</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    No recent activities match your current filter.
+                <div className="max-w-[280px]">
+                  <p className="text-base font-semibold text-foreground tracking-tight">No activities found</p>
+                  <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                    No recent activities match your current filter. Try selecting a different category.
                   </p>
                 </div>
               </div>

@@ -81,6 +81,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { AlertTriangle } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { ArrowLeft } from 'lucide-react';
 
 
 // Student type (adjust based on your actual student type)
@@ -272,14 +274,18 @@ export default function UpdateStudentForm({
 
   return (
     <div className="px-2 space-y-3 my-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit Student Profile</CardTitle>
-          <CardDescription>
-            Update student information, parent details, and documents.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <PageHeader
+        title="Edit Student Profile"
+        description="Update student information, parent details, and documents."
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/dashboard/students/${student.id}`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Profile
+            </Link>
+          </Button>
+        }
+      />
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

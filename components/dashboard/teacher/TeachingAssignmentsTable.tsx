@@ -285,7 +285,7 @@ export default function TeachingAssignmentsTable({
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9 border border-border">
-                          <AvatarImage src={assignment.teacher.user.profileImage} />
+                          <AvatarImage src={assignment.teacher.user.profileImage ?? undefined} />
                           <AvatarFallback className="bg-primary/5 text-primary text-xs">
                             {assignment.teacher.user.firstName[0]}
                             {assignment.teacher.user.lastName[0]}

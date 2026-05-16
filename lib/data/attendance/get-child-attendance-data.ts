@@ -1,7 +1,7 @@
 'use server';
 
 import prisma from '@/lib/db';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 import { getSelectedChildId } from '@/lib/data/parent/selected-child';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { toISTDate, getStartOfMonthIST, getStartOfYearIST, isSameDayIST } from '@/lib/utils';
@@ -57,7 +57,6 @@ export type ChildAttendanceData = {
 
 export async function getChildAttendanceData(): Promise<ChildAttendanceData | null> {
   const { userId, orgId } = await auth();
-  if (!userId || !orgId) return null;
 
   const [selectedChildId, academicYearId] = await Promise.all([
     getSelectedChildId(),

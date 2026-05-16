@@ -99,17 +99,162 @@ model AcademicYear {
   @@index([organizationId, isCurrent])
 }
 
-// model Institution {
-//   id   String @id @default(cuid())
-//   name String
-//   slug String @unique
-//   logo String?
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
 
-//   organizations Organization[]
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  profileImage  String?  @map("image")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-// }
+  // App-specific fields
+  firstName String?
+  lastName  String?
+  role      Role    @default(STUDENT)
+  isActive  Boolean @default(true)
+
+  // Direct organization relation (for backward compatibility)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // BetterAuth relations
+  accounts        Account[]
+  sessions        Session[]
+  sentInvitations Invitation[]
+
+  // Memberships - user can belong to multiple organizations
+  memberships Membership[]
+
+  // Institution ownership
+  ownedInstitutions Institution[]
+
+  // Profile relations
+  teacher Teacher?
+  student Student?
+  parent  Parent?
+
+  feePayment    FeePayment[]
+  notifications Notification[]
+  leave         Leave[]
+  leadActivity  LeadActivity[]
+  assignedLeads Lead[]         @relation("LeadAssignedTo")
+  createdLeads  Lead[]         @relation("LeadCreatedBy")
+  deviceTokens  DeviceToken[]
+
+  @@index([email])
+  @@index([organizationId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  providerId            String // "credential", "google", etc.
+  accountId             String // email for credentials, provider user ID for OAuth
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?   @db.Text
+  password              String? // hashed password for credential accounts
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Session {
+  id                   String   @id @default(cuid())
+  token                String   @unique
+  userId               String
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  activeOrganizationId String? // BetterAuth org plugin — tracks current workspace
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt])
+}
+
+//////////////////////////////////////////////////////
+// INSTITUTION (Trust/Group/Brand - Parent)
+// Owns multiple Organizations
+//////////////////////////////////////////////////////
+
+enum InstitutionType {
+  TRUST // Education trust/group
+  GROUP // Multi-brand group
+  BRAND // Single brand
+  SINGLE // Individual owner
+}
+
+model Institution {
+  id          String          @id @default(cuid())
+  name        String // "Delhi Public School Trust"
+  slug        String          @unique
+  logo        String?
+  description String?
+  type        InstitutionType @default(SINGLE)
+
+  contactEmail String?
+  contactPhone String?
+  website      String?
+  address      String?
+  city         String?
+  state        String?
+  pinCode      String?
+
+  ownerId  String
+  isActive Boolean @default(true)
+
+  isPaid        Boolean   @default(false)
+  plan          PlanType  @default(STANDARD)
+  planStartedAt DateTime?
+  planExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner         User           @relation(fields: [ownerId], references: [id])
+  organizations Organization[]
+  memberships   Membership[]
+
+  @@index([ownerId])
+  @@index([slug])
+  @@index([isActive])
+}
+
 enum OrganizationType {
   SCHOOL
   COLLEGE
@@ -120,11 +265,26 @@ enum OrganizationType {
   OTHER
 }
 
+enum StudentStatus {
+  ACTIVE // Currently studying
+  INACTIVE // Temporarily inactive (leave, unpaid fees, etc.)
+  SUSPENDED // Disciplinary action
+  TRANSFERRED // Moved to another school
+  DROPPED // Left without completing
+  GRADUATED // Completed education
+  ALUMNI // Historical record (optional)
+}
+
 model Organization {
-  id   String  @id @default(cuid())
-  name String
-  slug String  @unique
-  logo String?
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  logo     String?
+  metadata String?
+
+  // Institution relation (optional - for multi-org owners)
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
 
   contactEmail String? // admin or billing contact
   contactPhone String? // admin or billing contact
@@ -140,8 +300,8 @@ model Organization {
   maxStudents      Int? // set limits per plan
   organizationType OrganizationType?
 
+  // Users relation removed - now via Membership
   users                User[]
-  // members OrganizationMembership[]
   notices              Notice[]
   Student              Student[]
   StudentDocument      StudentDocument[]
@@ -169,6 +329,11 @@ model Organization {
   certificates         Certificate[]
   reportCards          ReportCard[]
 
+  // Branches - physical locations
+  // branches    Branch[]
+  memberships Membership[]
+  invitations Invitation[]
+
   establishedYear Int?
   createdBy       String?
   createdAt       DateTime         @default(now())
@@ -179,42 +344,113 @@ model Organization {
 
   @@index([id])
   @@index([slug])
+  @@index([institutionId])
 }
 
-model User {
-  id           String  @id @default(cuid())
-  firstName    String
-  lastName     String
-  email        String  @unique
-  password     String?
-  profileImage String
-  role         Role    @default(STUDENT)
-  clerkId      String  @unique
-  isActive     Boolean @default(true)
+//////////////////////////////////////////////////////
+// BRANCH (Campus/Location)
+// Physical location under an Organization
+//////////////////////////////////////////////////////
 
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  organizationId String?
-  // / Memberships - user can belong to multiple organizations
-  // memberships OrganizationMembership[]
+// model Branch {
+//   id   String @id @default(cuid())
+//   name String // "Main Campus", "DPS South Campus"
+//   slug String @unique
 
-  teacher Teacher?
-  student Student?
-  parent  Parent?
+//   // Address
+//   address String?
+//   city    String?
+//   state   String?
+//   pinCode String?
 
-  feePayment FeePayment[]
+//   // Contact
+//   phone String?
+//   email String?
 
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  notifications Notification[]
-  leave         Leave[]
-  leadActivity  LeadActivity[]
-  assignedLeads Lead[]         @relation("LeadAssignedTo")
-  createdLeads  Lead[]         @relation("LeadCreatedBy")
-  deviceTokens  DeviceToken[]
+//   // Properties
+//   isMainBranch Boolean @default(false)
+//   isActive     Boolean @default(true)
 
-  @@index([id, clerkId])
+//   // Organization relation
+//   organizationId String
+//   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+//   // Academic data
+//   academicYears AcademicYear[]
+
+//   // Users at this branch
+//   memberships Membership[]
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   @@index([organizationId])
+//   @@index([isMainBranch])
+// }
+
+//////////////////////////////////////////////////////
+// MEMBERSHIP (User-Org-Branch relation)
+// Handles user roles across Organization/Branch
+//////////////////////////////////////////////////////
+
+model Membership {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Optional: Institution-level membership
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
+
+  // Optional: Branch-level membership
+  // branchId String?
+  // branch   Branch? @relation(fields: [branchId], references: [id])
+
+  // Role & Status
+  role   Role             @default(STUDENT)
+  status MembershipStatus @default(ACTIVE)
+
+  // Invitation handling
+  invitedBy  String? // User ID who invited
+  invitedAt  DateTime?
+  acceptedAt DateTime?
+
+  // Meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // @@index([branchId])
+
+  @@unique([userId, organizationId]) // One membership per user per org
+  @@index([userId])
   @@index([organizationId])
+  @@index([organizationId, role])
 }
+
+model Invitation {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  role           Role
+  status         String   @default("pending")
+  inviterId      String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter      User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// User model is in BETTERAUTH CORE MODELS section (above AcademicCalendar)
 
 model DeviceToken {
   id         String   @id @default(cuid())
@@ -289,16 +525,6 @@ model Student {
   @@index([rollNumber])
   @@index([gradeId])
   @@index([sectionId])
-}
-
-enum StudentStatus {
-  ACTIVE // Currently studying
-  INACTIVE // Temporarily inactive (leave, unpaid fees, etc.)
-  SUSPENDED // Disciplinary action
-  TRANSFERRED // Moved to another school
-  DROPPED // Left without completing
-  GRADUATED // Completed education
-  ALUMNI // Historical record (optional)
 }
 
 model Parent {
@@ -1835,62 +2061,6 @@ enum AIAgentExecutionStatus {
   FAILED
   PARTIAL
 }
-
-// model OrganizationMembership {
-//   id             String   @id @default(cuid())
-//   userId         String
-//   organizationId String
-//   role           MembershipRole
-
-//   // Membership status
-//   status         MembershipStatus @default(ACTIVE)
-//   permissions    String[] // Custom permissions
-
-//   // Invitation system (like Clerk)
-//   invitedByEmail String?    // Email of inviter
-//   invitedFromIp  String?
-//   invitationId   String?    @unique // For invitation links
-
-//   // Timestamps
-//   createdAt      DateTime   @default(now())
-//   updatedAt      DateTime   @updatedAt
-//   acceptedAt     DateTime?  // When user accepted invitation
-//   revokedAt      DateTime?  // When membership was revoked
-
-//   // Relations
-//   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-//   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-//   // Link to specific profile types
-//   teacher    Teacher?
-//   student    Student?
-//   parent     Parent?
-
-//   @@unique([userId, organizationId])
-//   @@index([organizationId, role])
-//   @@index([userId, status])
-//   @@index([invitationId])
-//   @@map("organization_memberships")
-// }
-
-// // Enhanced role system
-// enum MembershipRole {
-//   OWNER       // Full control, can delete org
-//   ADMIN       // Manage members, settings
-//   TEACHER     // Teaching staff
-//   STUDENT     // Student access
-//   PARENT      // Parent access  
-//   MEMBER      // Basic member
-//   GUEST       // Limited access
-// }
-
-// enum MembershipStatus {
-//   INVITED     // Invitation sent, not accepted
-//   ACTIVE      // Active member
-//   INACTIVE    // Member inactive
-//   REVOKED     // Access revoked
-//   DECLINED    // Invitation declined
-// }
 
 // // Define time periods/slots for the school
 // model TimePeriod {

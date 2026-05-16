@@ -1,6 +1,6 @@
 'use client';
 
-import { MenuIcon, X } from 'lucide-react';
+import { MenuIcon, X, Building2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -14,10 +14,11 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { Menu } from './menu';
-import { OrganizationSwitcher } from '@clerk/nextjs';
 import { cn } from '@/lib/utils';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import type { Role } from '@/generated/prisma/enums';
+import { OrganizationSwitcher } from '@/components/auth/organization-switcher';
+
 
 interface SheetMenuProps {
   role: Role;
@@ -57,54 +58,11 @@ export function SheetMenu({ role }: SheetMenuProps) {
           <SheetDescription>Application navigation sidebar</SheetDescription>
         </VisuallyHidden>
 
-        {/* Header — Org Switcher + Close */}
+        {/* Header — App Name + Close */}
         <div className="flex items-center gap-2 px-3 py-3 border-b border-slate-200/60 dark:border-slate-700/60 flex-shrink-0 bg-white/50 dark:bg-slate-900/50">
-          {/* Org Switcher */}
-          <div className="flex-1 min-w-0 px-2 py-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/50 shadow-sm">
-            <OrganizationSwitcher
-              hidePersonal={true}
-              appearance={{
-                elements: {
-                  rootBox: 'w-full',
-                  organizationSwitcherTrigger: {
-                    width: '100%',
-                    padding: '6px 8px',
-                    borderRadius: '8px',
-                    background: 'transparent',
-                    border: 'none',
-                    boxShadow: 'none',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    '&:hover': {
-                      background: 'rgba(59, 130, 246, 0.05)',
-                    },
-                    '&:focus': {
-                      boxShadow: 'none',
-                    },
-                  },
-                  organizationPreview: {
-                    gap: '8px',
-                  },
-                  organizationPreviewMainIdentifier: cn(
-                    'text-slate-800 dark:text-slate-100 font-bold text-sm tracking-tight max-w-[130px] truncate'
-                  ),
-                  organizationPreviewSecondaryIdentifier: cn(
-                    'text-slate-500 dark:text-slate-400 font-medium text-[11px] uppercase tracking-wider'
-                  ),
-                  organizationSwitcherTriggerIcon: cn(
-                    'text-slate-400 dark:text-slate-500 ml-auto'
-                  ),
-                  organizationSwitcherPopoverActionButton__createOrganization: {
-                    display: 'none',
-                  },
-                  organizationSwitcherPopoverCard: {
-                    zIndex: 60,
-                  },
-                },
-              }}
-            />
+          {/* Organization Switcher */}
+          <div className="flex-1 min-w-0">
+            <OrganizationSwitcher />
           </div>
 
           {/* Close button */}

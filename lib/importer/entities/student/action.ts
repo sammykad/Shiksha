@@ -1,38 +1,24 @@
 "use server"
 
-// lib/importer/entities/student/action.ts
-//
-// ✅ "use server" lives HERE only — Prisma, Clerk, auth all safe.
-// Imported by student.config.ts as a function reference only.
-// Next.js serialises server action references so the client
-// receives a safe RPC stub, never the actual server code.
-
-import prisma from "@/lib/db"
-import { auth, clerkClient } from "@clerk/nextjs/server"
-import { Gender, BloodGroup, StudentStatus } from "@/generated/prisma/enums"
-
+import { Role, Gender, BloodGroup, StudentStatus } from "@/generated/prisma/enums"
+import { auth } from "@/lib/auth"
 import {
+    AppError,
+    dedupeInviteTargets,
+    extractErrorMessage,
+    sendOrganizationRoleInvitation,
+    upsertParentRecord,
+    upsertUserRecord,
+} from "@/lib/data/student/student-helpers"
+import prisma from "@/lib/db"
+import { getOrganizationId } from "@/lib/organization"
+import type {
     ImportContext,
     ImportHandlerResult,
 } from "@/types/importer"
-import { getOrganizationId } from "@/lib/organization"
-
-import {
-    upsertClerkUser,
-    addMemberAndInvite,
-    upsertUserRecord,
-    upsertParentRecord,
-    cleanupClerkUsers,
-    AppError,
-    extractErrorMessage
-} from "@/lib/data/student/student-helpers"
-
 import type { StudentCsvRow } from "./types"
 
 type StudentImportRow = StudentCsvRow & { __rowNumber?: number }
-
-
-// ─── Helpers (server-side only) ───────────────────────────────────────────────
 
 const VALID_GENDERS: string[] = Object.values(Gender)
 const VALID_STATUSES: string[] = Object.values(StudentStatus)
@@ -59,22 +45,22 @@ function parseBloodGroup(val: string): BloodGroup | undefined {
     return VALID_BLOOD_GROUPS.includes(normalized) ? normalized : undefined
 }
 
-// ─── Server action ────────────────────────────────────────────────────────────
+function parseRelationship(value: string) {
+    return (VALID_RELATIONSHIPS.includes(value as any) ? value : "GUARDIAN") as "FATHER" | "MOTHER" | "GUARDIAN" | "OTHER"
+}
 
 export async function bulkImportStudents(
     rows: StudentImportRow[],
     context: ImportContext
 ): Promise<ImportHandlerResult> {
-    const { userId: inviterUserId } = await auth()
-    if (!inviterUserId) throw new AppError("Unauthenticated")
+    const { userId } = await auth()
+    if (!userId) throw new AppError("Unauthenticated")
 
     const organizationId = await getOrganizationId()
     if (context.organizationId && context.organizationId !== organizationId) {
         throw new AppError("Unauthorized organization")
     }
-    const client = await clerkClient()
 
-    // Check org student cap
     const org = await prisma.organization.findUniqueOrThrow({
         where: { id: organizationId },
         select: { maxStudents: true },
@@ -96,10 +82,8 @@ export async function bulkImportStudents(
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i]
         const rowNum = row.__rowNumber ?? i + 1
-        const createdClerkIds: string[] = []
 
         try {
-            // ── Resolve grade + section ──────────────────────────────────────────────
             const gradeRecord = await prisma.grade.findFirst({
                 where: { organizationId, grade: { equals: row.grade, mode: "insensitive" } },
                 include: {
@@ -111,94 +95,70 @@ export async function bulkImportStudents(
 
             if (!gradeRecord) {
                 errors.push({ row: rowNum, field: "grade", message: `Grade "${row.grade}" not found` })
-                skipped++; continue
+                skipped++
+                continue
             }
 
             const sectionRecord = gradeRecord.section[0]
             if (!sectionRecord) {
                 errors.push({ row: rowNum, field: "section", message: `Section "${row.section}" not found in "${row.grade}"` })
-                skipped++; continue
+                skipped++
+                continue
             }
 
-            // ── Duplicate roll number check ──────────────────────────────────────────
             const dup = await prisma.student.findFirst({
                 where: { organizationId, rollNumber: row.rollNumber },
                 select: { id: true },
             })
             if (dup) {
                 errors.push({ row: rowNum, field: "rollNumber", message: `Roll number "${row.rollNumber}" already exists` })
-                skipped++; continue
+                skipped++
+                continue
             }
 
-            // ── Parse dates ──────────────────────────────────────────────────────────
             const dob = parseDate(row.dateOfBirth)
             if (!dob) {
                 errors.push({ row: rowNum, field: "dateOfBirth", message: "Invalid date of birth" })
-                skipped++; continue
+                skipped++
+                continue
             }
             const admissionDate = row.admissionDate ? parseDate(row.admissionDate) : null
+            const inviteTargets = dedupeInviteTargets([
+                { email: row.email, role: Role.STUDENT },
+                ...(row.parentEmail && row.parentFirstName
+                    ? [{ email: row.parentEmail, role: Role.PARENT, skipIfActive: true }]
+                    : []),
+            ])
 
-            // ── Clerk: student ───────────────────────────────────────────────────────
-            const { user: studentClerkUser, created: sCreated } = await upsertClerkUser(client, {
-                email: row.email,
-                firstName: row.firstName,
-                lastName: row.lastName,
-                password: row.phoneNumber,
-                role: "STUDENT",
-                externalIdPrefix: `student_${row.rollNumber}`,
-                organizationId,
-            })
-            if (sCreated) createdClerkIds.push(studentClerkUser.id)
-
-            await addMemberAndInvite(client, {
-                organizationId,
-                userId: studentClerkUser.id,
-                email: row.email,
-                role: "org:student",
-                inviterUserId,
-            })
-
-            // ── Clerk: parent (optional) ─────────────────────────────────────────────
-            let parentClerkUser: { id: string; imageUrl: string } | null = null
-
-            if (row.parentEmail && row.parentFirstName) {
-                const { user, created } = await upsertClerkUser(client, {
-                    email: row.parentEmail,
-                    firstName: row.parentFirstName,
-                    lastName: row.parentLastName,
-                    password: row.parentPhone || row.phoneNumber,
-                    role: "PARENT",
-                    externalIdPrefix: `parent_${row.parentEmail}`,
-                    organizationId,
-                })
-                if (created) createdClerkIds.push(user.id)
-
-                await addMemberAndInvite(client, {
-                    organizationId,
-                    userId: user.id,
-                    email: row.parentEmail,
-                    role: "org:parent",
-                    inviterUserId,
-                })
-                parentClerkUser = user
-            }
-
-            // ── DB transaction ───────────────────────────────────────────────────────
             await prisma.$transaction(async (tx) => {
-                await upsertUserRecord(tx, {
-                    clerkId: studentClerkUser.id,
+                const studentUser = await upsertUserRecord(tx, {
                     email: row.email,
                     firstName: row.firstName,
                     lastName: row.lastName,
                     password: row.phoneNumber,
-                    profileImage: studentClerkUser.imageUrl ?? "",
-                    role: "STUDENT",
+                    profileImage: null,
+                    role: Role.STUDENT,
                     organizationId,
+                    createMembership: false,
                 })
+
+                const existingMembership = await tx.membership.findUnique({
+                    where: {
+                        userId_organizationId: {
+                            userId: studentUser.id,
+                            organizationId,
+                        },
+                    },
+                    select: { status: true },
+                })
+
+                if (existingMembership?.status === "ACTIVE") {
+                    throw new AppError(`${row.email.trim().toLowerCase()} is already an active member of this organization.`)
+                }
 
                 const student = await tx.student.create({
                     data: {
-                        userId: studentClerkUser.id,
+                        userId: studentUser.id,
                         organizationId,
                         rollNumber: row.rollNumber,
                         firstName: row.firstName,
@@ -227,16 +187,16 @@ export async function bulkImportStudents(
                     },
                 })
 
-                if (parentClerkUser && row.parentEmail) {
+                if (row.parentEmail && row.parentFirstName) {
                     const parentUser = await upsertUserRecord(tx, {
-                        clerkId: parentClerkUser.id,
                         email: row.parentEmail,
                         firstName: row.parentFirstName,
                         lastName: row.parentLastName,
                         password: row.parentPhone || row.phoneNumber,
-                        profileImage: parentClerkUser.imageUrl ?? "",
-                        role: "PARENT",
+                        profileImage: null,
+                        role: Role.PARENT,
                         organizationId,
+                        createMembership: false,
                     })
 
                     const parent = await upsertParentRecord(tx, parentUser.id, {
@@ -245,9 +205,7 @@ export async function bulkImportStudents(
                         email: row.parentEmail,
                         phoneNumber: row.parentPhone || row.phoneNumber,
                         whatsAppNumber: row.parentWhatsApp || row.parentPhone || row.phoneNumber,
-                        relationship: (VALID_RELATIONSHIPS.includes(row.relationship as any)
-                            ? row.relationship
-                            : "GUARDIAN") as "FATHER" | "MOTHER" | "GUARDIAN" | "OTHER",
+                        relationship: parseRelationship(row.relationship),
                         isPrimary: true,
                     })
 
@@ -255,20 +213,23 @@ export async function bulkImportStudents(
                         data: {
                             studentId: student.id,
                             parentId: parent.id,
-                            relationship: (VALID_RELATIONSHIPS.includes(row.relationship as any)
-                                ? row.relationship
-                                : "GUARDIAN"),
+                            relationship: parseRelationship(row.relationship),
                             isPrimary: true,
                         },
                     })
                 }
             })
 
-            imported++
-        } catch (err: any) {
-            if (createdClerkIds.length) {
-                await cleanupClerkUsers(client, organizationId, createdClerkIds).catch(() => { })
+            for (const target of inviteTargets) {
+                await sendOrganizationRoleInvitation({
+                    ...target,
+                    organizationId,
+                    inviterUserId: userId,
+                })
             }
+
+            imported++
+        } catch (err) {
             errors.push({ row: rowNum, message: extractErrorMessage(err) })
             skipped++
         }

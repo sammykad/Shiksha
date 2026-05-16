@@ -16,8 +16,8 @@ import {
     UserPlus, Mail, MessageSquare, BarChart3,
     AlertTriangle, CheckSquare, FolderOpen, Layout,
 } from "lucide-react"
-import type { Role } from "@/lib/permissions"
 import { ROLE_CAPABILITIES, ROLE_META } from "@/lib/permissions"
+import { Role } from "@/generated/prisma/enums"
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -26,7 +26,7 @@ import { ROLE_CAPABILITIES, ROLE_META } from "@/lib/permissions"
 export interface RolePermissionsUser {
     id: string
     name: string
-    role: "admin" | "teacher"
+    role: Role
     organization: string
     initials: string
     avatarUrl?: string

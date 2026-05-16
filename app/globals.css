@@ -176,11 +176,6 @@ body {
   @apply from-blue-400 to-indigo-400;
 }
 
-.dark [data-clerk-element='organizationSwitcherTrigger'],
-.dark [data-clerk-element='organizationPreviewMainIdentifier'] {
-  color: white !important;
-}
-
 ::-webkit-scrollbar {
   @apply w-2 h-2;
 }

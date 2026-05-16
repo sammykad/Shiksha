@@ -49,3 +49,5 @@ scripts/
 
 # Generated Prisma client
 generated/
+# next-agents-md
+.next-docs/

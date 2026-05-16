@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { TrendingUp, Download } from 'lucide-react';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { ChildSwitcher } from '@/components/dashboard/parent/child-switcher';
@@ -9,8 +9,11 @@ import { getChildAttendanceData } from '@/lib/data/attendance/get-child-attendan
 import { getActiveAcademicYear } from '@/lib/academicYear';
 
 export default async function ChildAttendancePage() {
-  const { orgRole } = await auth();
-  if (orgRole !== 'org:parent') redirect('/dashboard');
+  const { orgRole } = await auth({
+    callbackUrl: '/dashboard/child-attendance',
+    organizationReturnUrl: '/dashboard/child-attendance',
+  });
+  if (orgRole !== 'PARENT') redirect('/dashboard');
 
   const childData = await getChildAttendanceData();
 

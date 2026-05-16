@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../lib/db';
-import { auth } from '@clerk/nextjs/server';
+import { getOrganizationId } from '@/lib/auth';
+import prisma from '@/lib/db';
 
 export async function GET(
   request: Request,
@@ -16,18 +16,12 @@ export async function GET(
       );
     }
 
-    const { orgId } = await auth();
+    const organizationId = await getOrganizationId();
 
-    if (!orgId) {
-      return NextResponse.json(
-        { error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
 
     const sections = await prisma.section.findMany({
       where: {
-        organizationId: orgId,
+        organizationId,
         gradeId: gradeId,
       },
       include: {

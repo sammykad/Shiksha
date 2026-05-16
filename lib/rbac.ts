@@ -13,18 +13,12 @@ export type AppRole = 'admin' | 'teacher' | 'student' | 'parent';
 // Where each role lands after login or on unauthorized access
 export const ROLE_HOMEPAGE: Record<AppRole, string> = {
     admin: '/dashboard',
-    teacher: '/dashboard/',
-    student: '/dashboard/',
-    parent: '/dashboard/',
+    teacher: '/dashboard',
+    student: '/dashboard',
+    parent: '/dashboard',
 };
 
-// Clerk orgRole → AppRole
-export const CLERK_ROLE_MAP: Record<string, AppRole> = {
-    'org:admin': 'admin',
-    'org:teacher': 'teacher',
-    'org:student': 'student',
-    'org:parent': 'parent',
-};
+// Server auth uses the Prisma Role enum. RBAC routes stay lowercase for URL matching.
 
 // ─────────────────────────────────────────────────────────────
 // ROUTE PERMISSIONS

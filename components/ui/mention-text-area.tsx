@@ -37,17 +37,17 @@ function buildHighlightHtml(text: string, mentionedPeople: MentionedPerson[]): s
 
     // Sort by name length descending to avoid partial matches (e.g., "@John Doe" vs "@John")
     const sortedPeople = [...mentionedPeople].sort((a, b) => b.name.length - a.name.length);
-    
+
     // We want to avoid double-highlighting. 
     // We'll replace mentions with a unique token, then swap tokens for <mark>
     const tokens: string[] = [];
-    
+
     sortedPeople.forEach((person, idx) => {
         const mentionText = `@${person.name}`;
         // Escape for regex use
         const escapedName = person.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`@${escapedName}(?=[\\s\\n.,!?;:)<br>]|$)`, 'g');
-        
+
         html = html.replace(regex, () => {
             const token = `__MENTION_${idx}__`;
             tokens[idx] = `<mark>${mentionText}</mark>`;
@@ -259,7 +259,7 @@ const MentionOption = React.memo(function MentionOption({
             }}
         >
             <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border">
-                <AvatarImage src={user.profileImage} alt="" />
+                <AvatarImage src={user.profileImage ?? undefined} alt="user.image" />
                 <AvatarFallback className="text-xs font-medium">
                     {user.name[0]?.toUpperCase() ?? '?'}
                 </AvatarFallback>

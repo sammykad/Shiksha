@@ -1,37 +1,29 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { Role } from '@/generated/prisma/enums';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { updateStudentSchema } from '@/lib/schemas';
 import { getCurrentUserId } from '@/lib/user';
-import { clerkClient } from '@clerk/nextjs/server';
-import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 import {
   AppError,
-  ClerkUser,
-  ParentInput,
-  addMemberAndInvite,
+  dedupeInviteTargets,
   extractErrorMessage,
-  upsertClerkUser,
+  sendOrganizationRoleInvitation,
   upsertParentRecord,
   upsertUserRecord,
 } from './student-helpers';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 type ValidatedUpdate = z.infer<typeof updateStudentSchema>;
-
-// ─── Action ──────────────────────────────────────────────────────────────────
 
 export async function updateStudent(data: ValidatedUpdate) {
   const inviterUserId = await getCurrentUserId();
   if (!inviterUserId) throw new AppError('Unauthenticated');
 
   const organizationId = await getOrganizationId();
-  const client = await clerkClient();
 
-  // Validate
   const parsed = updateStudentSchema.safeParse(data);
   if (!parsed.success) {
     throw new AppError(
@@ -41,43 +33,21 @@ export async function updateStudent(data: ValidatedUpdate) {
 
   const input = parsed.data;
   const parents = input.parents ?? [];
+  const parentInviteTargets = dedupeInviteTargets(
+    parents
+      .filter((parent) => Boolean(parent.email))
+      .map((parent) => ({
+        email: parent.email,
+        role: Role.PARENT,
+        skipIfActive: true,
+        skipIfPending: true,
+      }))
+  );
 
   try {
-    // ── Parents (Clerk) ──────────────────────────────────────────────────────
-    // For each parent in the updated list: upsert Clerk user, add to org, send invite.
-    // addMemberAndInvite already skips duplicate invitations — so existing parents
-    // with unchanged emails won't get re-invited, but a new/changed email will.
-
-    const processedParents: Array<{ clerkUser: ClerkUser; data: ParentInput }> = [];
-
-    for (const parentData of parents) {
-      const { user: parentClerkUser } = await upsertClerkUser(client, {
-        email: parentData.email,
-        firstName: parentData.firstName,
-        lastName: parentData.lastName,
-        password: parentData.phoneNumber,
-        role: 'PARENT',
-        externalIdPrefix: `parent_${parentData.email}`,
-        organizationId,
-      });
-
-      await addMemberAndInvite(client, {
-        organizationId,
-        userId: parentClerkUser.id,
-        email: parentData.email,
-        role: 'org:parent',
-        inviterUserId,
-      });
-
-      processedParents.push({ clerkUser: parentClerkUser, data: parentData });
-    }
-
-    // ── Database Transaction ─────────────────────────────────────────────────
-
     const student = await prisma.$transaction(async (tx) => {
-      // Update core student record
       const updatedStudent = await tx.student.update({
-        where: { id: input.id },
+        where: { id: input.id, organizationId },
         data: {
           firstName: input.firstName,
           middleName: input.middleName,
@@ -101,19 +71,34 @@ export async function updateStudent(data: ValidatedUpdate) {
         },
       });
 
-      // Replace all parent links for this student
+      await tx.user.update({
+        where: { id: updatedStudent.userId },
+        data: {
+          email: input.email.trim().toLowerCase(),
+          name: [input.firstName, input.lastName].filter(Boolean).join(' '),
+          firstName: input.firstName,
+          lastName: input.lastName,
+          profileImage: input.profileImage ?? undefined,
+          role: Role.STUDENT,
+          organizationId,
+          updatedAt: new Date(),
+        },
+      });
+
       await tx.parentStudent.deleteMany({ where: { studentId: input.id } });
 
-      for (const { clerkUser, data: parentData } of processedParents) {
+      for (const parentData of parents) {
+        if (!parentData.email) continue;
+
         const parentUser = await upsertUserRecord(tx, {
-          clerkId: clerkUser.id,
           email: parentData.email,
           firstName: parentData.firstName,
           lastName: parentData.lastName,
           password: parentData.phoneNumber,
-          profileImage: clerkUser.imageUrl || '',
-          role: 'PARENT',
+          profileImage: null,
+          role: Role.PARENT,
           organizationId,
+          createMembership: false,
         });
 
         const parent = await upsertParentRecord(tx, parentUser.id, parentData);
@@ -131,13 +116,29 @@ export async function updateStudent(data: ValidatedUpdate) {
       return updatedStudent;
     });
 
+    let sentInvitations = 0;
+    for (const target of parentInviteTargets) {
+      const result = await sendOrganizationRoleInvitation({
+        ...target,
+        organizationId,
+        inviterUserId,
+      });
+
+      if (result.sent) sentInvitations++;
+    }
+
     revalidatePath('/dashboard/students');
 
-    return { success: true, student, message: 'Student updated successfully.' };
-
+    return {
+      success: true,
+      student,
+      message:
+        sentInvitations > 0
+          ? `Student updated successfully. ${sentInvitations} parent invitation${sentInvitations === 1 ? '' : 's'} refreshed.`
+          : 'Student updated successfully.',
+    };
   } catch (error) {
     if (error instanceof AppError) throw error;
-
     throw new AppError(extractErrorMessage(error));
   }
 }

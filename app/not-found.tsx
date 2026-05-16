@@ -1,8 +1,7 @@
 import { EmptyState } from '@/components/ui/empty-state';
 import { Mail, Phone, User } from 'lucide-react';
 import type { Metadata } from 'next';
-import { auth } from '@clerk/nextjs/server';
-import { headers } from 'next/headers';
+import { getSessionOrNull } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'Page Not Found | Shiksha Cloud',
@@ -14,26 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NotFound() {
-  const headersList = await headers();
-  const pathname = headersList.get('x-pathname') || '';
-  const cookie = headersList.get('cookie') || '';
-
-  // We only attempt auth check if:
-  // 1. We are on a dashboard route (where Clerk is required)
-  // 2. OR we have a session cookie (user is likely logged in)
-  // During static build, headers() will be empty, so this will safely skip auth().
-  const shouldCheckAuth = pathname.startsWith('/dashboard') || cookie.includes('__session');
-
-  let userId: string | null = null;
-
-  if (shouldCheckAuth) {
-    try {
-      const session = await auth();
-      userId = session?.userId;
-    } catch (error) {
-      userId = null;
-    }
-  }
+  const session = await getSessionOrNull();
+  const userId = session?.user.id;
 
   const homeHref = userId ? '/dashboard' : '/';
   const homeLabel = userId ? 'Back to Dashboard' : 'Go to Home';

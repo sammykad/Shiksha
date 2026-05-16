@@ -129,11 +129,16 @@ export function AddTeacherForm({ prefillData, onSuccess }: AddTeacherFormProps) 
             toast.error(result.error || 'Failed to onboard teacher');
             return;
           }
+          toast.success(result?.message || 'Teacher profile has been updated successfully.');
         } else {
-          await createTeacherFormAction(data);
+          const result = await createTeacherFormAction(data);
+          if (!result?.success) {
+            toast.error(result?.error || 'Failed to create teacher profile');
+            return;
+          }
+          toast.success(result.message || 'Teacher profile has been created successfully.');
         }
 
-        toast.success('Teacher profile has been created successfully.');
         form.reset();
         setCurrentTab('basic');
         onSuccess?.();

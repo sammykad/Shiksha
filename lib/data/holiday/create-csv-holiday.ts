@@ -4,7 +4,7 @@ import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { singleHolidayFormSchema } from '@/lib/schemas';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
 type HolidayCSVData = {
@@ -27,7 +27,7 @@ export const createCsvHolidayAction = async (holidayData: HolidayCSVData) => {
     isRecurring: holidayData.isRecurring,
   });
 
-  const user = await currentUser();
+  const { user } = await getSession();
   const organizationId = await getOrganizationId();
   const academicYearId = await getCurrentAcademicYearId();
 
@@ -41,7 +41,7 @@ export const createCsvHolidayAction = async (holidayData: HolidayCSVData) => {
       isRecurring: validated.isRecurring,
       organizationId,
       createdBy:
-        `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'Unknown',
+        `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'Unknown',
       createdAt: new Date(),
       academicYearId,
     },

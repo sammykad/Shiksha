@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { authClient } from "@/lib/auth-client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { onMessage, Unsubscribe } from "firebase/messaging";
 import { fetchToken, messaging } from "@/lib/firebase";
@@ -62,7 +62,9 @@ async function waitForServiceWorker(): Promise<ServiceWorkerRegistration | undef
 let globalLastSavedToken: string | null = null;
 
 const useFcmToken = () => {
-    const { isSignedIn, isLoaded } = useUser();
+    const { data: session, isPending } = authClient.useSession();
+    const isLoaded = !isPending;
+    const isSignedIn = Boolean(session?.user);
     const router = useRouter();
 
     const [notificationPermissionStatus, setNotificationPermissionStatus] =

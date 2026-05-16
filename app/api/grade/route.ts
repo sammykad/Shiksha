@@ -1,22 +1,17 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../lib/db';
-
+import prisma from '@/lib/db';
 import { unstable_noStore as noStore } from 'next/cache';
-import { auth } from '@clerk/nextjs/server';
+import { getOrganizationId } from '@/lib/auth';
 
 export async function GET() {
   noStore();
   try {
-    const { orgId } = await auth();
-
-    if (!orgId) {
-      return new NextResponse('organizationId is required', { status: 400 });
-    }
+    const organizationId = await getOrganizationId();
 
     // Fetch all grades for the organization
     const grades = await prisma.grade.findMany({
       where: {
-        organizationId: orgId,
+        organizationId,
       },
       include: {
         section: true,

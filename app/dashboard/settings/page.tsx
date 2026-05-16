@@ -2,20 +2,23 @@ import AdminSettings from '@/components/dashboard/admin/settings/AdminSettings';
 import ParentSettings from '@/components/dashboard/parent/parent-settings';
 import StudentSettings from '@/components/dashboard/Student/StudentSettings';
 import TeacherSettings from '@/components/dashboard/teacher/TeacherSettings';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
 export default async function SettingPage() {
-  const { orgRole } = await auth();
+  const { orgRole } = await auth({
+    callbackUrl: '/dashboard/settings',
+    organizationReturnUrl: '/dashboard/settings',
+  });
 
   switch (orgRole) {
-    case 'org:admin':
+    case 'ADMIN':
       return <AdminSettings />;
-    case 'org:teacher':
+    case 'TEACHER':
       return <TeacherSettings />;
-    case 'org:parent':
+    case 'PARENT':
       return <ParentSettings />;
-    case 'org:student':
+    case 'STUDENT':
       return <StudentSettings />;
     default:
       redirect('/'); // Or show a fallback/unauthorized page

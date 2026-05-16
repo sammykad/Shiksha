@@ -93,7 +93,6 @@ const getStudentFullDetails = async (studentId: string, organizationId: string, 
   };
 };
 
-
 const getOrganizationMetaData = async (organizationId: string, academicYearId: string) => {
   const [academicYears, examSessions, holidayData] = await Promise.all([
     prisma.academicYear.findMany({
@@ -171,127 +170,83 @@ const StudentDetailsPage = async ({
 
   return (
     <div className="mx-2 space-y-8 pb-8">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+      <Card className="p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           {/* Profile Section */}
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             {/* Avatar */}
             <div className="relative">
-              <Avatar className="h-20 w-20 sm:w-24 sm:h-24 border-4 border-white dark:border-slate-800 shadow-md">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                 <AvatarImage
-                  src={
-                    student?.profileImage ||
-                    student?.user.profileImage ||
-                    '/placeholder.svg?height=96&width=96'
-                  }
-                  className='object-cover object-center"'
+                  src={student?.profileImage ?? student?.user.profileImage ?? undefined}
+                  className="object-cover object-center"
                   alt="Student"
                 />
-                <AvatarFallback className="text-lg font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                <AvatarFallback>
                   {student?.firstName?.[0]}
                   {student?.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-3 h-3 text-white" />
-              </div>
             </div>
 
             {/* Student Info */}
             <div className="space-y-3 text-center sm:text-left">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
+              <div className="space-y-2">
+                <h1 className="text-2xl font-semibold sm:text-3xl">
                   {student?.firstName} {student?.lastName}
                 </h1>
-                <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-medium"
-                  >
-                    Roll No: {student?.rollNumber}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300"
-                  >
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  <Badge variant="secondary">Roll No: {student?.rollNumber}</Badge>
+                  <Badge variant="outline">
                     {student?.grade.grade} - {student?.section?.name}
                   </Badge>
                 </div>
               </div>
 
               {/* Contact Info */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 text-sm">
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-lg">
-                  <Mail className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                  <span className="text-sm">{student?.email}</span>
+              <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground sm:flex-row sm:items-start">
+                <div className="flex items-center gap-1.5">
+                  <Mail className="h-4 w-4" />
+                  <span>{student?.email}</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-lg">
-                  <Phone className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                  <span className="text-sm">{student?.phoneNumber}</span>
+                <Separator orientation="vertical" className="hidden h-4 sm:block" />
+                <div className="flex items-center gap-1.5">
+                  <Phone className="h-4 w-4" />
+                  <span>{student?.phoneNumber}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3 justify-center">
-            <Button
-              asChild
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-            >
+          {/* Actions */}
+          <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+            <Button asChild>
               <Link href={`/dashboard/students/${student?.id}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Profile
               </Link>
             </Button>
-            <StudentReportDialog academicYears={academicYears} currentAcademicYearId={academicYearId} studentId={studentId} />
+            <StudentReportDialog
+              academicYears={academicYears}
+              currentAcademicYearId={academicYearId}
+              studentId={studentId}
+            />
           </div>
         </div>
-      </div>
+      </Card>
 
       <StudentDashboardStatsCards studentId={studentId} data={dashboardStats} />
 
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         <Tabs defaultValue="overview" className="w-full">
           {/* Tabs Header */}
-          <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-t-xl">
-            <TabsList className="w-full grid grid-cols-2 md:grid-cols-6 lg:grid-cols-6 h-auto bg-transparent p-2 gap-1">
-              <TabsTrigger
-                value="overview"
-                className="flex-1 data-[state=active]:bg-slate-100 data-[state=active]:dark:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:dark:text-white data-[state=active]:shadow-none font-medium py-3 px-4 rounded-lg transition-all duration-200"
-              >
-                <span className="text-xs sm:text-sm">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="academic"
-                className="flex-1 data-[state=active]:bg-slate-100 data-[state=active]:dark:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:dark:text-white data-[state=active]:shadow-none font-medium py-3 px-4 rounded-lg transition-all duration-200"
-              >
-                <span className="text-xs sm:text-sm">Academic</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="attendance"
-                className="flex-1 data-[state=active]:bg-slate-100 data-[state=active]:dark:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:dark:text-white data-[state=active]:shadow-none font-medium py-3 px-4 rounded-lg transition-all duration-200"
-              >
-                <span className="text-xs sm:text-sm">Attendance</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="fees"
-                className="flex-1 data-[state=active]:bg-slate-100 data-[state=active]:dark:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:dark:text-white data-[state=active]:shadow-none font-medium py-3 px-4 rounded-lg transition-all duration-200"
-              >
-                <span className="text-xs sm:text-sm">Fees</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="documents"
-                className="flex-1 data-[state=active]:bg-slate-100 data-[state=active]:dark:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:dark:text-white data-[state=active]:shadow-none font-medium py-3 px-4 rounded-lg transition-all duration-200"
-              >
-                <span className="text-xs sm:text-sm">Documents</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="parents"
-                className="flex-1 data-[state=active]:bg-slate-100 data-[state=active]:dark:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:dark:text-white data-[state=active]:shadow-none font-medium py-3 px-4 rounded-lg transition-all duration-200"
-              >
-                <span className="text-xs sm:text-sm">Parents</span>
-              </TabsTrigger>
+          <div className="border-b">
+            <TabsList className="w-full grid grid-cols-2 md:grid-cols-6 h-auto bg-transparent p-2 gap-1">
+              {["overview", "academic", "attendance", "fees", "documents", "parents"].map(tab => (
+                <TabsTrigger key={tab} value={tab} className="py-3 capitalize">
+                  <span className="text-xs sm:text-sm">{tab}</span>
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
@@ -1000,3 +955,588 @@ const StudentDetailsPage = async ({
 };
 
 export default StudentDetailsPage;
+
+
+// const StudentDetailsPage = async ({ params }: { params: Promise<{ id: string }> }) => {
+//   const { id: studentId } = await params;
+//   const organizationId = await getOrganizationId();
+//   const academicYearId = await getCurrentAcademicYearId();
+
+//   const [studentData, orgMeta, performanceData] = await Promise.all([
+//     getStudentFullDetails(studentId, organizationId, academicYearId),
+//     getOrganizationMetaData(organizationId, academicYearId),
+//     getStudentPerformance(studentId),
+//   ]);
+
+//   if (!studentData) {
+//     return (
+//       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+//         <AlertCircle className="w-12 h-12 text-destructive" />
+//         <h2 className="text-xl font-bold">Student Not Found</h2>
+//         <p className="text-muted-foreground">The student record you are looking for does not exist or has been removed.</p>
+//         <Button asChild><Link href="/dashboard/students">Back to Students</Link></Button>
+//       </div>
+//     );
+//   }
+
+//   const { student, attendanceRate, totalFees, paidFees, pendingFees } = studentData;
+//   const { academicYears, examSessions, holidayData } = orgMeta;
+
+//   const dashboardStats = {
+//     attendanceRate,
+//     attendancePresent: student.StudentAttendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length,
+//     attendanceTotal: student.StudentAttendance.length,
+//     gpa: performanceData.reportCards[0]?.cgpa || 0,
+//     grade: performanceData.reportCards[0]?.overallGrade || 'N/A',
+//     upcomingExams: performanceData.upcomingExams,
+//     pendingAssignments: 0,
+//   };
+
+//   return (
+//     <div className="mx-2 space-y-8 pb-8">
+//       {/* Profile Header */}
+//       <Card className="p-6">
+//         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+//           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+//             <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
+//               <AvatarImage
+//                 src={student?.profileImage ?? student?.user.profileImage ?? undefined}
+//                 className="object-cover object-center"
+//                 alt="Student"
+//               />
+//               <AvatarFallback>{student?.firstName?.[0]}{student?.lastName?.[0]}</AvatarFallback>
+//             </Avatar>
+
+//             <div className="space-y-3 text-center sm:text-left">
+//               <div className="space-y-2">
+//                 <h1 className="text-2xl font-semibold sm:text-3xl">
+//                   {student?.firstName} {student?.lastName}
+//                 </h1>
+//                 <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+//                   <Badge variant="secondary">Roll No: {student?.rollNumber}</Badge>
+//                   <Badge variant="outline">{student?.grade.grade} - {student?.section?.name}</Badge>
+//                 </div>
+//               </div>
+//               <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground sm:flex-row sm:items-start">
+//                 <div className="flex items-center gap-1.5">
+//                   <Mail className="h-4 w-4" />
+//                   <span>{student?.email}</span>
+//                 </div>
+//                 <Separator orientation="vertical" className="hidden h-4 sm:block" />
+//                 <div className="flex items-center gap-1.5">
+//                   <Phone className="h-4 w-4" />
+//                   <span>{student?.phoneNumber}</span>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+//             <Button asChild>
+//               <Link href={`/dashboard/students/${student?.id}/edit`}>
+//                 <Edit className="mr-2 h-4 w-4" />Edit Profile
+//               </Link>
+//             </Button>
+//             <StudentReportDialog academicYears={academicYears} currentAcademicYearId={academicYearId} studentId={studentId} />
+//           </div>
+//         </div>
+//       </Card>
+
+//       <StudentDashboardStatsCards studentId={studentId} data={dashboardStats} />
+
+//       {/* Tabs */}
+//       <Card>
+//         <Tabs defaultValue="overview" className="w-full">
+//           <div className="border-b">
+//             <TabsList className="w-full grid grid-cols-2 md:grid-cols-6 h-auto bg-transparent p-2 gap-1">
+//               {['overview', 'academic', 'attendance', 'fees', 'documents', 'parents'].map((tab) => (
+//                 <TabsTrigger key={tab} value={tab} className="py-3 capitalize">
+//                   <span className="text-xs sm:text-sm">{tab}</span>
+//                 </TabsTrigger>
+//               ))}
+//             </TabsList>
+//           </div>
+
+//           <div className="p-4">
+//             {/* Overview */}
+//             <TabsContent value="overview" className="space-y-8 mt-0">
+//               <div className="grid gap-8 lg:grid-cols-3">
+//                 <Card className="lg:col-span-1 h-full flex flex-col overflow-hidden">
+//                   <CardHeader>
+//                     <CardTitle className="flex items-center gap-2 text-base">
+//                       <Users className="w-4 h-4 text-muted-foreground" />
+//                       Student Information
+//                     </CardTitle>
+//                   </CardHeader>
+//                   <CardContent className="p-0 flex-1 relative min-h-[300px]">
+//                     <div className="absolute inset-0">
+//                       <ScrollArea className="h-full px-6 py-4">
+//                         <div className="space-y-4">
+//                           {/* Full Name */}
+//                           <div className="space-y-1">
+//                             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+//                               <Users className="w-3.5 h-3.5" /> Full Name
+//                             </label>
+//                             <p className="font-semibold text-lg">
+//                               {student?.firstName} {student?.middleName} {student?.lastName}
+//                             </p>
+//                           </div>
+//                           <Separator />
+
+//                           {/* Roll + ID */}
+//                           <div className="grid grid-cols-2 gap-4">
+//                             <div className="space-y-1">
+//                               <label className="text-xs font-medium text-muted-foreground">Roll Number</label>
+//                               <p className="font-semibold">{student?.rollNumber}</p>
+//                             </div>
+//                             <div className="space-y-1">
+//                               <label className="text-xs font-medium text-muted-foreground">Student ID</label>
+//                               <p className="font-semibold text-xs truncate">{student?.id}</p>
+//                             </div>
+//                           </div>
+//                           <Separator />
+
+//                           {/* DOB */}
+//                           <div className="space-y-1">
+//                             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+//                               <CalendarDays className="w-3.5 h-3.5" /> Date of Birth
+//                             </label>
+//                             <p className="font-semibold">
+//                               {student?.dateOfBirth ? formatDateIN(student.dateOfBirth) : 'N/A'}
+//                             </p>
+//                             <p className="text-xs text-muted-foreground">
+//                               Age: {student?.dateOfBirth
+//                                 ? new Date().getFullYear() - new Date(student.dateOfBirth).getFullYear()
+//                                 : 'N/A'} years
+//                             </p>
+//                           </div>
+//                           <Separator />
+
+//                           {/* Gender + Blood */}
+//                           <div className="grid grid-cols-2 gap-4">
+//                             <div className="space-y-1">
+//                               <label className="text-xs font-medium text-muted-foreground">Gender</label>
+//                               <p className="font-semibold">{student?.gender}</p>
+//                             </div>
+//                             <div className="space-y-1">
+//                               <label className="text-xs font-medium text-muted-foreground">Blood Group</label>
+//                               <p className="font-semibold">{student?.bloodGroup || 'N/A'}</p>
+//                             </div>
+//                           </div>
+//                           <Separator />
+
+//                           {/* Academic */}
+//                           <div className="space-y-2">
+//                             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+//                               <GraduationCap className="w-3.5 h-3.5" /> Academic Details
+//                             </label>
+//                             <div className="space-y-2 text-sm">
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Class</span>
+//                                 <Badge variant="meta">{student?.grade.grade} - {student?.section?.name}</Badge>
+//                               </div>
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Class Teacher</span>
+//                                 <span className="font-medium text-right">
+//                                   {student?.section?.classTeacher?.user
+//                                     ? `${student.section.classTeacher.user.firstName} ${student.section.classTeacher.user.lastName}`
+//                                     : <span className="text-muted-foreground italic font-normal">Not Assigned</span>}
+//                                 </span>
+//                               </div>
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Admission Date</span>
+//                                 <span className="font-medium">
+//                                   {student?.createdAt ? formatDateIN(student.createdAt) : 'N/A'}
+//                                 </span>
+//                               </div>
+//                             </div>
+//                           </div>
+//                           <Separator />
+
+//                           {/* Contact */}
+//                           <div className="space-y-2">
+//                             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+//                               <Phone className="w-3.5 h-3.5" /> Contact Information
+//                             </label>
+//                             <div className="space-y-1.5 text-sm">
+//                               <div className="flex items-center gap-2">
+//                                 <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+//                                 <span className="font-medium">{student?.email}</span>
+//                               </div>
+//                               <div className="flex items-center gap-2">
+//                                 <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+//                                 <span className="font-medium">{student?.phoneNumber}</span>
+//                               </div>
+//                               <div className="flex items-center gap-2">
+//                                 <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
+//                                 <span className="font-medium">{student?.emergencyContact}</span>
+//                               </div>
+//                             </div>
+//                           </div>
+//                           <Separator />
+
+//                           {/* Additional */}
+//                           <div className="space-y-2">
+//                             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+//                               <Users className="w-3.5 h-3.5" /> Additional Information
+//                             </label>
+//                             <div className="space-y-1.5 text-sm">
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Caste</span>
+//                                 <span className="font-medium">{student?.caste || 'N/A'}</span>
+//                               </div>
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Nationality</span>
+//                                 <span className="font-medium">Indian</span>
+//                               </div>
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Address</span>
+//                                 <span className="font-medium text-right max-w-32">{student?.address || 'N/A'}</span>
+//                               </div>
+//                             </div>
+//                           </div>
+//                           <Separator />
+
+//                           {/* Status */}
+//                           <div className="space-y-2">
+//                             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+//                               <CheckCircle className="w-3.5 h-3.5" /> Status & Verification
+//                             </label>
+//                             <div className="space-y-1.5 text-sm">
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Account Status</span>
+//                                 <Badge variant="verified">{student.status}</Badge>
+//                               </div>
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Documents</span>
+//                                 <Badge variant={
+//                                   student.StudentDocument.every(d => d.verified) ? 'verified'
+//                                     : student.StudentDocument.some(d => d.rejected) ? 'rejected'
+//                                       : 'pending'
+//                                 }>
+//                                   {student.StudentDocument.every(d => d.verified) ? 'Complete'
+//                                     : student.StudentDocument.some(d => d.rejected) ? 'Issues Found'
+//                                       : 'Pending Review'}
+//                                 </Badge>
+//                               </div>
+//                               <div className="flex items-center justify-between">
+//                                 <span className="text-muted-foreground">Fee Status</span>
+//                                 <Badge variant={pendingFees === 0 ? 'verified' : 'pending'}>
+//                                   {pendingFees === 0 ? 'Up to Date' : 'Payment Due'}
+//                                 </Badge>
+//                               </div>
+//                             </div>
+//                           </div>
+//                         </div>
+//                       </ScrollArea>
+//                     </div>
+//                   </CardContent>
+//                 </Card>
+
+//                 <StudentSubjectsRadar
+//                   role="ADMIN"
+//                   examResults={performanceData.examResults}
+//                   reportCards={performanceData.reportCards}
+//                   examSessions={examSessions}
+//                   activeAcademicYearId={academicYearId}
+//                   studentName={`${student?.firstName} ${student?.lastName}`}
+//                   className="lg:col-span-2"
+//                 />
+//               </div>
+//             </TabsContent>
+
+//             {/* Academic */}
+//             <TabsContent value="academic" className="mt-0">
+//               <StudentAcademicPerformance
+//                 examResults={performanceData.examResults}
+//                 reportCards={performanceData.reportCards}
+//                 upcomingExams={performanceData.upcomingExams}
+//                 examEnrollments={performanceData.examEnrollments}
+//               />
+//             </TabsContent>
+
+//             {/* Attendance */}
+//             <TabsContent value="attendance" className="mt-0">
+//               <Card className="border-none shadow-none">
+//                 <CardHeader>
+//                   <CardTitle className="flex items-center justify-between">
+//                     <div className="flex items-center gap-2">
+//                       <CalendarDays className="w-5 h-5" />
+//                       Attendance
+//                     </div>
+//                     <Button asChild size="sm">
+//                       <Link href="/dashboard/attendance/mark">Mark Attendance</Link>
+//                     </Button>
+//                   </CardTitle>
+//                 </CardHeader>
+//                 <CardContent className="p-2">
+//                   {student.StudentAttendance.length > 0 ? (
+//                     <StudentAttendanceCalendar
+//                       attendanceRecords={student.StudentAttendance}
+//                       academicCalendarEvents={holidayData}
+//                       activeAcademicYear={academicYears.find(y => y.id === academicYearId)}
+//                     />
+//                   ) : (
+//                     <div className="h-64 flex flex-col items-center justify-center text-center">
+//                       <CalendarDays className="w-12 h-12 mb-3 text-muted-foreground/30" />
+//                       <p className="text-sm text-muted-foreground">No attendance records yet</p>
+//                     </div>
+//                   )}
+//                 </CardContent>
+//               </Card>
+//             </TabsContent>
+
+//             {/* Fees */}
+//             <TabsContent value="fees" className="mt-0">
+//               <div className="grid gap-6 lg:grid-cols-2">
+//                 {/* Fee Overview */}
+//                 <Card className="shadow-none">
+//                   <CardHeader className="pb-4">
+//                     <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+//                       <CreditCard className="w-4 h-4 text-muted-foreground" />
+//                       Fee Overview
+//                     </CardTitle>
+//                   </CardHeader>
+//                   <CardContent className="space-y-6 pt-0">
+//                     <div className="grid grid-cols-3 gap-3">
+//                       {[
+//                         { label: 'Total Fees', value: totalFees, icon: IndianRupee },
+//                         { label: 'Paid Amount', value: paidFees, icon: CheckCircle },
+//                         { label: 'Pending', value: pendingFees, icon: AlertCircle },
+//                       ].map(({ label, value, icon: Icon }) => (
+//                         <Card key={label} className="shadow-none">
+//                           <CardContent className="p-4">
+//                             <div className="flex items-center justify-between pb-2">
+//                               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
+//                               <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+//                             </div>
+//                             <div className="text-xl font-semibold tabular-nums">₹{formatCurrencyIN(value)}</div>
+//                           </CardContent>
+//                         </Card>
+//                       ))}
+//                     </div>
+
+//                     <Separator />
+
+//                     <div className="space-y-3">
+//                       <div className="flex items-center justify-between">
+//                         <h4 className="text-sm font-semibold flex items-center gap-2">
+//                           <FileText className="w-4 h-4 text-muted-foreground" />
+//                           Fee Breakdown
+//                         </h4>
+//                         <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+//                           {student.Fee.length} Items
+//                         </span>
+//                       </div>
+
+//                       <ScrollArea className="h-64">
+//                         <div className="space-y-2 pr-4">
+//                           {student.Fee.length > 0 ? student.Fee.map((fee, index) => (
+//                             <div key={index} className="p-3 rounded-lg border bg-muted/30 space-y-2">
+//                               <div className="flex items-center justify-between">
+//                                 <div>
+//                                   <p className="text-sm font-semibold">{fee.feeCategory.name}</p>
+//                                   <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+//                                     <CalendarDays className="w-3 h-3" />
+//                                     Due: {formatDateIN(fee.dueDate)}
+//                                   </p>
+//                                 </div>
+//                                 <Badge variant={fee.status === 'PAID' ? 'verified' : fee.status === 'OVERDUE' ? 'rejected' : 'pending'}>
+//                                   {fee.status}
+//                                 </Badge>
+//                               </div>
+//                               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+//                                 <span className="tabular-nums">Total: ₹{formatCurrencyIN(fee.totalFee)}</span>
+//                                 <span className="tabular-nums font-medium">Paid: ₹{formatCurrencyIN(fee.paidAmount)}</span>
+//                               </div>
+//                               <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+//                                 <div
+//                                   className={`h-full rounded-full transition-all duration-700 ${fee.status === 'PAID' ? 'bg-emerald-500' : fee.status === 'OVERDUE' ? 'bg-destructive' : 'bg-primary'}`}
+//                                   style={{ width: `${(fee.paidAmount / fee.totalFee) * 100}%` }}
+//                                 />
+//                               </div>
+//                             </div>
+//                           )) : (
+//                             <div className="h-48 flex flex-col items-center justify-center text-center border-2 border-dashed rounded-lg">
+//                               <CreditCard className="w-10 h-10 text-muted-foreground/20 mb-3" />
+//                               <p className="text-sm font-medium">No fees assigned</p>
+//                               <p className="text-xs text-muted-foreground mt-1">No fee records found for this academic year.</p>
+//                             </div>
+//                           )}
+//                         </div>
+//                       </ScrollArea>
+//                     </div>
+//                   </CardContent>
+//                 </Card>
+
+//                 {/* Payment History */}
+//                 <Card className="shadow-none">
+//                   <CardHeader className="pb-4">
+//                     <CardTitle className="flex items-center justify-between">
+//                       <div className="flex items-center gap-2 text-sm font-semibold">
+//                         <CreditCard className="w-4 h-4 text-muted-foreground" />
+//                         Payment History
+//                       </div>
+//                       <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+//                         {student.Fee.flatMap(f => f.payments).length} Transactions
+//                       </span>
+//                     </CardTitle>
+//                   </CardHeader>
+//                   <CardContent className="pt-0">
+//                     <ScrollArea className="h-[470px]">
+//                       <div className="space-y-2 pr-4">
+//                         {student.Fee.flatMap(f => f.payments).length > 0 ? (
+//                           student.Fee
+//                             .flatMap(fee => fee.payments.map(p => ({ ...p, feeCategory: fee.feeCategory.name })))
+//                             .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+//                             .slice(0, 15)
+//                             .map((payment, index) => (
+//                               <div key={index} className="p-3 rounded-lg border bg-muted/30">
+//                                 <div className="flex items-center justify-between mb-2">
+//                                   <div className="flex items-center gap-3">
+//                                     <CheckCircle className={`w-4 h-4 ${payment.status === 'COMPLETED' ? 'text-emerald-500' : payment.status === 'FAILED' ? 'text-destructive' : 'text-amber-500'}`} />
+//                                     <div>
+//                                       <p className="text-sm font-semibold tabular-nums">₹{formatCurrencyIN(payment.amount)}</p>
+//                                       <p className="text-[11px] text-muted-foreground">{payment.feeCategory}</p>
+//                                     </div>
+//                                   </div>
+//                                   <Badge variant={payment.status === 'COMPLETED' ? 'verified' : payment.status === 'FAILED' ? 'rejected' : 'pending'}>
+//                                     {payment.status}
+//                                   </Badge>
+//                                 </div>
+//                                 <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+//                                   <div className="flex items-center gap-3">
+//                                     <span className="flex items-center gap-1">
+//                                       <CalendarDays className="w-3 h-3" />{formatDateIN(payment.paymentDate)}
+//                                     </span>
+//                                     <span className="flex items-center gap-1">
+//                                       <CreditCard className="w-3 h-3" />{payment.paymentMethod || 'Online'}
+//                                     </span>
+//                                   </div>
+//                                   {payment.transactionId && (
+//                                     <span className="font-mono text-[10px] opacity-40">#{payment.transactionId.slice(-6)}</span>
+//                                   )}
+//                                 </div>
+//                               </div>
+//                             ))
+//                         ) : (
+//                           <div className="h-64 flex flex-col items-center justify-center text-center border-2 border-dashed rounded-lg">
+//                             <Clock className="w-10 h-10 text-muted-foreground/20 mb-3" />
+//                             <p className="text-sm font-medium">No transactions</p>
+//                             <p className="text-xs text-muted-foreground mt-1">No payments have been recorded yet.</p>
+//                           </div>
+//                         )}
+//                       </div>
+//                     </ScrollArea>
+//                   </CardContent>
+//                 </Card>
+//               </div>
+//             </TabsContent>
+
+//             {/* Documents */}
+//             <TabsContent value="documents" className="mt-0">
+//               <Card className="shadow-none border-none">
+//                 <CardContent className="p-4">
+//                   {student.StudentDocument.filter(d => !d.isDeleted).length > 0 ? (
+//                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+//                       {student.StudentDocument.filter(d => !d.isDeleted).map(doc => (
+//                         <DocumentCard key={doc.id} studentDocument={doc} />
+//                       ))}
+//                     </div>
+//                   ) : (
+//                     <div className="text-center py-10 border-2 border-dashed rounded-xl">
+//                       <FileText className="h-8 w-8 text-muted-foreground/20 mx-auto mb-3" />
+//                       <h3 className="text-sm font-medium">No documents found</h3>
+//                       <p className="text-xs text-muted-foreground mt-1">
+//                         Upload documents like Aadhaar, PAN, or Birth Certificate.
+//                       </p>
+//                     </div>
+//                   )}
+//                 </CardContent>
+//               </Card>
+//             </TabsContent>
+
+//             {/* Parents */}
+//             <TabsContent value="parents" className="mt-0">
+//               <div className="flex flex-wrap gap-6 max-w-5xl">
+//                 {student.parents.slice(0, 2).map((parentStudent, index) => (
+//                   <Card key={index} className="flex-1 min-w-[320px] shadow-none">
+//                     <CardHeader className="pb-4">
+//                       <div className="flex items-center gap-4">
+//                         <div className="p-2.5 bg-muted rounded-xl">
+//                           <Users className="w-5 h-5 text-muted-foreground" />
+//                         </div>
+//                         <div>
+//                           <p className="text-base font-semibold">
+//                             {parentStudent.parent.firstName} {parentStudent.parent.lastName}
+//                           </p>
+//                           <div className="flex items-center gap-2 mt-0.5">
+//                             <span className="text-xs text-muted-foreground">{parentStudent.relationship}</span>
+//                             {parentStudent.isPrimary && (
+//                               <Badge variant="secondary" className="text-xs h-4 px-1.5">PRIMARY</Badge>
+//                             )}
+//                           </div>
+//                         </div>
+//                       </div>
+//                     </CardHeader>
+//                     <CardContent className="space-y-2">
+//                       {[
+//                         { icon: Mail, label: 'Email Address', value: parentStudent.parent.email },
+//                         { icon: Phone, label: 'Phone Number', value: parentStudent.parent.phoneNumber },
+//                         ...(parentStudent.parent.whatsAppNumber
+//                           ? [{ icon: MessageCircle, label: 'WhatsApp', value: parentStudent.parent.whatsAppNumber }]
+//                           : []),
+//                       ].map(({ icon: Icon, label, value }) => (
+//                         <div key={label} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/50 transition-colors">
+//                           <div className="p-2 bg-muted rounded-lg">
+//                             <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+//                           </div>
+//                           <div className="flex-1 min-w-0">
+//                             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">{label}</label>
+//                             <p className="font-semibold text-sm truncate">{value}</p>
+//                           </div>
+//                         </div>
+//                       ))}
+
+//                       <div className="pt-2">
+//                         <Button variant="outline" size="sm" className="w-full">
+//                           <MessageCircle className="w-3.5 h-3.5 mr-2" />
+//                           Contact Parent
+//                         </Button>
+//                       </div>
+//                     </CardContent>
+//                   </Card>
+//                 ))}
+
+//                 {Array.from({ length: Math.max(0, 2 - student.parents.slice(0, 2).length) }).map((_, i) => (
+//                   <Link
+//                     key={`skeleton-${i}`}
+//                     href={`/dashboard/students/${studentId}/edit`}
+//                     className="flex-1 min-w-[320px] group relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed hover:border-primary/40 hover:bg-muted/30 transition-all duration-300 min-h-[340px]"
+//                   >
+//                     <div className="flex flex-col items-center text-center gap-4">
+//                       <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+//                         <Plus className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
+//                       </div>
+//                       <div className="space-y-1.5">
+//                         <h4 className="text-base font-bold">
+//                           {student.parents.length === 0 && i === 0 ? 'Add Primary Parent' : 'Add Secondary Parent'}
+//                         </h4>
+//                         <p className="text-xs text-muted-foreground max-w-[220px] leading-relaxed">
+//                           Link a mother, father, or guardian record to this student's profile.
+//                         </p>
+//                       </div>
+//                     </div>
+//                     <Users className="absolute -bottom-4 -right-4 w-24 h-24 text-muted/20 -rotate-12 group-hover:scale-110 transition-transform duration-500" />
+//                   </Link>
+//                 ))}
+//               </div>
+//             </TabsContent>
+//           </div>
+//         </Tabs>
+//       </Card>
+//     </div>
+//   );
+// };
+
+// export default StudentDetailsPage;

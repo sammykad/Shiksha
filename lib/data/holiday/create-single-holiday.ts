@@ -4,7 +4,7 @@ import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { singleHolidayFormSchema } from '@/lib/schemas';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -17,7 +17,7 @@ export const createSingleHolidayAction = async (
 ) => {
   const validateData = singleHolidayFormSchema.parse(data);
 
-  const user = await currentUser();
+  const { user } = await getSession();
   const organizationId = await getOrganizationId();
   const academicYearId = await getCurrentAcademicYearId();
 
@@ -30,7 +30,7 @@ export const createSingleHolidayAction = async (
       reason: validateData.reason,
       organizationId: organizationId,
       isRecurring: validateData.isRecurring,
-      createdBy: `${user?.firstName} ${user?.lastName}` || "Unknown",
+      createdBy: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || "Unknown",
       createdAt: new Date(),
       academicYearId,
     },

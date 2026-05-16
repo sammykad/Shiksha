@@ -74,7 +74,7 @@ function calculateProfileCompletion(student: StudentProfileFields): number {
 export async function getStudentProfile(studentId?: string) {
   const userId = await getCurrentUserId();
 
-  // parent.user must be included to resolve isParent via clerkId
+  // parent.user must be included to resolve parent ownership by Better Auth user id.
   const includeShape = {
     user: true,
     grade: true,
@@ -93,13 +93,13 @@ export async function getStudentProfile(studentId?: string) {
 
   const student = studentId
     ? await prisma.student.findUnique({ where: { id: studentId }, include: includeShape })
-    : await prisma.student.findFirst({ where: { user: { clerkId: userId } }, include: includeShape });
+    : await prisma.student.findFirst({ where: { userId }, include: includeShape });
 
   if (!student) return null;
 
-  const isOwnProfile = student.user?.clerkId === userId;
+  const isOwnProfile = student.userId === userId;
   const isParent = student.parents.some(
-    (ps) => ps.parent.user?.clerkId === userId
+    (ps) => ps.parent.userId === userId
   );
 
   if (!isOwnProfile && !isParent) {

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import StudentFilter from '@/components/dashboard/Student/StudentFilter';
 import { searchParamsCache } from '@/lib/searchParams';
 import { SearchParams } from 'nuqs';
-import { getOrganization } from '@/lib/organization';
+import { auth } from '@/lib/auth';
 import FilterStudents from '@/lib/data/student/FilterStudents';
 import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
@@ -17,7 +17,7 @@ type PageProps = {
 
 export default async function Students({ searchParams }: PageProps) {
   const [{ orgId, orgRole }, searchParamsParsed] = await Promise.all([
-    getOrganization(),
+    auth(),
     searchParamsCache.parse(searchParams),
   ]);
 
@@ -25,7 +25,7 @@ export default async function Students({ searchParams }: PageProps) {
 
   const students = await FilterStudents({ search, gradeId, sectionId });
 
-  if (orgRole === 'org:student' || orgRole === 'org:parent')
+  if (orgRole === 'STUDENT' || orgRole === 'PARENT')
     redirect('/dashboard');
 
   return (

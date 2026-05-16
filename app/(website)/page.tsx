@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { ArrowRight, ArrowRightIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-// import { CreateOrganization } from '@clerk/nextjs';
 import DotPattern from '@/components/ui/dot-pattern';
 import AnimatedShinyText from '@/components/ui/animated-shiny-text';
 import { indianEducationProblems } from '@/constants';

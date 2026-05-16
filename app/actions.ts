@@ -1,6 +1,4 @@
 'use server';
-
-import { auth, currentUser, clerkClient } from '@clerk/nextjs/server';
 import {
   AcademicYearFormData,
   academicYearSchema,
@@ -30,83 +28,11 @@ import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { toISTDate } from '@/lib/utils';
 import { SupportFormData } from '@/components/website/support/SupportPopup';
 import { DOCUMENT_TYPE_LABELS } from '@/types/document';
-
-export const syncUserWithOrg = async () => {
-  const { orgId, orgRole, orgSlug } = await auth();
-
-  if (!orgId) {
-    throw new Error('Missing orgId ');
-  }
-  if (!orgSlug) {
-    throw new Error('Missing orgSlug');
-  }
-  if (!orgRole) {
-    throw new Error('Missing orgRole');
-  }
-  const user = await currentUser();
-
-  if (!user) {
-    throw new Error('No user found');
-  }
-
-  const roleMap: Record<string, Role> = {
-    'org:admin': 'ADMIN',
-    'org:teacher': 'TEACHER',
-    'org:student': 'STUDENT',
-    'org:parent': 'PARENT',
-  };
-
-  const mappedRole: Role = roleMap[orgRole] || 'PARENT';
-
-  // default fallback
-
-  // ✅ Upsert organization
-  const organization = await prisma.organization.upsert({
-    where: { id: orgId },
-    update: {
-      name: orgSlug,
-      isActive: true,
-      isPaid: false,
-      updatedAt: new Date(),
-    },
-    create: {
-      id: orgId,
-      name: orgSlug,
-      slug: orgSlug,
-      isActive: true,
-      isPaid: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  });
-
-  console.log('✅ Synced organization:', organization);
-  // ✅ Upsert user with organizationId and role
-  const syncedUser = await prisma.user.upsert({
-    where: { clerkId: user.id },
-    update: {
-      organizationId: orgId,
-      role: mappedRole,
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      email: user.emailAddresses[0]?.emailAddress || '',
-      profileImage: user.imageUrl || '',
-    },
-    create: {
-      id: user.id,
-      clerkId: user.id,
-      organizationId: orgId,
-      role: mappedRole,
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      email: user.emailAddresses[0]?.emailAddress || '',
-      profileImage: user.imageUrl || '',
-    },
-  });
-
-  console.log('✅ Synced user:', syncedUser);
-};
-
+import {
+  extractErrorMessage,
+  sendOrganizationRoleInvitation,
+  upsertUserRecord,
+} from '@/lib/data/student/student-helpers';
 
 
 // * CLASSES && GRADES
@@ -761,92 +687,115 @@ export async function createTeacherFormAction(data: CreateTeacherFormData) {
   try {
     const organizationId = await getOrganizationId();
     const inviterUserId = await getCurrentUserId();
-    const client = await clerkClient();
     const validatedData = createTeacherSchema.parse(data);
 
-    // 1. Create Clerk User
-    const clerkUser = await client.users.createUser({
-      emailAddress: [validatedData.email],
-      lastName: validatedData.lastName,
-      firstName: validatedData.firstName,
-      externalId: validatedData.contactPhone,
-      skipPasswordRequirement: true,
-    });
-
-    // 2. Send Invitation
-    await client.organizations.createOrganizationInvitation({
-      organizationId,
-      inviterUserId,
-      emailAddress: validatedData.email,
-      role: 'org:teacher',
-      redirectUrl: 'https://shiksha.cloud/dashboard',
-    });
-
-    // 3. Create records in DB
     await prisma.$transaction(async (tx) => {
-      await tx.user.create({
-        data: {
-          id: clerkUser.id,
-          email: validatedData.email,
-          firstName: validatedData.firstName,
-          lastName: validatedData.lastName,
-          role: 'TEACHER',
-          password: validatedData.contactPhone,
-          organizationId,
-          createdAt: new Date(),
-          clerkId: clerkUser.id,
-          profileImage: clerkUser.imageUrl,
+      const teacherUser = await upsertUserRecord(tx, {
+        email: validatedData.email,
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        password: validatedData.contactPhone,
+        profileImage: null,
+        role: Role.TEACHER,
+        organizationId,
+        createMembership: false,
+      });
+
+      const existingMembership = await tx.membership.findUnique({
+        where: {
+          userId_organizationId: {
+            userId: teacherUser.id,
+            organizationId,
+          },
+        },
+        select: {
+          status: true,
         },
       });
 
-      await tx.teacher.create({
-        data: {
-          userId: clerkUser.id,
+      if (existingMembership?.status === 'ACTIVE') {
+        throw new Error(`${validatedData.email.trim().toLowerCase()} is already an active member of this organization.`);
+      }
+
+      const teacher = await tx.teacher.upsert({
+        where: { userId: teacherUser.id },
+        update: {
+          employeeCode: validatedData.employeeCode,
+          employmentStatus: 'ACTIVE',
+          organizationId,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+        create: {
+          userId: teacherUser.id,
           employeeCode: validatedData.employeeCode,
           employmentStatus: 'ACTIVE',
           organizationId,
           isActive: true,
           createdAt: new Date(),
-          profile: {
-            create: {
-              idProofUrl: validatedData.idProofUrl || '',
-              joinedAt: validatedData.joinedAt,
-              contactEmail: validatedData.contactEmail,
-              contactPhone: validatedData.contactPhone,
-              address: validatedData.address,
-              city: validatedData.city,
-              state: validatedData.state,
-              dateOfBirth: validatedData.dateOfBirth,
-              qualification: validatedData.qualification,
-              experienceInYears: validatedData.experienceInYears,
-              bio: validatedData.bio,
-              teachingPhilosophy: validatedData.teachingPhilosophy,
-              specializedSubjects: validatedData.specializedSubjects,
-              preferredGrades: validatedData.preferredGrades,
-              linkedinPortfolio: validatedData.linkedinPortfolio,
-              languagesKnown: validatedData.languagesKnown,
-            },
-          },
         },
+      });
+
+      await tx.teacherProfile.upsert({
+        where: { teacherId: teacher.id },
+        update: {
+          idProofUrl: validatedData.idProofUrl || '',
+          joinedAt: validatedData.joinedAt,
+          contactEmail: validatedData.contactEmail,
+          contactPhone: validatedData.contactPhone,
+          address: validatedData.address,
+          city: validatedData.city,
+          state: validatedData.state,
+          dateOfBirth: validatedData.dateOfBirth,
+          qualification: validatedData.qualification,
+          experienceInYears: validatedData.experienceInYears,
+          bio: validatedData.bio,
+          teachingPhilosophy: validatedData.teachingPhilosophy,
+          specializedSubjects: validatedData.specializedSubjects,
+          preferredGrades: validatedData.preferredGrades,
+          linkedinPortfolio: validatedData.linkedinPortfolio,
+          languagesKnown: validatedData.languagesKnown,
+        },
+        create: {
+          teacherId: teacher.id,
+          idProofUrl: validatedData.idProofUrl || '',
+          joinedAt: validatedData.joinedAt,
+          contactEmail: validatedData.contactEmail,
+          contactPhone: validatedData.contactPhone,
+          address: validatedData.address,
+          city: validatedData.city,
+          state: validatedData.state,
+          dateOfBirth: validatedData.dateOfBirth,
+          qualification: validatedData.qualification,
+          experienceInYears: validatedData.experienceInYears,
+          bio: validatedData.bio,
+          teachingPhilosophy: validatedData.teachingPhilosophy,
+          specializedSubjects: validatedData.specializedSubjects,
+          preferredGrades: validatedData.preferredGrades,
+          linkedinPortfolio: validatedData.linkedinPortfolio,
+          languagesKnown: validatedData.languagesKnown,
+          },
       });
     });
 
+    await sendOrganizationRoleInvitation({
+      email: validatedData.email,
+      role: Role.TEACHER,
+      organizationId,
+      inviterUserId,
+    });
+
     revalidatePath('/dashboard/teachers');
-    return { success: true };
+    return {
+      success: true,
+      message: `Teacher profile created and invitation sent to ${validatedData.email.trim().toLowerCase()}.`,
+    };
   } catch (error: any) {
     console.error('Teacher creation failed:', error);
-
-    // Optional Clerk error log
-    if (error?.errors) {
-      console.error('Clerk Error:', {
-        status: error?.status,
-        errors: error.errors,
-        traceId: error?.clerkTraceId,
-      });
-    }
-
-    // Don't throw error, fail silently or log only
-    return null;
+    return {
+      success: false,
+      error: extractErrorMessage(error),
+    };
   }
 }
 export async function updateTeacherAction(
@@ -918,6 +867,7 @@ export async function updateTeacherAction(
 export async function onboardExistingTeacherAction(data: CreateTeacherFormData) {
   try {
     const organizationId = await getOrganizationId();
+    const inviterUserId = await getCurrentUserId();
     const validatedData = createTeacherSchema.parse(data);
 
     // Find the existing user by email
@@ -1017,8 +967,21 @@ export async function onboardExistingTeacherAction(data: CreateTeacherFormData) 
       });
     });
 
+    const inviteResult = await sendOrganizationRoleInvitation({
+      email: validatedData.email,
+      role: Role.TEACHER,
+      organizationId,
+      inviterUserId,
+      skipIfActive: true,
+    });
+
     revalidatePath('/dashboard/teachers');
-    return { success: true };
+    return {
+      success: true,
+      message: inviteResult.sent
+        ? `Teacher profile updated and invitation sent to ${validatedData.email.trim().toLowerCase()}.`
+        : 'Teacher profile updated. This user is already a member of the organization.',
+    };
   } catch (error: any) {
     console.error('Teacher onboarding failed:', error);
     return { success: false, error: error.message || 'Failed to onboard teacher' };
@@ -1052,7 +1015,7 @@ export async function toggleTeacherStatus(teacherId: string) {
 export async function createAcademicYear(data: AcademicYearFormData) {
   try {
     const organizationId = await getOrganizationId();
-    const user = await currentUser();
+    const user = await getCurrentUser();
     const userId = await getCurrentUserId();
 
     const validatedData = academicYearSchema.parse(data);
@@ -1110,7 +1073,10 @@ export async function createAcademicYear(data: AcademicYearFormData) {
         ...validatedData,
         isCurrent: isActuallyCurrent,
         organizationId, // Force the organizationId from session
-        createdBy: `${user?.firstName} ${user?.lastName}` || userId || 'SYSTEM', // Replace with actual user ID from auth
+        createdBy:
+          [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+          userId ||
+          'SYSTEM',
       },
     });
 

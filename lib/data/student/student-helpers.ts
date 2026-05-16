@@ -1,25 +1,28 @@
+import { hashPassword } from 'better-auth/crypto';
 import prisma from '@/lib/db';
+import { Role } from '@/generated/prisma/enums';
 import { studentSchema } from '@/lib/schemas';
-import { clerkClient } from '@clerk/nextjs/server';
 import { z } from 'zod';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
+import { buildInvitationEmail, sendAuthEmail } from '@/lib/auth-email';
 
 type ValidatedStudent = z.infer<typeof studentSchema>;
 export type ParentInput = NonNullable<ValidatedStudent['parents']>[number];
-export type ClerkClient = Awaited<ReturnType<typeof clerkClient>>;
 export type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-export interface ClerkUser {
+export type ProvisionedAuthUser = {
   id: string;
-  imageUrl: string;
-}
+  email: string;
+  profileImage: string | null;
+};
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+export type OrganizationInviteTarget = {
+  email: string;
+  role: Role;
+  skipIfActive?: boolean;
+  skipIfPending?: boolean;
+};
 
-export const REDIRECT_URL = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/students`;
-
-// ─── Error ────────────────────────────────────────────────────────────────────
+const INVITATION_EXPIRES_IN_DAYS = 7;
 
 export class AppError extends Error {
   constructor(message: string) {
@@ -28,164 +31,98 @@ export class AppError extends Error {
   }
 }
 
-// ─── Clerk Helpers ────────────────────────────────────────────────────────────
-
-/**
- * Find an existing Clerk user by email, or create a new one.
- * Returns the user and whether it was freshly created.
- */
-export async function upsertClerkUser(
-  client: ClerkClient,
-  params: {
-    email: string;
-    firstName: string;
-    lastName: string;
-    password: string;
-    role: 'STUDENT' | 'PARENT';
-    externalIdPrefix: string;
-    organizationId: string;
-  }
-): Promise<{ user: ClerkUser; created: boolean }> {
-  const { data: existing } = await client.users.getUserList({
-    emailAddress: [params.email],
-    limit: 1,
-  });
-
-  if (existing.length > 0) {
-    return { user: existing[0], created: false };
-  }
-
-  const user = await client.users.createUser({
-    emailAddress: [params.email],
-    firstName: params.firstName,
-    lastName: params.lastName,
-    password: params.password,
-    skipPasswordChecks: true,
-    externalId: `${params.externalIdPrefix}_${Date.now()}`,
-    privateMetadata: {
-      role: params.role,
-      organizationId: params.organizationId,
-    },
-  });
-
-  return { user, created: true };
-}
-
-/**
- * Check if a user is already a member of the organization.
- * Uses getOrganizationMembership (single-resource lookup) —
-* avoids the userId list-filter that causes 403s on some plans.
- */
-export async function isOrgMember(
-  client: ClerkClient,
-  organizationId: string,
-  userId: string
-): Promise<boolean> {
-  try {
-    await client.organizations.getOrganizationMembershipList({ organizationId, userId: [userId] });
-    return true;
-  } catch (err: any) {
-    if (err?.status === 404) return false;
-    throw err;
-  }
-}
-
-/**
- * Add user to the org (if not already a member) and send an invitation email.
- * Silently skips duplicate invitations.
- */
-export async function addMemberAndInvite(
-  client: ClerkClient,
-  params: {
-    organizationId: string;
-    userId: string;
-    email: string;
-    role: 'org:student' | 'org:parent';
-    inviterUserId: string;
-  }
-) {
-  const alreadyMember = await isOrgMember(client, params.organizationId, params.userId);
-
-  // Already a member — skip both membership creation and invite
-  if (alreadyMember) return;
-
-  await client.organizations.createOrganizationMembership({
-    organizationId: params.organizationId,
-    userId: params.userId,
-    role: params.role,
-  });
-
-  try {
-    await client.organizations.createOrganizationInvitation({
-      organizationId: params.organizationId,
-      emailAddress: params.email,
-      role: params.role,
-      redirectUrl: REDIRECT_URL,
-      inviterUserId: params.inviterUserId,
-    });
-  } catch (err: any) {
-    if (err?.errors?.[0]?.code !== 'duplicate_invitations') throw err;
-  }
-}
-
-/**
- * Best-effort cleanup: remove org membership and delete Clerk users
- * created during a failed run.
- */
-export async function cleanupClerkUsers(
-  client: ClerkClient,
-  organizationId: string,
-  userIds: string[]
-) {
-  await Promise.allSettled(
-    userIds.map(async (userId) => {
-      try {
-        await client.organizations.deleteOrganizationMembership({ organizationId, userId });
-      } finally {
-        await client.users.deleteUser(userId);
-      }
-    })
-  );
-}
-
-// ─── DB Helpers ───────────────────────────────────────────────────────────────
-
-/**
- * Upsert a User record linked to a Clerk user.
- */
 export async function upsertUserRecord(
   tx: TxClient,
   params: {
-    clerkId: string;
     email: string;
     firstName: string;
     lastName: string;
     password: string;
-    profileImage: string;
-    role: 'STUDENT' | 'PARENT';
+    profileImage?: string | null;
+    role: Role;
     organizationId: string;
+    createMembership?: boolean;
   }
-) {
-  const shared = {
-    organizationId: params.organizationId,
-    email: params.email,
-    firstName: params.firstName,
-    lastName: params.lastName,
-    password: params.password,
-    profileImage: params.profileImage,
-    role: params.role,
-  };
+): Promise<ProvisionedAuthUser> {
+  const email = params.email.trim().toLowerCase();
+  const name = [params.firstName, params.lastName].filter(Boolean).join(' ');
 
-  return tx.user.upsert({
-    where: { clerkId: params.clerkId },
-    create: { id: params.clerkId, clerkId: params.clerkId, ...shared },
-    update: { id: params.clerkId, ...shared, updatedAt: new Date() },
+  const user = await tx.user.upsert({
+    where: { email },
+    create: {
+      email,
+      name,
+      emailVerified: false,
+      firstName: params.firstName,
+      lastName: params.lastName,
+      profileImage: params.profileImage ?? null,
+      role: params.role,
+      organizationId: params.organizationId,
+      isActive: true,
+    },
+    update: {
+      name,
+      firstName: params.firstName,
+      lastName: params.lastName,
+      profileImage: params.profileImage ?? undefined,
+      role: params.role,
+      organizationId: params.organizationId,
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    select: {
+      id: true,
+      email: true,
+      profileImage: true,
+    },
   });
+
+  const credentialAccount = await tx.account.findFirst({
+    where: {
+      userId: user.id,
+      providerId: 'credential',
+    },
+    select: { id: true },
+  });
+
+  if (!credentialAccount) {
+    await tx.account.create({
+      data: {
+        userId: user.id,
+        providerId: 'credential',
+        accountId: user.id,
+        password: await hashPassword(params.password),
+      },
+    });
+  }
+
+  if (params.createMembership ?? true) {
+    await tx.membership.upsert({
+      where: {
+        userId_organizationId: {
+          userId: user.id,
+          organizationId: params.organizationId,
+        },
+      },
+      create: {
+        userId: user.id,
+        organizationId: params.organizationId,
+        role: params.role,
+        status: 'ACTIVE',
+        acceptedAt: new Date(),
+      },
+      update: {
+        role: params.role,
+        status: 'ACTIVE',
+        acceptedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  return user;
 }
 
-/**
- * Upsert a Parent record linked to a User.
- */
 export async function upsertParentRecord(
   tx: TxClient,
   userId: string,
@@ -198,9 +135,9 @@ export async function upsertParentRecord(
   };
 
   return tx.parent.upsert({
-    where: { email: parent.email },
+    where: { email: parent.email.trim().toLowerCase() },
     create: {
-      email: parent.email,
+      email: parent.email.trim().toLowerCase(),
       firstName: parent.firstName,
       lastName: parent.lastName,
       ...shared,
@@ -209,12 +146,149 @@ export async function upsertParentRecord(
   });
 }
 
-// ─── Shared error surfacing ───────────────────────────────────────────────────
+export function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+export function dedupeInviteTargets(targets: OrganizationInviteTarget[]) {
+  const byEmail = new Map<string, OrganizationInviteTarget>();
+
+  for (const target of targets) {
+    const email = normalizeEmail(target.email);
+    if (!email) continue;
+
+    const existing = byEmail.get(email);
+    if (existing && existing.role !== target.role) {
+      throw new AppError(`${email} cannot be invited as multiple roles in the same organization.`);
+    }
+
+    byEmail.set(email, {
+      ...target,
+      email,
+      skipIfActive: existing?.skipIfActive ?? target.skipIfActive,
+      skipIfPending: existing?.skipIfPending ?? target.skipIfPending,
+    });
+  }
+
+  return Array.from(byEmail.values());
+}
+
+export async function sendOrganizationRoleInvitation({
+  email,
+  role,
+  organizationId,
+  inviterUserId,
+  skipIfActive = false,
+  skipIfPending = false,
+}: OrganizationInviteTarget & {
+  organizationId: string;
+  inviterUserId: string;
+}) {
+  const normalizedEmail = normalizeEmail(email);
+
+  const [organization, inviter] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: inviterUserId },
+      select: { name: true, email: true },
+    }),
+  ]);
+
+  if (!organization) throw new AppError('Organization not found.');
+  if (!inviter) throw new AppError('Inviter account not found.');
+
+  const existingMember = await prisma.membership.findFirst({
+    where: {
+      organizationId,
+      user: {
+        email: normalizedEmail,
+      },
+      status: 'ACTIVE',
+    },
+    select: { id: true },
+  });
+
+  if (existingMember) {
+    if (skipIfActive) {
+      return { sent: false, skipped: true, reason: 'already-active' as const };
+    }
+
+    throw new AppError(`${normalizedEmail} is already an active member of this organization.`);
+  }
+
+  const existingPendingInvitation = await prisma.invitation.findFirst({
+    where: {
+      organizationId,
+      email: normalizedEmail,
+      status: 'pending',
+    },
+    select: {
+      id: true,
+      role: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  if (existingPendingInvitation && skipIfPending) {
+    return { sent: false, skipped: true, reason: 'already-pending' as const };
+  }
+
+  await prisma.invitation.updateMany({
+    where: {
+      organizationId,
+      email: normalizedEmail,
+      status: 'pending',
+    },
+    data: {
+      status: 'canceled',
+      updatedAt: new Date(),
+    },
+  });
+
+  const invitation = await prisma.invitation.create({
+    data: {
+      organizationId,
+      email: normalizedEmail,
+      role,
+      inviterId: inviterUserId,
+      status: 'pending',
+      expiresAt: new Date(Date.now() + INVITATION_EXPIRES_IN_DAYS * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const inviteUrl = `${appUrl}/accept-invitation/${invitation.id}`;
+    await sendAuthEmail({
+      to: normalizedEmail,
+      subject: `You're invited to join ${organization.name} on Shiksha Cloud`,
+      react: buildInvitationEmail({
+        inviteUrl,
+        inviterName: inviter.name ?? inviter.email,
+        orgName: organization.name,
+        role,
+      }),
+    });
+
+    return { sent: true, skipped: false, reason: null };
+  } catch (error) {
+    await prisma.invitation.update({
+      where: { id: invitation.id },
+      data: {
+        status: 'canceled',
+        updatedAt: new Date(),
+      },
+    });
+
+    throw new AppError(`Invitation email could not be sent to ${normalizedEmail}: ${extractErrorMessage(error)}`);
+  }
+}
 
 export function extractErrorMessage(error: unknown): string {
-  const clerkDetail =
-    (error as any)?.errors?.[0]?.longMessage ??
-    (error as any)?.errors?.[0]?.message;
-
-  return clerkDetail ?? (error instanceof Error ? error.message : 'Unknown error');
+  return error instanceof Error ? error.message : 'Unknown error';
 }

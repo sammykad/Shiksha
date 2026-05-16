@@ -3,18 +3,18 @@ import AdminDashboard from '@/components/dashboard/admin/AdminDashboard';
 import ParentDashboard from '@/components/dashboard/parent/parent-dashboard';
 import StudentDashboard from '@/components/dashboard/Student/StudentDashboard';
 import TeacherDashboard from '@/components/dashboard/teacher/TeacherDashboard';
-import { getOrganization } from '@/lib/organization';
+import { auth } from '@/lib/auth';
 export default async function DashboardPage() {
-  const { orgRole } = await getOrganization()
+  const { orgRole } = await auth()
 
   switch (orgRole) {
-    case 'org:admin':
+    case 'ADMIN':
       return <AdminDashboard />;
-    case 'org:teacher':
+    case 'TEACHER':
       return <TeacherDashboard />;
-    case 'org:parent':
+    case 'PARENT':
       return <ParentDashboard />;
-    case 'org:student':
+    case 'STUDENT':
       return <StudentDashboard />; // Or show a fallback/unauthorized page
   }
 }

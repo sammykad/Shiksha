@@ -3,7 +3,7 @@ import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { goggleImportHolidayFormSchema } from '@/lib/schemas';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -12,7 +12,7 @@ export const ImportGoogleSheetHolidayAction = async (
 ) => {
   try {
     const organizationId = await getOrganizationId();
-    const user = await currentUser();
+    const { user } = await getSession();
     const academicYearId = await getCurrentAcademicYearId();
 
     // Validate data against schema
@@ -27,7 +27,7 @@ export const ImportGoogleSheetHolidayAction = async (
         reason: holiday.reason,
         isRecurring: holiday.isRecurring,
         organizationId,
-        createdBy: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+        createdBy: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'Unknown',
         academicYearId,
       })),
       skipDuplicates: true,
