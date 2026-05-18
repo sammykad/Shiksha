@@ -1,277 +1,525 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
+import IntegrationComponent from "@/components/website/IntegrationComponent";
+import { Metadata } from "next";
+import { RelatedFeatures } from "@/components/website/features/RelatedFeatures";
+import { getRelatedFeatures, FEATURES } from "@/lib/features-config";
 import { CallToAction } from '@/components/website/shared/CallToAction';
-import { Plug, Shield, Zap, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
 
-const appUrl = new URL('https://shiksha.cloud');
+const appUrl = new URL("https://shiksha.cloud");
+const FEATURE_SLUG = "integration";
 
 export const metadata: Metadata = {
-  title: 'School Software Integrations | UPI, WhatsApp | Shiksha',
-  description: 'Connect UPI payments, WhatsApp Business, SMS gateways, biometric devices & more. All integrations included in every plan. Trusted by 1,200+ schools.',
-  keywords: [
-    'school software integrations',
-    'UPI payment integration school',
-    'WhatsApp Business API school',
-    'school ERP API',
-    'biometric attendance integration',
-    'school SMS gateway',
-    'school software connectors',
-  ],
-  alternates: {
-    canonical: `${appUrl.origin}/features/integration`,
-    languages: {
-      en: `${appUrl.origin}/features/integration`,
-      'x-default': `${appUrl.origin}/features/integration`,
+    metadataBase: new URL(appUrl.origin),
+    title: "Best School Software Integrations India | Sync Facebook, WhatsApp & Google Sheets | Shiksha Cloud",
+    description: "Connect your school's ecosystem. Seamless integrations with Facebook Ads, Google Sheets, WhatsApp Business, and more. Automate data flow, reduce manual entry, and grow admissions. Trusted by 1,200+ Indian institutions.",
+    keywords: [
+        "school software integrations India",
+        "Facebook lead ads for schools",
+        "WhatsApp integration for school management",
+        "Google Sheets sync school software",
+        "automated admission data flow",
+        "school CRM integrations India",
+        "Meta ads for school admissions",
+        "educational software API India",
+        "sync lead data to school software",
+        "automated lead capture for schools",
+        "best school software for digital marketing",
+        "school management system with API",
+        "integrate WhatsApp with school software",
+        "automated student data entry",
+        "school administration automation tools",
+        "CBSE school marketing automation",
+        "ICSE school lead management sync",
+        "reduce manual data entry in schools",
+        "school software third party integrations",
+        "educational SaaS integration India",
+        "school admission funnel automation",
+        "lead tracking for coaching centers",
+        "best school software for lead conversion",
+        "integrated school management system",
+        "API based school software India",
+        "school software for digital lead generation",
+        "automated reporting for school ads",
+    ],
+    authors: [{ name: "Shiksha Cloud" }],
+    creator: "Shiksha Cloud",
+    publisher: "Shiksha Cloud",
+
+    alternates: {
+        canonical: `${appUrl.origin}/features/integration`,
+        languages: {
+            en: `${appUrl.origin}/features/integration`,
+            'en-IN': `${appUrl.origin}/features/integration`,
+            'x-default': `${appUrl.origin}/features/integration`,
+        },
     },
-  },
-  openGraph: {
-    title: 'School Software Integrations | Shiksha Cloud',
-    description: 'Connect with UPI, WhatsApp, SMS, biometric devices and more.',
-    url: `${appUrl.origin}/features/integration`,
-    siteName: 'Shiksha Cloud',
-    locale: 'en_IN',
-    type: 'website',
-    images: [{
-      url: `${appUrl.origin}/og-image.png`,
-      width: 1200,
-      height: 630,
-      alt: 'Shiksha Cloud - Integrations',
-    }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    site: '@shiksha_cloud',
-    title: 'School Software Integrations | Shiksha Cloud',
-    description: 'Connect with UPI, WhatsApp, SMS, biometric devices and more.',
-    images: [`${appUrl.origin}/og-image.png`],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+
+    category: "education",
+    classification: "School Management Software",
+
+    openGraph: {
+        title: "Seamless School Software Integrations | Automate Your Ecosystem | Shiksha Cloud",
+        description: "Stop manual data entry. Sync Facebook Leads, Google Sheets, and WhatsApp in real-time. Grow your school admissions with automated data pipelines. Trusted by 1,200+ Indian institutions.",
+        url: `${appUrl.origin}/features/integration`,
+        siteName: "Shiksha Cloud",
+        locale: "en_IN",
+        type: "website",
+
+        images: [
+            {
+                url: `${appUrl.origin}/og-image-integration.png`,
+                width: 1200,
+                height: 630,
+                alt: "Shiksha Cloud - Best School Software Integrations India",
+            },
+            {
+                url: `${appUrl.origin}/og-image-integration-square.png`,
+                width: 1200,
+                height: 1200,
+                alt: "Shiksha Cloud Integration Dashboard Screenshot",
+            },
+        ],
+
+    },
+
+    twitter: {
+        card: "summary_large_image",
+        site: "@shiksha_cloud",
+        creator: "@shiksha_cloud",
+        title: "School Software Integrations India | Sync Ads & Leads | Shiksha Cloud",
+        description: "Automate your school's data flow. Sync Facebook, Google Sheets, and WhatsApp in real-time. Trusted by 1,200+ Indian institutions.",
+        images: [
+            `${appUrl.origin}/og-image-integration.png`,
+            `${appUrl.origin}/twitter-card-integration.png`,
+        ],
+    },
+
+    robots: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+    },
+
+    verification: {
+        google: "google-site-verification-code",
+    },
+
+    other: {
+        "geo.region": "IN",
+        "geo.placename": "India",
+        "ICBM": "28.6139, 77.2090",
+    },
 };
 
+// Enhanced Software Application Schema
 const softwareAppSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  'name': 'Shiksha Cloud — Integrations',
-  'applicationCategory': 'EducationalApplication',
-  'operatingSystem': 'Web, Android, iOS',
-  'description': 'Connect Shiksha Cloud with UPI payments, WhatsApp Business API, SMS gateways, biometric/RFID devices, and cloud services. All integrations included in every plan.',
-  'url': `${appUrl.origin}/features/integration`,
-  'offers': {
-    '@type': 'Offer',
-    'price': '79',
-    'priceCurrency': 'INR',
-    'description': 'Per student per month, all integrations included',
-  },
-  'featureList': [
-    'UPI payment gateway (Google Pay, PhonePe, Paytm)',
-    'WhatsApp Business API built-in',
-    'SMS gateway for bulk alerts',
-    'Biometric & RFID device integration',
-    'Email service integration',
-    'API access for custom integrations',
-  ],
-  'audience': {
-    '@type': 'Audience',
-    'audienceType': 'School IT administrators and technology teams in India',
-  },
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Shiksha Cloud - Integration Hub",
+    "alternateName": "Shiksha Cloud School Integrations",
+    "description": "Centralized integration hub for Indian schools to connect Facebook Ads, Google Sheets, WhatsApp, and other third-party tools to automate admission and administration workflows.",
+    "url": `${appUrl.origin}/features/integration`,
+    "image": `${appUrl.origin}/og-image-integration.png`,
+
+    "applicationCategory": "https://schema.org/EducationalApplication",
+    "applicationSubCategory": "School Administration Software",
+
+    "operatingSystem": ["Web", "Android", "iOS", "PWA"],
+    "softwareVersion": "3.0",
+
+    "offers": {
+        "@type": "Offer",
+        "price": "79",
+        "priceCurrency": "INR",
+        "priceUnit": "per student per month",
+        "billingPeriod": "P1M",
+        "description": "Starts at ₹79/student/month. Includes core integrations. Free trial available.",
+        "availability": "https://schema.org/InStock",
+        "validFrom": "2024-01-01",
+        "url": `${appUrl.origin}/pricing`,
+    },
+
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "84",
+        "bestRating": "5",
+    },
+
+    "review": [
+        {
+            "@type": "Review",
+            "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+            "author": { "@type": "Person", "name": "Mr. Rajesh Khanna" },
+            "reviewBody": "The Facebook Ads integration changed how we do admissions. Leads flow instantly into our CRM.",
+            "publisher": { "@type": "Organization", "name": "Modern Public School, Delhi" },
+            "datePublished": "2024-11-10",
+        },
+        {
+            "@type": "Review",
+            "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+            "author": { "@type": "Person", "name": "Sonia Mehra" },
+            "reviewBody": "Syncing data to Google Sheets for our board reports is now a one-click process. Huge time saver.",
+            "publisher": { "@type": "Organization", "name": "Global International Academy" },
+            "datePublished": "2024-10-05",
+        },
+    ],
+
+    "featureList": [
+        "Real-time Facebook Lead Ads synchronization",
+        "Two-way Google Sheets data sync",
+        "Official WhatsApp Business API integration",
+        "Automated lead distribution to admission staff",
+        "Webhook support for custom third-party tools",
+        "Integrated payment gateway connectors",
+        "Automated data mapping and validation",
+        "Cross-platform synchronization in real-time",
+        "Unified dashboard for all connected apps",
+    ],
+
+    "author": {
+        "@type": "Organization",
+        "name": "Shiksha Cloud",
+        "url": `${appUrl.origin}`,
+    },
+
+    "publisher": {
+        "@type": "Organization",
+        "name": "Shiksha Cloud",
+        "logo": { "@type": "ImageObject", "url": `${appUrl.origin}/logo.png` },
+    },
+
+    "audience": {
+        "@type": "Audience",
+        "audienceType": "School owners and administrators in India",
+        "geographicArea": { "@type": "Country", "name": "India" },
+    },
 };
 
+// Extended FAQ Schema - 10 Questions for Featured Snippets
 const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'What payment gateways does Shiksha Cloud support?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Shiksha Cloud supports UPI payments (Google Pay, PhonePe, Paytm), net banking, credit/debit cards, and digital wallets through our integrated payment gateway partners.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I integrate biometric/RFID attendance with Shiksha Cloud?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. Shiksha Cloud supports optional RFID and biometric device integration for schools that want hardware-based attendance tracking alongside our 2-tap digital system.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Does Shiksha Cloud integrate with WhatsApp Business API?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. Shiksha Cloud has built-in WhatsApp Business API integration for automated attendance alerts, fee reminders, exam notifications, and emergency announcements.',
-      },
-    },
-  ],
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "What integrations does Shiksha Cloud support for Indian schools?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Shiksha Cloud provides a comprehensive set of integrations tailored for Indian schools, including Facebook Lead Ads for admission growth, Google Sheets for data portability, official WhatsApp Business API for communication, and various Indian payment gateways. We also support custom webhooks for schools using specialized third-party software.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "How does the Facebook Ads integration help in school admissions?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "When a parent fills out a lead form on Facebook or Instagram, the data is instantly synced to the Shiksha Cloud lead management system. This eliminates manual CSV downloads and ensures your admission team can call the parent within seconds, significantly increasing conversion rates.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Can I sync my student data with Google Sheets automatically?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, Shiksha Cloud offers a two-way synchronization with Google Sheets. You can export live reports, student lists, or lead trackers to a spreadsheet that updates in real-time, making it easy to share data with board members or external auditors without leaving the platform.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Is the WhatsApp integration compliant with Meta's policies?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Absolutely. We use the official WhatsApp Business API, ensuring that your school's account is verified and compliant with Meta's policies. This prevents account banning and allows you to send high-volume, authenticated notifications to parents and students.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Do integrations require a technical team to set up?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No technical team is required. Our integration hub is designed for school administrators. You simply select the app you want to connect, authenticate via OAuth (log in), and map your fields. Our support team is also available to help you with the initial setup via a quick Zoom call.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "How secure is the data transfer between Shiksha Cloud and third-party apps?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "We employ industry-standard AES-256 encryption for all data in transit and at rest. All integrations use secure OAuth 2.0 protocols, meaning we never store your third-party passwords. Data transfers are logged and audited to ensure complete security and privacy.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Can I integrate my existing payment gateway with the system?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, Shiksha Cloud integrates seamlessly with leading Indian payment gateways like Razorpay, Cashfree, and PayU. This allows you to collect fees online and have the payment status automatically updated in the student's fee ledger in real-time.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Does the integration work with existing legacy school software?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "While we cannot integrate with every proprietary legacy system, we provide robust CSV/Excel import/export tools and a REST API that allows your existing software to push or pull data from Shiksha Cloud, facilitating a smooth transition to our modern platform.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "How do I track lead conversion from integrated ad campaigns?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Our integration hub tags every lead with its source (e.g., 'FB_Ads_Campaign_June'). In the lead management dashboard, you can see exactly which ad campaigns are producing the highest quality leads and which ones are converting into actual admissions, allowing you to optimize your marketing spend.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Are there any additional costs for enabling integrations?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Core integrations like Google Sheets and Facebook Lead Ads are included in our standard pricing. For the WhatsApp Business API, there may be per-message charges from Meta, which we handle transparently. We believe in honest pricing with no hidden 'integration fees'.",
+            },
+        },
+    ],
 };
 
+// Breadcrumb schema
 const breadcrumbSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://shiksha.cloud/' },
-    { '@type': 'ListItem', position: 2, name: 'Features', item: 'https://shiksha.cloud/features' },
-    { '@type': 'ListItem', position: 3, name: 'Integrations', item: `${appUrl.origin}/features/integration` },
-  ],
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": `${appUrl.origin}/`,
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Features",
+            "item": `${appUrl.origin}/features`,
+        },
+        {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Integrations",
+            "item": `${appUrl.origin}/features/integration`,
+        },
+    ],
 };
 
-const integrations = [
-  {
-    icon: Zap,
-    title: 'UPI Payments',
-    description: 'Accept fees via Google Pay, PhonePe, Paytm, and any UPI-enabled app. Auto-reconciliation included.',
-    color: 'from-violet-500 to-purple-600',
-  },
-  {
-    icon: Plug,
-    title: 'WhatsApp Business API',
-    description: 'Automated attendance alerts, fee reminders, exam notifications, and emergency announcements via WhatsApp.',
-    color: 'from-green-500 to-emerald-600',
-  },
-  {
-    icon: BarChart3,
-    title: 'SMS Gateway',
-    description: 'Bulk SMS for announcements, alerts, and notifications. Fallback channel when WhatsApp is unavailable.',
-    color: 'from-blue-500 to-cyan-600',
-  },
-  {
-    icon: Shield,
-    title: 'Biometric & RFID Devices',
-    description: 'Optional hardware integration for RFID cards, fingerprint scanners, and facial recognition attendance.',
-    color: 'from-orange-500 to-red-600',
-  },
-];
+// Organization Schema - For E-E-A-T Authority
+const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Shiksha Cloud",
+    "alternateName": "Shiksha Cloud Education Technologies Private Limited",
+    "url": `${appUrl.origin}`,
+    "logo": `${appUrl.origin}/logo.png`,
+    "description": "Shiksha Cloud is India's leading school management software, trusted by 1,200+ schools for digitizing attendance, fees, exams, and admissions.",
 
-export default function IntegrationPage() {
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
+    "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Sales",
+        "email": "contact@shiksha.cloud",
+        "availableLanguage": ["English", "Hindi", "Tamil", "Telugu"],
+    },
 
-      {/* Hero Section */}
-      <section className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white border border-neutral-200 px-3.5 py-1.5 rounded-full shadow-sm mb-6">
-            <Plug className="w-3.5 h-3.5 text-[#7fb800]" strokeWidth={2} />
-            <span className="text-xs font-semibold tracking-widest text-neutral-500 uppercase">
-              Integrations & Connectivity
-            </span>
-          </div>
+    "sameAs": [
+        "https://facebook.com/shikshacloud",
+        "https://twitter.com/shiksha_cloud",
+        "https://instagram.com/shikshacloud",
+        "https://linkedin.com/company/shikshacloud",
+    ],
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-neutral-900 leading-tight">
-            School Software Integrations —{' '}
-            <span className="text-[#7fb800]">Connect Everything, Zero Effort.</span>
-          </h1>
+    "areaServed": { "@type": "Country", "name": "India" },
 
-          <p className="mt-6 text-lg text-neutral-500 max-w-2xl mx-auto leading-relaxed">
-            Shiksha Cloud connects with UPI payments, WhatsApp Business, SMS gateways,
-            biometric devices, and more — so you can run your entire school from one platform.
-          </p>
-        </div>
-      </section>
+    "potentialAction": {
+        "@type": "ViewAction",
+        "target": `${appUrl.origin}/select-organization`,
+        "name": "Book a Demo",
+    },
+};
 
-      {/* Integrations Grid */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-6">
-            {integrations.map((integration) => (
-              <div
-                key={integration.title}
-                className="group relative bg-white border border-neutral-200 rounded-2xl p-8 hover:shadow-lg hover:border-neutral-300 transition-all duration-300"
-              >
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${integration.color} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
-                  <integration.icon className="w-6 h-6 text-white" />
+// HowTo Schema - Step by Step Guide
+const howToSchema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Connect Your School's Ecosystem to Shiksha Cloud",
+    "description": "A simple guide to automating your school's data flow using the Shiksha Cloud Integration Hub.",
+
+    "step": [
+        {
+            "@type": "HowToStep",
+            "name": "Access Integration Hub",
+            "text": "Log into your Shiksha Cloud admin dashboard and navigate to the 'Integrations' section in the main menu.",
+            "url": `${appUrl.origin}/select-organization`,
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Select Your App",
+            "text": "Choose the service you want to connect, such as Facebook Lead Ads, Google Sheets, or WhatsApp Business API.",
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Authenticate & Grant Access",
+            "text": "Click 'Connect' and log into your third-party account to securely grant Shiksha Cloud permission to sync data.",
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Map Data Fields",
+            "text": "Match the fields from the external app (e.g., 'Full Name') to the corresponding fields in Shiksha Cloud (e.g., 'Student Name').",
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Activate Sync",
+            "text": "Enable the sync toggle. Your data will now flow in real-time between the platforms automatically.",
+        },
+    ],
+
+    "totalTime": "PT15M",
+};
+
+// Product Schema - For pricing clarity
+const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Shiksha Cloud Integration Suite",
+    "description": "Automated synchronization hub for Facebook, Google, WhatsApp and other essential school tools.",
+    "brand": { "@type": "Brand", "name": "Shiksha Cloud" },
+    "offers": {
+        "@type": "Offer",
+        "price": "79",
+        "priceCurrency": "INR",
+        "priceUnit": "per student per month",
+        "availability": "https://schema.org/InStock",
+    },
+    "additionalProperty": [
+        { "@type": "PropertyValue", "name": "Setup Fee", "value": "₹0 (Free)" },
+        { "@type": "PropertyValue", "name": "Free Trial", "value": "14 days" },
+        { "@type": "PropertyValue", "name": "Support", "value": "24/7 Dedicated Support" },
+    ],
+};
+
+// WebSite Schema for Search Action
+const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Shiksha Cloud - School Software Integrations",
+    "url": appUrl.origin,
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": `${appUrl.origin}/search?q={search_term_string}`
+        },
+        "query-input": "required name=search_term_string"
+    }
+};
+
+export default function IntegrationFeaturePage() {
+    const relatedFeatures = getRelatedFeatures(FEATURE_SLUG, 3);
+    const feature = FEATURES[FEATURE_SLUG];
+
+    return (
+        <>
+            {/* 1. SoftwareApplication Schema */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppSchema) }}
+            />
+
+            {/* 2. FAQPage Schema - 10 Questions for Featured Snippets */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+            />
+
+            {/* 3. Breadcrumb Schema */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+            />
+
+            {/* 4. Organization Schema - E-E-A-T Authority */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+            />
+
+            {/* 5. HowTo Schema - Step by Step Guide */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
+            />
+
+            {/* 6. Product Schema */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+            />
+
+            {/* 7. WebSite Schema - Search Action */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+            />
+
+            {/* Main Content */}
+            <IntegrationComponent />
+
+            {/* Related Features Section */}
+            {relatedFeatures.length > 0 && (
+                <RelatedFeatures
+                    features={relatedFeatures}
+                    currentSlug={FEATURE_SLUG}
+                    title="Tools That Work With Our Integrations"
+                />
+            )}
+
+            {/* Industry Links Section */}
+            <section className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl font-bold text-slate-900 mb-4">
+                            Powering Growth for Every Institution
+                        </h2>
+                        <p className="text-xl text-slate-600">
+                            Automated data pipelines designed for every education segment
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {feature?.relatedIndustries?.map((industry: string) => (
+                            <a
+                                key={industry}
+                                href={`/industries/${industry}`}
+                                className="group block"
+                            >
+                                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border-2 border-slate-200 hover:border-green-500 hover:shadow-lg transition-all duration-300">
+                                    <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-green-600 transition-colors capitalize">
+                                        {industry.replace(/-/g, ' ')}
+                                    </h3>
+                                    <p className="text-sm text-slate-600 group-hover:text-slate-700">
+                                        See how integrations scale growth for {industry.replace(/-/g, ' ')}
+                                    </p>
+                                    <div className="mt-3 text-green-600 text-sm font-medium group-hover:underline">
+                                        Learn more →
+                                    </div>
+                                </div>
+                            </a>
+                        ))}
+                    </div>
                 </div>
-                <h3 className="text-xl font-semibold text-neutral-900 mb-2">
-                  {integration.title}
-                </h3>
-                <p className="text-neutral-600 leading-relaxed">
-                  {integration.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </section>
 
-      {/* What's Included */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white border border-neutral-100 rounded-3xl p-10 shadow-sm">
-            <h2 className="text-3xl font-bold text-neutral-900 mb-8 text-center">
-              All Integrations Included in Every Plan
-            </h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {[
-                'UPI payment gateway (GPay, PhonePe, Paytm)',
-                'WhatsApp Business API built-in',
-                'SMS gateway for bulk alerts',
-                'Email service integration',
-                'Push notification system',
-                'Optional RFID/biometric support',
-                'Cloud backup & data sync',
-                'API access for custom integrations',
-              ].map((feature) => (
-                <div key={feature} className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#7fb800] flex-shrink-0" />
-                  <span className="text-sm text-neutral-700 font-medium">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Related Features */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-neutral-900 mb-8 text-center">
-            Features That Work Together
-          </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { title: 'Fee Management', href: '/features/fee-management', desc: 'Auto-collect fees via UPI with WhatsApp reminders' },
-              { title: 'Smart Notifications', href: '/features/notification-engine', desc: '5-channel alert system for every event' },
-              { title: 'Attendance Tracking', href: '/features/attendance', desc: '2-tap attendance with RFID option' },
-            ].map((feature) => (
-              <Link
-                key={feature.href}
-                href={feature.href}
-                className="group block bg-slate-50 rounded-xl p-6 border-2 border-slate-200 hover:border-[#7fb800] hover:shadow-lg transition-all duration-300"
-              >
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2 group-hover:text-[#7fb800] transition-colors">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-neutral-600 mb-3">{feature.desc}</p>
-                <div className="text-[#7fb800] text-sm font-medium group-hover:underline flex items-center gap-1">
-                  Learn more <ArrowRight className="w-3 h-3" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-      <CallToAction
-        variant="dark"
-        badge="Integrations"
-        heading={<>Connects With the Tools<br />You Already Use</>}
-        description="Plug Shiksha Cloud into your existing ERP, payment gateways, and communication platforms."
-      />
-    </>
-  );
+            <CallToAction
+                variant="dark"
+                heading={<>Connect Your School's<br />Digital Ecosystem</>}
+                description="Stop manual data entry and start growing. Sync your leads and communications in real-time."
+            />
+        </>
+    );
 }

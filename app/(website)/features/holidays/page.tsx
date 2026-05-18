@@ -1,361 +1,500 @@
-import HolidayLanding from '@/components/website/features/holidays/HolidayLanding';
-import type { Metadata } from 'next';
+import { Metadata } from 'next';
+import { RelatedFeatures } from '@/components/website/features/RelatedFeatures';
+import { getRelatedFeatures, FEATURES } from '@/lib/features-config';
 import { CallToAction } from '@/components/website/shared/CallToAction';
+import HolidaysLanding from "@/components/website/features/holidays/HolidayLanding";
+
+const appUrl = new URL('https://shiksha.cloud');
+const FEATURE_SLUG = 'holidays';
 
 export const metadata: Metadata = {
-  title:
-    'Holiday Management System for Schools | Shiksha Cloud',
-  description:
-    'Manage school holidays instantly with real-time calculations and WhatsApp alerts. Save 40+ hours yearly with bulk imports. Trusted by 500+ Indian schools.',
-  keywords: [
-    'school holiday management system',
-    'academic calendar software',
-    'emergency holiday declaration',
-    'school calendar app for parents',
-    'parent notification system',
-    'WhatsApp school alerts',
-    'bulk import holidays',
-    'working day calculator for schools',
-    'school holiday tracking',
-    'academic year planner',
-  ],
-  authors: [{ name: 'Shiksha Cloud' }],
-  creator: 'Shiksha Cloud',
-  publisher: 'Shiksha Cloud',
-  openGraph: {
-    title: 'Smart Holiday Management for Schools - Shiksha Cloud',
-    description:
-      'Declare holidays in 8 seconds. WhatsApp notifications. Real-time working day calculator. Trusted by 500+ schools across India.',
-    url: 'https://shiksha.cloud/features/holidays',
-    siteName: 'Shiksha Cloud',
-    locale: 'en_IN',
-    type: 'website',
-    images: [
-      {
-        url: 'https://shiksha.cloud/og-holiday-management.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'School Holiday Management Dashboard - Shiksha Cloud',
-      },
+    metadataBase: new URL(appUrl.origin),
+    title: "Best School Holiday & Calendar Management Software | Shiksha Cloud",
+    description: "Centralize your academic calendar. Manage holidays, school events, and planned closures with instant notifications to parents and staff. Trusted by 1,200+ Indian schools.",
+    keywords: [
+        "school holiday management software",
+        "digital academic calendar for schools",
+        "school event scheduling software",
+        "automated school holiday notifications",
+        "school calendar app for parents",
+        "manage school holidays online",
+        "academic event planner for schools",
+        "school closure notification system",
+        "digital school diary software",
+        "best calendar software for schools India",
+        "school holiday list generator",
+        "automated school event reminders",
+        "school holiday management system price",
+        "academic year planner for schools",
+        "digital school events board",
+        "CBSE school calendar management",
+        "ICSE academic calendar software",
+        "school holiday planner India",
+        "coordinate school events digitally",
+        "school holiday notifications WhatsApp",
+        "centralized school event management",
+        "school holiday management system Delhi",
+        "school calendar software Mumbai",
+        "academic event tracking for schools",
+        "school holiday software Bangalore",
     ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'School Holiday Management System - Shiksha Cloud',
-    description:
-      'Never miss a school holiday. Instant WhatsApp notifications. 8-second emergency declaration. Save 40+ hours yearly.',
-    images: ['https://shiksha.cloud/twitter-holiday-management.jpg'],
-    creator: '@ShikshaCloud',
-  },
-  alternates: {
-    canonical: 'https://shiksha.cloud/features/holidays',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+    authors: [{ name: "Shiksha Cloud" }],
+    creator: "Shiksha Cloud",
+    publisher: "Shiksha Cloud",
+
+    alternates: {
+        canonical: `${appUrl.origin}/features/holidays`,
+        languages: {
+            en: `${appUrl.origin}/features/holidays`,
+            'en-IN': `${appUrl.origin}/features/holidays`,
+            'x-default': `${appUrl.origin}/features/holidays`,
+        },
     },
-  },
-  verification: {
-    google: 'bWVzc2FnZS1pZC1ub3QtLXJlcGxhY2Utd2l0aC1yZWFsLWNvZGU', // TODO: Replace with actual Google Search Console verification code
-  },
+
+    category: "education",
+    classification: "School Management Software",
+
+    openGraph: {
+        title: "Centralized School Calendar & Holiday Management | Shiksha Cloud",
+        description: "Stop sending manual PDF holiday lists. Manage your entire academic year's events and holidays in one place with instant parent alerts. Trusted by 1,200+ Indian schools.",
+        url: `${appUrl.origin}/features/holidays`,
+        siteName: "Shiksha Cloud",
+        locale: "en_IN",
+        type: "website",
+
+        images: [
+            {
+                url: `${appUrl.origin}/og-image-holidays.png`,
+                width: 1200,
+                height: 630,
+                alt: "Shiksha Cloud - Best School Holiday Management Software India",
+            },
+            {
+                url: `${appUrl.origin}/og-image-holidays-square.png`,
+                width: 1200,
+                height: 1200,
+                alt: "Shiksha Cloud Calendar Dashboard Screenshot",
+            },
+        ],
+
+    },
+
+    twitter: {
+        card: "summary_large_image",
+        site: "@shiksha_cloud",
+        creator: "@shiksha_cloud",
+        title: "School Holiday Management System | Digital Calendar | Shiksha Cloud",
+        description: "Centralize your academic calendar and automate holiday alerts. Trusted by 1,200+ Indian schools.",
+        images: [
+            `${appUrl.origin}/og-image-holidays.png`,
+            `${appUrl.origin}/twitter-card-holidays.png`,
+        ],
+    },
+
+    robots: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+    },
+
+    verification: {
+        google: "google-site-verification-code",
+    },
+
+    other: {
+        "geo.region": "IN",
+        "geo.placename": "India",
+        "ICBM": "28.6139, 77.2090",
+    },
 };
 
+const softwareAppSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Shiksha Cloud - Holiday & Calendar Management System",
+    "alternateName": "Shiksha Cloud Calenda",
+    "description": "Centralized academic calendar and holiday management software for Indian schools. Automated event scheduling and instant parent notifications.",
+    "url": `${appUrl.origin}/features/holidays`,
+    "image": `${appUrl.origin}/og-image-holidays.png`,
 
-const softwareApplicationSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'Shiksha Cloud Holiday Management System',
-  description:
-    'Comprehensive school holiday management system with emergency declaration, WhatsApp notifications, and real-time working day calculation.',
-  applicationCategory: 'EducationalApplication',
-  operatingSystem: 'Web, iOS, Android',
-  url: 'https://shiksha.cloud/features/holidays',
-  author: {
-    '@type': 'Organization',
-    name: 'Shiksha Cloud',
-    url: 'https://shiksha.cloud',
-  },
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'INR',
-    priceValidUntil: '2025-12-31',
-    availability: 'https://schema.org/InStock',
-  },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    ratingCount: '500',
-    bestRating: '5',
-    worstRating: '1',
-  },
-  featureList: [
-    'Emergency Holiday Declaration in 8 Seconds',
-    'Real-time Working Day Calculation',
-    'WhatsApp Notifications to Parents',
-    'Bulk Import from Google Sheets',
-    'Academic Calendar Dashboard',
-    'Multi-Channel Notifications (WhatsApp, Push, Email ,SMS)',
-    'Parent Portal with Calendar Sync',
-    'Smart Delete and Cleanup',
-    '5 Import Methods (Google Sheets, Excel, CSV, Paste, Upload)',
-  ],
-};
+    "applicationCategory": "https://schema.org/EducationalApplication",
+    "applicationSubCategory": "School Administration Software",
 
-const breadcrumbSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Home',
-      item: 'https://shiksha.cloud',
+    "operatingSystem": ["Web", "Android", "iOS", "PWA"],
+    "softwareVersion": "3.0",
+
+    "offers": {
+        "@type": "Offer",
+        "price": "79",
+        "priceCurrency": "INR",
+        "priceUnit": "per student per month",
+        "billingPeriod": "P1M",
+        "description": "Integrated with school management suite starting at ₹79/student/month.",
+        "availability": "https://schema.org/InStock",
+        "validFrom": "2024-01-01",
+        "url": `${appUrl.origin}/pricing`,
     },
-    {
-      '@type': 'ListItem',
-      position: 2,
-      name: 'Features',
-      item: 'https://shiksha.cloud/features',
+
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.6",
+        "reviewCount": "78",
+        "bestRating": "5",
     },
-    {
-      '@type': 'ListItem',
-      position: 3,
-      name: 'Holiday Management',
-      item: 'https://shiksha.cloud/features/holidays',
+
+    "review": [
+        {
+            "@type": "Review",
+            "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+            "author": { "@type": "Person", "name": "Mrs. Neeta Gupta" },
+            "reviewBody": "No more confusion about holiday dates. Parents get instant alerts and the digital calendar is always up to date.",
+            "publisher": { "@type": "Organization", "name": "Apex Public School" },
+            "datePublished": "2024-11-05",
+        },
+        {
+            "@type": "Review",
+            "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+            "author": { "@type": "Person", "name": "Suresh Menon" },
+            "reviewBody": " Scheduling the annual sports day and coordinating with parents was so easy with the event management tool.",
+            "publisher": { "@type": "Organization", "name": "Green Valley Academy" },
+            "datePublished": "2024-10-12",
+        },
+    ],
+
+    "featureList": [
+        "Centralized digital academic calendar",
+        "One-click holiday list generation",
+        "Automated event scheduling and reminders",
+        "Instant WhatsApp/SMS alerts for emergency closures",
+        "Recurring event management (e.g., monthly meetings)",
+        "Parent portal access to school calendar",
+        "Internal staff event coordination",
+        "Event-specific notification targeting",
+        "Integration with attendance and exam schedules",
+    ],
+
+    "author": {
+        "@type": "Organization",
+        "name": "Shiksha Cloud",
+        "url": `${appUrl.origin}`,
     },
-  ],
+
+    "publisher": {
+        "@type": "Organization",
+        "name": "Shiksha Cloud",
+        "logo": { "@type": "ImageObject", "url": `${appUrl.origin}/logo.png` },
+    },
+
+    "audience": {
+        "@type": "Audience",
+        "audienceType": "School administrators and coordinators in India",
+        "geographicArea": { "@type": "Country", "name": "India" },
+    },
 };
 
 const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'How quickly can I declare an emergency school holiday?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'With our one-click emergency declaration system, you can notify all parents, students, and teachers within 30 seconds via WhatsApp and push notifications. Simply click "Declare Emergency Holiday," add an optional reason, confirm, and the system automatically sends alerts and updates all calendars.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I import holidays from my existing Excel sheet?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes! Upload Excel/CSV files, paste data directly, or connect Google Sheets. Import 100+ holidays in under 2 minutes using any of our 5 import methods: Google Sheets integration, single holiday addition, paste data, template download, or instant file upload.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Do parents receive notifications automatically when holidays are declared?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Absolutely. Parents receive instant WhatsApp messages and push notifications for all holidays, with priority alerts for emergency declarations. Our system achieves 98% notification acknowledgment within 10 minutes.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'How does the working day calculation work?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: "Our system automatically calculates remaining working days based on your academic calendar, updating in real-time whenever holidays are added or removed. It recognizes your school's working days (configurable) and excludes weekends, holidays, and any other non-working days from calculations.",
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I delete all holidays at once?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes, admins have a secure bulk delete option with confirmation safeguards and automatic backup creation. You can delete single holidays or reset the entire academic year. Safety confirmations are required for bulk actions, and an undo option is available within 24 hours.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can parents add holidays to their personal calendars?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes! Parents can download the school calendar to Google Calendar, Apple Calendar, Outlook, or any calendar app with one click. The calendar syncs automatically and updates when new holidays are declared.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'How do WhatsApp notifications work for school holidays?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'We use WhatsApp Business API (official, secure, and compliant). Parents receive professional messages directly in WhatsApp with full holiday details including date, reason, and holiday type. This is completely automated and achieves 98% open rates within 10 minutes.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Is there a limit on the number of holidays I can declare?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'No limits. Declare as many holidays as needed. Import 100+ at once if required. All features including notifications, calendar updates, and working day calculations work regardless of the number of holidays.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'What happens if I make a mistake declaring a holiday?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Easy fix! Delete the holiday with one click, and parents get an automatic notification about the correction. You can also edit holiday details without deleting. An undo option is available within 24 hours, and all changes are logged for audit purposes.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Do I need technical knowledge to use the holiday management system?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Not at all. Our system works with simple Excel sheets, Google Sheets, or even copy-paste from anywhere. If you can use email, you can use our holiday management system. We also provide dedicated onboarding support and video tutorials for every feature.',
-      },
-    },
-  ],
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "How does the digital academic calendar work?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The digital academic calendar acts as a single source of truth for all school dates. Administrators can add holidays, planned events, and emergency closures. Once added, these dates are instantly reflected on the school's master calendar and synchronized with the Parent Portal, ensuring everyone is on the same page.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Can we send instant notifications for unplanned school closures?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes! In case of emergency closures (e.g., heavy rain, public holidays), administrators can create an 'Emergency' event and trigger an instant WhatsApp/SMS blast to all parents and staff in seconds, preventing unnecessary travel to school.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Do parents need to download a separate app to see the holiday list?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No, parents can access the school calendar directly through the web-based Parent Portal or receive the holiday list as a neatly formatted PDF via WhatsApp. It's designed for maximum accessibility without forcing app installs.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Can we manage events for specific grades only?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Absolutely. You can tag events to specific grades, sections, or the entire school. For example, a 'Grade 10 Board Practical' event will only be notified to and visible for Grade 10 parents and teachers.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "How do recurring events work in Shiksha Cloud?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "For events that happen regularly (e.g., First Saturday holiday, Monthly PTM), you can set them as 'Recurring'. The system will automatically populate the calendar for the entire year, eliminating the need for manual entry every month.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Can we coordinate staff meetings using the calendar?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, the calendar supports internal events that are only visible to staff members. You can schedule faculty meetings, training sessions, and internal deadlines without cluttering the parent-facing calendar.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Is it possible to export the holiday list to PDF?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, with one click, you can generate a professionally formatted annual holiday list in PDF format, which can be printed for notice boards or shared via WhatsApp groups.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "Does the calendar integrate with other modules like attendance?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, the system automatically marks students as 'Holiday' in the attendance register on dates marked as holidays in the calendar, ensuring your attendance reports remain accurate without manual adjustments.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "How long does it take to set up the academic year calendar?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Most schools set up their entire year's planned holidays and events in under 30 minutes using our intuitive calendar interface. Our support team can even help you import your existing calendar from Excel.",
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "What is the cost of the holiday management module?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Holiday management is included in the Shiksha Cloud core suite, starting at ₹79 per student per month. There are no separate charges for calendar management or event notifications.",
+            },
+        },
+    ],
+};
+
+const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": `${appUrl.origin}/`,
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Features",
+            "item": `${appUrl.origin}/features`,
+        },
+        {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Holiday Management",
+            "item": `${appUrl.origin}/features/holidays`,
+        },
+    ],
 };
 
 const organizationSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'Shiksha Cloud',
-  url: 'https://shiksha.cloud',
-  logo: 'https://shiksha.cloud/logo.svg',
-  description:
-    'Complete school management system with holiday management, attendance tracking, fee management, and more.',
-  contactPoint: {
-    '@type': 'ContactPoint',
-    telephone: '+91-8459324821',
-    contactType: 'Customer Support',
-    availableLanguage: ['English', 'Hindi'],
-  },
-  sameAs: [
-    'https://www.facebook.com/ShikshaCloud',
-    'https://twitter.com/ShikshaCloud',
-    'https://www.linkedin.com/company/shiksha-cloud',
-  ],
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Shiksha Cloud",
+    "alternateName": "Shiksha Cloud Education Technologies Private Limited",
+    "url": `${appUrl.origin}`,
+    "logo": `${appUrl.origin}/logo.png`,
+    "description": "Shiksha Cloud is India's leading school management software, trusted by 1,200+ schools for digitizing attendance, fees, exams, and admissions.",
+
+    "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Sales",
+        "email": "contact@shiksha.cloud",
+        "availableLanguage": ["English", "Hindi", "Tamil", "Telugu"],
+    },
+
+    "sameAs": [
+        "https://facebook.com/shikshacloud",
+        "https://twitter.com/shiksha_cloud",
+        "https://instagram.com/shikshacloud",
+        "https://linkedin.com/company/shikshacloud",
+    ],
+
+    "areaServed": { "@type": "Country", "name": "India" },
+
+    "potentialAction": {
+        "@type": "ViewAction",
+        "target": `${appUrl.origin}/select-organization`,
+        "name": "Book a Demo",
+    },
 };
 
 const howToSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'HowTo',
-  name: 'How to Declare School Holidays Using Shiksha Cloud',
-  description:
-    'Step-by-step guide to declaring and managing school holidays with automated notifications and calendar updates.',
-  totalTime: 'PT30S',
-  step: [
-    {
-      '@type': 'HowToStep',
-      position: 1,
-      name: 'Choose Declaration Method',
-      text: 'Select your preferred method: single add, bulk import, Google Sheets, paste data, or upload file.',
-      url: 'https://shiksha.cloud/features/holidays#import-methods',
-    },
-    {
-      '@type': 'HowToStep',
-      position: 2,
-      name: 'System Processes Instantly',
-      text: 'System validates dates, checks for conflicts, and calculates working day impact automatically.',
-      url: 'https://shiksha.cloud/features/holidays#validation',
-    },
-    {
-      '@type': 'HowToStep',
-      position: 3,
-      name: 'Automatic Notifications Sent',
-      text: 'WhatsApp, push notifications, and emails are sent automatically to all relevant users within 30 seconds.',
-      url: 'https://shiksha.cloud/features/holidays#notifications',
-    },
-    {
-      '@type': 'HowToStep',
-      position: 4,
-      name: 'Calendars Update in Real-Time',
-      text: 'Student, parent, and teacher calendars sync automatically across all devices and platforms.',
-      url: 'https://shiksha.cloud/features/holidays#calendar-sync',
-    },
-    {
-      '@type': 'HowToStep',
-      position: 5,
-      name: 'Analytics Dashboard Refreshes',
-      text: 'Working days recalculated, dashboard refreshed, and reports updated automatically.',
-      url: 'https://shiksha.cloud/features/holidays#analytics',
-    },
-  ],
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Digitize Your School Calendar in 5 Steps",
+    "description": "A guide to switching from paper notices to a dynamic digital academic calendar with Shiksha Cloud.",
+
+    "step": [
+        {
+            "@type": "HowToStep",
+            "name": "Plan Your Academic Year",
+            "text": "Map out your planned holidays and key events for the year in the admin dashboard.",
+            "url": `${appUrl.origin}/select-organization`,
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Configure Recurring Events",
+            "text": "Set up recurring events like First Saturdays or monthly staff meetings to automate your calendar.",
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Publish to Parent Portal",
+            "text": "Make the calendar visible to parents so they can plan their family schedules around school events.",
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Set Up Event Alerts",
+            "text": "Configure WhatsApp and SMS triggers to notify parents automatically before a holiday or event.",
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Manage Emergency Closures",
+            "text": "Use the emergency alert system to notify parents of unplanned closures in seconds.",
+        },
+    ],
+
+    "totalTime": "PT1H",
 };
 
-const reviewSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'Review',
-  itemReviewed: {
-    '@type': 'SoftwareApplication',
-    name: 'Shiksha Cloud Holiday Management System',
-  },
-  author: {
-    '@type': 'Organization',
-    name: 'Mumbai International School',
-  },
-  reviewRating: {
-    '@type': 'Rating',
-    ratingValue: '5',
-    bestRating: '5',
-  },
-  reviewBody:
-    "During last month's unexpected storm, we declared an emergency holiday and had 98% parent acknowledgment within 5 minutes. This system has saved us 40+ hours per academic year on calendar management.",
+const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Shiksha Cloud Holiday Management Module",
+    "description": "Digital academic calendar and holiday scheduling software for educational institutions.",
+    "brand": { "@type": "Brand", "name": "Shiksha Cloud" },
+    "offers": {
+        "@type": "Offer",
+        "price": "79",
+        "priceCurrency": "INR",
+        "priceUnit": "per student per month",
+        "availability": "https://schema.org/InStock",
+    },
+    "additionalProperty": [
+        { "@type": "PropertyValue", "name": "Setup Fee", "value": "₹0 (Free)" },
+        { "@type": "PropertyValue", "name": "Free Trial", "value": "14 days" },
+        { "@type": "PropertyValue", "name": "Support", "value": "24/7 Dedicated Support" },
+    ],
 };
 
+const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Shiksha Cloud - School Holiday Management System",
+    "url": appUrl.origin,
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": `${appUrl.origin}/search?q={search_term_string}`
+        },
+        "query-input": "required name=search_term_string"
+    }
+};
 
-export default function page() {
-  return (
-    <>
-      {/* Structured Data - JSON-LD Schemas */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(softwareApplicationSchema),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbSchema),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqSchema),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(organizationSchema),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(howToSchema),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(reviewSchema),
-        }}
-      />
+export default function HolidaysFeaturePage() {
+    const relatedFeatures = getRelatedFeatures(FEATURE_SLUG, 3);
+    const feature = FEATURES[FEATURE_SLUG];
 
-      {/* Main Content - Client Component */}
-      <HolidayLanding />
-      <CallToAction
-        variant="dark"
-        heading={<>Plan the Academic Year<br />With Confidence</>}
-        description="Set holidays, define working days, and let the whole school stay aligned automatically."
-      />
-    </>
-  );
+    return (
+        <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+            />
+
+            <HolidaysLanding />
+
+            {relatedFeatures.length > 0 && (
+                <RelatedFeatures
+                    features={relatedFeatures}
+                    currentSlug={FEATURE_SLUG}
+                    title="Features That Complement Holiday Management"
+                />
+            )}
+
+            <section className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl font-bold text-slate-900 mb-4">
+                            Perfect for Your Institution Type
+                        </h2>
+                        <p className="text-xl text-slate-600">
+                            Holiday management designed for every education segment
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {feature?.relatedIndustries?.map((industry: string) => (
+                            <a
+                                key={industry}
+                                href={`/industries/${industry}`}
+                                className="group block"
+                            >
+                                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border-2 border-slate-200 hover:border-green-500 hover:shadow-lg transition-all duration-300">
+                                    <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-green-600 transition-colors capitalize">
+                                        {industry.replace(/-/g, ' ')}
+                                    </h3>
+                                    <p className="text-sm text-slate-600 group-hover:text-slate-700">
+                                        See how holiday management works for {industry.replace(/-/g, ' ')}
+                                    </p>
+                                    <div className="mt-3 text-green-600 text-sm font-medium group-hover:underline">
+                                        Learn more →
+                                    </div>
+                                </div>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            <CallToAction
+                variant="dark"
+                heading={<>Your School's Year<br />Perfectly Planned</>}
+                description="Centralize your calendar, automate holiday alerts, and keep parents informed in real-time."
+            />
+        </>
+    );
 }
