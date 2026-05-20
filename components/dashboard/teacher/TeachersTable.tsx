@@ -51,7 +51,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { TeacherProfile, User } from '@/generated/prisma/client';
-import { EmploymentStatus } from '@/generated/prisma/enums';
+import { EmploymentStatus, Role } from '@/generated/prisma/enums';
 import { getStatusConfig, TeacherDetailsModal } from './TeacherDetailsModal';
 import { toggleTeacherStatus } from '@/app/actions';
 import {
@@ -66,6 +66,33 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddTeacherForm } from './AddTeacherForm';
 
+export interface StaffMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: Role;
+  profileImage: string | null;
+  createdAt: Date;
+  isActive: boolean;
+  teacher: {
+    id: string;
+    employeeCode: string | null;
+    employmentStatus: EmploymentStatus;
+    isActive: boolean;
+    profile: {
+      qualification: string | null;
+      experienceInYears: number | null;
+      contactPhone: string | null;
+      specializedSubjects: string[];
+    } | null;
+    teachingAssignment: {
+      subject: { name: string };
+      grade: { grade: string };
+    }[];
+  } | null;
+}
+
 interface TeachersProps {
   teachers: {
     id: string;
@@ -77,9 +104,13 @@ interface TeachersProps {
     updatedAt: Date;
     userId: string;
     profile: TeacherProfile | null;
-    user: User;
+    user: User & {
+      memberships: {
+        role: Role;
+      }[];
+    };
   }[];
-  staff: any[];
+  staff: StaffMember[];
 }
 
 export type SelectedTeacher = {
@@ -92,7 +123,11 @@ export type SelectedTeacher = {
   updatedAt: Date;
   userId: string;
   profile: TeacherProfile | null;
-  user: User;
+  user: User & {
+    memberships: {
+      role: Role;
+    }[];
+  };
 } | null;
 
 const TeachersTable = ({ teachers, staff }: TeachersProps) => {
@@ -104,7 +139,7 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const [onboardingMember, setOnboardingMember] = useState<any>(null);
+  const [onboardingMember, setOnboardingMember] = useState<StaffMember | null>(null);
 
   const filteredTeachers = teachers.filter((teacher) => {
     const matchesSearch =
@@ -146,7 +181,7 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
     setIsDetailsModalOpen(true);
   };
 
-  const handleEditTeacher = (teacher: any) => {
+  const handleEditTeacher = (teacher: SelectedTeacher) => {
     setSelectedTeacher(teacher);
     setIsEditModalOpen(true);
   };

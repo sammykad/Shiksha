@@ -1,7 +1,29 @@
 // prisma-error-extension.ts
 import { Prisma } from '@/generated/prisma/client'
 
+/**
+ * Maps are keyed by the RELATION FIELD NAME as Prisma reports it,
+ * not the DB constraint name. On PostgreSQL with driver adapters,
+ * e.meta.field_name is the relation field name (e.g. "grade", "section")
+ * or the FK column name (e.g. "gradeId"). We handle both.
+ *
+ * IMPORTANT: field_name can also be:
+ *   - "(not available)"  → batch ops like createMany
+ *   - "foreign key"      → some DB adapters/versions
+ *   - undefined          → non-FK errors
+ *
+ * We fall back gracefully in all cases.
+ */
 const FK_LABELS: Record<string, string> = {
+    // Relation field name variants (what Prisma 5+ reports on PostgreSQL)
+    gradeId: 'items are linked to this grade',
+    sectionId: 'items are linked to this section',
+    subjectId: 'items are linked to this subject',
+    examSessionId: 'exams exist in this session',
+    academicYearId: 'records are tied to this academic year',
+    examId: 'results or enrollments exist for this exam',
+
+    // Full constraint name variants (older Prisma / MySQL)
     Exam_gradeId_fkey: 'Exams are linked to this grade',
     Section_gradeId_fkey: 'Sections belong to this grade',
     Student_gradeId_fkey: 'Students are enrolled in this grade',
@@ -23,6 +45,50 @@ const PRISMA_MESSAGES: Record<string, string> = {
     P2014: 'This action would break a required relationship.',
 }
 
+/**
+ * A typed, structured error that preserves the original cause
+ * and is distinguishable via instanceof.
+ */
+export class PrismaUserError extends Error {
+    public readonly prismaCode: string
+    public readonly fieldName: string | undefined
+    public readonly blockedBy: string | undefined
+    public readonly modelName: string
+    public readonly userMessage: string
+
+    constructor(opts: {
+        prismaCode: string
+        fieldName?: string
+        blockedBy?: string
+        modelName: string
+        userMessage: string
+        cause: Error
+    }) {
+        super(opts.userMessage, { cause: opts.cause })
+        this.name = 'PrismaUserError'
+        this.prismaCode = opts.prismaCode
+        this.fieldName = opts.fieldName
+        this.blockedBy = opts.blockedBy
+        this.modelName = opts.modelName
+        this.userMessage = opts.userMessage
+    }
+}
+
+/**
+ * Resolves a human-readable label from field_name.
+ * Handles the known garbage values Prisma emits.
+ */
+function resolveBlockedBy(fieldName: string | undefined): string | undefined {
+    if (
+        !fieldName ||
+        fieldName === 'foreign key' ||      // SQLite / some adapters
+        fieldName === '(not available)'     // createMany / batch ops
+    ) {
+        return undefined
+    }
+    return FK_LABELS[fieldName]
+}
+
 export const errorExtension = Prisma.defineExtension({
     name: 'error-transformer',
     query: {
@@ -33,13 +99,14 @@ export const errorExtension = Prisma.defineExtension({
                 } catch (e) {
                     if (e instanceof Prisma.PrismaClientKnownRequestError) {
                         const fieldName = e.meta?.field_name as string | undefined
-                        throw new Error(JSON.stringify({
+                        throw new PrismaUserError({
                             prismaCode: e.code,
                             fieldName,
-                            blockedBy: fieldName ? FK_LABELS[fieldName] : undefined,
-                            modelName: model, // ← use the model from context, not meta
+                            blockedBy: resolveBlockedBy(fieldName),
+                            modelName: model,
                             userMessage: PRISMA_MESSAGES[e.code] ?? 'A database error occurred.',
-                        }))
+                            cause: e,          // ← preserves original stack and context
+                        })
                     }
                     throw e
                 }

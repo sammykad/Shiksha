@@ -64,7 +64,7 @@ export function UserButton({
                         size="icon"
                         aria-label="Open user menu"
                         className={cn(
-                            "size-10 rounded-full p-0 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
+                            "size-6 rounded-full p-0 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
                             className
                         )}
                     >

@@ -187,16 +187,6 @@ export function BetterAuthSignUp({
         return;
       }
 
-      const { error: otpError } = await emailOTP.sendVerificationOtp({
-        email: normalizedEmail,
-        type: "email-verification",
-      });
-
-      if (otpError) {
-        setError(otpError.message ?? "Account created, but we could not send the verification code.");
-        return;
-      }
-
       moveToVerifyStep(normalizedEmail);
     } finally {
       setIsSubmitting(false);

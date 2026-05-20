@@ -179,6 +179,7 @@ export default function CreateStudentForm({ leadData, leadId, organizationId, ac
       setSelectedGradeId(null);
       // setDocuments([]);
       form.reset();
+      router.push('/dashboard/students');
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : 'Failed to create student');

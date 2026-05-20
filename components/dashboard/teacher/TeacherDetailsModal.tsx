@@ -312,9 +312,11 @@ export function TeacherDetailsModal({
                       />
                       <DataPoint
                         label="Role"
-                        value={user.role
-                          .toLowerCase()
-                          .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        value={
+                          (user.memberships?.[0]?.role ?? 'TEACHER')
+                            .toLowerCase()
+                            .replace(/\b\w/g, (l: string) => l.toUpperCase())
+                        }
                         icon={Briefcase}
                       />
                     </div>

@@ -25,7 +25,11 @@ type LeaveWithUser = Prisma.LeaveGetPayload<{
         firstName: true;
         lastName: true;
         profileImage: true;
-        role: true;
+        memberships: {
+          select: {
+            role: true;
+          };
+        };
         student: {
           select: {
             section: {
@@ -106,9 +110,9 @@ export default function LeaveCard({ leave }: LeaveCardProps) {
               />
               <span className="leading-none"> Grade And Section:</span>
               <span className="truncate text-muted-foreground flex gap-x-3">
-                {leave.appliedBy.student?.section.grade.grade}{' '}
+                {leave.appliedBy.student?.section.grade.grade || '—'}{' '}
                 <Separator orientation="vertical" className="h-4" />
-                {leave.appliedBy.student?.section.name}
+                {leave.appliedBy.student?.section.name || '—'}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">

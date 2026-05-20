@@ -205,33 +205,72 @@ export async function getReportStats() {
 export async function getStaffDirectoryData(): Promise<StaffReportData[]> {
     const organizationId = await getOrganizationId();
 
-    const staff = await prisma.user.findMany({
+    const staffRecords = await prisma.user.findMany({
         where: {
-            organizationId,
-            role: { in: ['ADMIN', 'TEACHER'] },
+            isActive: true,
+            memberships: {
+                some: {
+                    organizationId,
+                    status: 'ACTIVE',
+                    role: { in: ['ADMIN', 'TEACHER'] },
+                },
+            },
         },
         include: {
+            memberships: {
+                where: {
+                    organizationId,
+                    status: 'ACTIVE',
+                },
+                select: {
+                    role: true,
+                },
+            },
             teacher: {
+                where: { organizationId },
                 include: {
                     profile: true,
                 },
             },
         },
-        orderBy: [{ role: 'asc' }, { firstName: 'asc' }],
     });
 
+    const staff = staffRecords.map((member) => {
+        const activeMembership = member.memberships[0];
+        if (!activeMembership) {
+            throw new Error(`Critical: User ${member.id} has no active membership in organization ${organizationId}`);
+        }
 
-    return staff.map((member) => ({
-        id: member.id,
-        employeeCode: member.teacher?.employeeCode || undefined,
-        firstName: member.firstName,
-        lastName: member.lastName,
-        email: member.email,
-        role: member.role,
-        phone: member.teacher?.profile?.contactPhone || '-',
-        employmentStatus: member.teacher?.employmentStatus || 'ACTIVE',
-        joinedAt: member.teacher?.profile?.joinedAt || undefined,
-        qualification: member.teacher?.profile?.qualification || '-',
-        isActive: member.isActive,
-    }));
+        return {
+            id: member.id,
+            employeeCode: member.teacher?.employeeCode || undefined,
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            role: activeMembership.role,
+            phone: member.teacher?.profile?.contactPhone || '-',
+            employmentStatus: member.teacher?.employmentStatus || 'ACTIVE',
+            joinedAt: member.teacher?.profile?.joinedAt || undefined,
+            qualification: member.teacher?.profile?.qualification || '-',
+            isActive: member.isActive,
+        };
+    });
+
+    const ROLE_PRIORITY: Record<string, number> = {
+        ADMIN: 1,
+        TEACHER: 2,
+    };
+
+    // Sort by role hierarchy (ADMIN before TEACHER) and then by firstName
+    staff.sort((a, b) => {
+        const priorityA = ROLE_PRIORITY[a.role] ?? 99;
+        const priorityB = ROLE_PRIORITY[b.role] ?? 99;
+
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return a.firstName.localeCompare(b.firstName);
+    });
+
+    return staff;
 }

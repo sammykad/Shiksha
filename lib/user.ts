@@ -10,13 +10,13 @@ import {
 export { auth, getCurrentUserId, getCurrentUserRole };
 
 export const getCurrentUser = cache(async () => {
-  const { user } = await auth();
+  const { user, orgRole } = await auth();
   return {
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
     imageUrl: user.image,
-    role: user.role,
+    role: orgRole,
   };
 });

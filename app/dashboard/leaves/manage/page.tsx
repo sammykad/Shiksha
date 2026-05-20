@@ -31,14 +31,17 @@ export default async function LeavesManagePage() {
           firstName: true,
           lastName: true,
           profileImage: true,
-          role: true,
+          memberships: {
+            where: { organizationId },
+            select: { role: true },
+          },
           student: {
             select: {
               grade: {
-                select: {
-                  grade: true,
-                  section: { select: { name: true } },
-                },
+                select: { grade: true },
+              },
+              section: {
+                select: { name: true },
               },
             },
           },
@@ -62,7 +65,8 @@ export default async function LeavesManagePage() {
         </div>
         <Button asChild>
           <Link href="/dashboard/leaves">Own Leaves</Link>
-        </Button>      </Card>
+        </Button>
+      </Card>
       <Card>
         <CardContent className='max-sm:p-2'>
           <ApproveRejectLeave leaves={pendingLeaves} />

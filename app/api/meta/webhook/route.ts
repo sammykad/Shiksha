@@ -1,7 +1,7 @@
 // src/app/api/meta/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { adminPrisma as prisma } from '@/lib/db';
+import prisma from '@/lib/prisma-base';
 import { decrypt } from '@/lib/data/integration/crypto';
 
 export const maxDuration = 30;

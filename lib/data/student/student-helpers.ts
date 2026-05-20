@@ -55,9 +55,7 @@ export async function upsertUserRecord(
       emailVerified: false,
       firstName: params.firstName,
       lastName: params.lastName,
-      profileImage: params.profileImage ?? null,
-      role: params.role,
-      organizationId: params.organizationId,
+      profileImage: params.profileImage ?? "",
       isActive: true,
     },
     update: {
@@ -65,8 +63,6 @@ export async function upsertUserRecord(
       firstName: params.firstName,
       lastName: params.lastName,
       profileImage: params.profileImage ?? undefined,
-      role: params.role,
-      organizationId: params.organizationId,
       isActive: true,
       updatedAt: new Date(),
     },
@@ -290,5 +286,31 @@ export async function sendOrganizationRoleInvitation({
 }
 
 export function extractErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unknown error';
+  if (!error) return 'Unknown error';
+
+  const msg = error instanceof Error ? error.message : String(error);
+
+  if (msg.trim().startsWith('{') && msg.trim().endsWith('}')) {
+    try {
+      const parsed = JSON.parse(msg);
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.prismaCode === 'P2002') {
+          if (parsed.modelName === 'Student') {
+            return 'A student with this email or roll number already exists.';
+          }
+          if (parsed.modelName === 'User') {
+            return 'A user with this email address already exists.';
+          }
+          return parsed.userMessage ?? 'A record with this value already exists.';
+        }
+        if (parsed.userMessage) {
+          return parsed.userMessage;
+        }
+      }
+    } catch {
+      // Fallback to normal error message if parsing fails
+    }
+  }
+
+  return msg;
 }

@@ -18,8 +18,13 @@ export async function getMentionUsers(
 ): Promise<MentionUser[]> {
   const users = await prisma.user.findMany({
     where: {
-      organizationId,
       isActive: true,
+      memberships: {
+        some: {
+          organizationId,
+          status: "ACTIVE",
+        },
+      },
       ...(searchQuery && searchQuery.length >= 2 && {
         OR: [
           { firstName: { contains: searchQuery, mode: 'insensitive' } },
@@ -33,9 +38,18 @@ export async function getMentionUsers(
       firstName: true,
       lastName: true,
       email: true,
-      role: true,
       profileImage: true,
+      memberships: {
+        where: {
+          organizationId,
+          status: "ACTIVE",
+        },
+        select: {
+          role: true,
+        },
+      },
       teacher: {
+        where: { organizationId },
         select: {
           profile: {
             select: {
@@ -46,6 +60,7 @@ export async function getMentionUsers(
         },
       },
       student: {
+        where: { organizationId },
         select: {
           grade: { select: { grade: true } },
           section: { select: { name: true } },
@@ -56,14 +71,21 @@ export async function getMentionUsers(
     orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
   });
 
-  return users.map((user) => ({
-    id: user.id,
-    name: `${user.firstName} ${user.lastName}`.trim(),
-    role: user.role,
-    department: getDepartmentInfo(user),
-    email: user.email,
-    profileImage: user.profileImage ?? undefined,
-  }));
+  return users.map((user) => {
+    const role = user.memberships[0]?.role ?? "STUDENT";
+    return {
+      id: user.id,
+      name: `${user.firstName} ${user.lastName}`.trim(),
+      role,
+      department: getDepartmentInfo({
+        role,
+        teacher: user.teacher,
+        student: user.student,
+      }),
+      email: user.email,
+      profileImage: user.profileImage ?? undefined,
+    };
+  });
 }
 
 

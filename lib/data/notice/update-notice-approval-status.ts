@@ -188,11 +188,19 @@ async function resolveRecipients(
     // For org-wide, we resolve through User → student/parent/teacher sub-records
     // to get phone + whatsapp (those live on the sub-models, not User directly)
     const users = await prisma.user.findMany({
-      where: { organizationId, role: { in: orgWideRoles }, isActive: true },
+      where: {
+        isActive: true,
+        memberships: {
+          some: {
+            organizationId,
+            status: 'ACTIVE',
+            role: { in: orgWideRoles },
+          },
+        },
+      },
       select: {
         id: true,
         email: true,
-        role: true,
         deviceTokens: { select: { token: true } },
         student: { select: { id: true, phoneNumber: true, whatsAppNumber: true } },
         parent: { select: { id: true, phoneNumber: true, whatsAppNumber: true } },

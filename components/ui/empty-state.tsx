@@ -99,12 +99,12 @@ export function EmptyState({
                 </p>
             )}
             {action && (
-                <div className="mt-4">
+                <div className="mt-6">
                     {action.href ? (
-                        <Link href={action.href}>
+                        <Link href={action.href} className='space-x-2 gap-2'>
                             <Button
                                 variant="outline"
-                                className="shadow-sm active:shadow-none"
+                                className="shadow-sm active:shadow-none space-x-2"
                             >
                                 {action.label}
                             </Button>
@@ -113,7 +113,7 @@ export function EmptyState({
                         <Button
                             onClick={action.onClick}
                             variant="outline"
-                            className="shadow-sm active:shadow-none"
+                            className="shadow-sm active:shadow-none space-x-2 gap-2"
                         >
                             {action.icon &&
                                 React.createElement(action.icon, {

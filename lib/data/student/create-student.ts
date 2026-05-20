@@ -157,20 +157,35 @@ export async function createStudent(data: ValidatedStudent, leadId?: string) {
     });
 
     let sentInvitations = 0;
-    for (const target of inviteTargets) {
-      const result = await sendOrganizationRoleInvitation({
-        ...target,
-        organizationId,
-        inviterUserId,
-      });
+    const failures: string[] = [];
 
-      if (result.sent) sentInvitations++;
+    for (const target of inviteTargets) {
+      try {
+        const result = await sendOrganizationRoleInvitation({
+          ...target,
+          organizationId,
+          inviterUserId,
+        });
+
+        if (result.sent) sentInvitations++;
+      } catch (err) {
+        console.error(`[Invitation Error] Failed to invite ${target.email}:`, err);
+        failures.push(target.email);
+      }
     }
 
     revalidatePath('/dashboard/students');
     if (leadId) {
       revalidatePath(`/dashboard/leads/${leadId}`);
       revalidatePath('/dashboard/leads');
+    }
+
+    if (failures.length > 0) {
+      return {
+        success: true,
+        student,
+        message: `Student created successfully, but we couldn't send invitations to: ${failures.join(', ')}. Please invite them manually from settings.`,
+      };
     }
 
     return {

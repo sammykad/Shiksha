@@ -18,6 +18,36 @@ export async function sendAuthEmail({
   subject: string;
   react: React.ReactElement;
 }) {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("\n📬 ======= [DEV AUTH EMAIL BYPASS] =======");
+    console.log(`📧 To:      ${to}`);
+    console.log(`✉️ Subject: ${subject}`);
+    
+    const props = (react as any)?.props;
+    if (props) {
+      if (props.otp) {
+        console.log(`🔑 OTP Code: ${props.otp}`);
+      }
+      if (props.inviteUrl) {
+        console.log(`🔗 Invite Link: ${props.inviteUrl}`);
+      }
+      if (props.url) {
+        console.log(`🔗 Reset Link:  ${props.url}`);
+      }
+      if (props.inviterName) {
+        console.log(`👤 Inviter:    ${props.inviterName}`);
+      }
+      if (props.orgName) {
+        console.log(`🏢 Org Name:   ${props.orgName}`);
+      }
+      if (props.role) {
+        console.log(`💼 Role:       ${props.role}`);
+      }
+    }
+    console.log("=========================================\n");
+    return;
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {

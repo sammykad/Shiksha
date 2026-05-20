@@ -25,8 +25,12 @@ export default async function LeavesPage() {
           firstName: true,
           lastName: true,
           profileImage: true,
-          role: true,
+          memberships: {
+            where: { organizationId },
+            select: { role: true },
+          },
           student: {
+            where: { organizationId },
             select: {
               section: {
                 select: {

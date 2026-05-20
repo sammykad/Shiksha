@@ -38,7 +38,15 @@ export const createSingleHolidayAction = async (
 
   // ─── NOTIFICATION ──────────────────────────────────────────────────────────
   const users = await prisma.user.findMany({
-    where: { organizationId, isActive: true },
+    where: {
+      isActive: true,
+      memberships: {
+        some: {
+          organizationId,
+          status: "ACTIVE",
+        },
+      },
+    },
     select: { id: true }
   });
 

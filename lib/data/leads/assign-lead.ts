@@ -149,9 +149,15 @@ export async function getAvailableUsersForLeads() {
 
     const users = await prisma.user.findMany({
       where: {
-        organizationId,
-        role: {
-          in: ['ADMIN', 'TEACHER'],
+        isActive: true,
+        memberships: {
+          some: {
+            organizationId,
+            status: "ACTIVE",
+            role: {
+              in: ['ADMIN', 'TEACHER'],
+            },
+          },
         },
       },
       select: {
@@ -160,12 +166,29 @@ export async function getAvailableUsersForLeads() {
         lastName: true,
         email: true,
         profileImage: true,
-        role: true,
+        memberships: {
+          where: {
+            organizationId,
+            status: "ACTIVE",
+          },
+          select: {
+            role: true,
+          },
+        },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
-    console.log(users);
-    return { success: true, data: users };
+
+    const mappedUsers = users.map((u) => {
+      const { memberships, ...rest } = u;
+      return {
+        ...rest,
+        role: memberships[0]?.role ?? 'TEACHER',
+      };
+    });
+
+    console.log(mappedUsers);
+    return { success: true, data: mappedUsers };
   } catch (error) {
     console.error('Error fetching users:', error);
     return {

@@ -676,47 +676,49 @@ Winter Break,2026-12-24,2027-01-01,PLANNED,Year-end Vacation,false`;
         icon={CalendarIcon}
         actions={
           <>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant={'outline'}
-                  className="hover:text-red-500 transition-colors duration-200"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete All
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Are you absolutely sure?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. All holidays will be
-                    permanently deleted.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction asChild>
-                    <Button
-                      variant="destructive"
-                      onClick={handleDeleteAllHolidays}
-                      disabled={isDeletingAll}
-                    >
-                      {
-                        isDeletingAll ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4 mr-2" />
-                        )
-                      }
-                      Delete All
-                    </Button>
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {holidays.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant={'outline'}
+                    className="hover:text-red-500 transition-colors duration-200"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete All
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. All holidays will be
+                      permanently deleted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteAllHolidays}
+                        disabled={isDeletingAll}
+                      >
+                        {
+                          isDeletingAll ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4 mr-2" />
+                          )
+                        }
+                        Delete All
+                      </Button>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               onClick={() => setIsBulkDialogOpen(true)}

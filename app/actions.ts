@@ -774,7 +774,7 @@ export async function createTeacherFormAction(data: CreateTeacherFormData) {
           preferredGrades: validatedData.preferredGrades,
           linkedinPortfolio: validatedData.linkedinPortfolio,
           languagesKnown: validatedData.languagesKnown,
-          },
+        },
       });
     });
 
@@ -798,6 +798,7 @@ export async function createTeacherFormAction(data: CreateTeacherFormData) {
     };
   }
 }
+
 export async function updateTeacherAction(
   teacherId: string,
   data: CreateTeacherFormData
@@ -873,19 +874,42 @@ export async function onboardExistingTeacherAction(data: CreateTeacherFormData) 
     // Find the existing user by email
     const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email },
+      include: {
+        memberships: {
+          where: { organizationId },
+        },
+      },
     });
 
     if (!existingUser) {
       throw new Error('User not found with this email');
     }
 
+    const currentMembership = existingUser.memberships[0];
+
     await prisma.$transaction(async (tx) => {
-      // 1. Update user role if needed (ensure they can at least be a teacher)
+      // 1. Update user membership role if needed (ensure they can at least be a teacher in this org)
       // If they are an ADMIN, we keep them as ADMIN but they now have a teacher profile
-      if (existingUser.role !== 'ADMIN' && existingUser.role !== 'TEACHER') {
-        await tx.user.update({
-          where: { id: existingUser.id },
-          data: { role: 'TEACHER' },
+      if (!currentMembership || (currentMembership.role !== 'ADMIN' && currentMembership.role !== 'TEACHER')) {
+        await tx.membership.upsert({
+          where: {
+            userId_organizationId: {
+              userId: existingUser.id,
+              organizationId,
+            },
+          },
+          create: {
+            userId: existingUser.id,
+            organizationId,
+            role: 'TEACHER',
+            status: 'ACTIVE',
+            acceptedAt: new Date(),
+          },
+          update: {
+            role: 'TEACHER',
+            status: 'ACTIVE',
+            updatedAt: new Date(),
+          },
         });
       }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -31,10 +31,6 @@ export interface RolePermissionsUser {
     initials: string
     avatarUrl?: string
 }
-
-// ─────────────────────────────────────────────────────────────
-// TYPES (continued)
-// ─────────────────────────────────────────────────────────────
 
 interface PermissionRow {
     id: string
@@ -72,68 +68,85 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
     "alert-triangle": AlertTriangle,
 }
 
-function buildCategoriesForUser(role: Role): PermissionCategory[] {
+// Defined outside the component so it's stable and never re-created
+const GROUPS_TEMPLATE: Record<string, { label: string; icon: string }> = {
+    students: { label: "Students", icon: "graduation-cap" },
+    teachers: { label: "Teachers", icon: "users" },
+    grades: { label: "Grades", icon: "graduation-cap" },
+    subjects: { label: "Subjects", icon: "book-open" },
+    attendance: { label: "Attendance", icon: "calendar" },
+    fees: { label: "Fees", icon: "credit-card" },
+    exams: { label: "Exams", icon: "file-text" },
+    notices: { label: "Notices", icon: "bell" },
+    reports: { label: "Reports", icon: "bar-chart-3" },
+    documents: { label: "Documents", icon: "file-text" },
+    org: { label: "Organization", icon: "building-2" },
+    users: { label: "Users", icon: "users" },
+    complaints: { label: "Complaints", icon: "alert-triangle" },
+    leaves: { label: "Leaves", icon: "calendar" },
+    holidays: { label: "Holidays", icon: "calendar" },
+    leads: { label: "Leads", icon: "users" },
+    agents: { label: "Agents", icon: "settings" },
+    certificates: { label: "Certificates", icon: "file-text" },
+    gallery: { label: "Gallery", icon: "file-text" },
+    "teaching-assignments": { label: "Teaching", icon: "book-open" },
+    assignments: { label: "Assignments", icon: "file-text" },
+    profile: { label: "Profile", icon: "users" },
+    children: { label: "Children", icon: "users" },
+    transport: { label: "Transport", icon: "calendar" },
+}
+
+// VIEW_LIKE_ACTIONS set for O(1) lookup instead of array.includes on every row
+const VIEW_LIKE_ACTIONS = new Set([
+    "view", "manage", "mark", "analytics", "reminders", "reports", "resolve",
+    "approve", "verify", "reject", "convert", "generate", "publish", "assign",
+    "apply", "upload", "submit", "pay", "receipt:download", "results:view",
+    "view:own", "view:child", "manage:assigned", "results:view:child",
+    "pay:child", "edit:own", "track",
+])
+const CREATE_LIKE_ACTIONS = new Set(["create", "convert"])
+const EDIT_LIKE_ACTIONS = new Set([
+    "manage", "update", "mark", "assign", "resolve", "approve", "verify",
+    "reject", "generate", "publish", "reminders", "analytics", "reports",
+])
+const DELETE_LIKE_ACTIONS = new Set(["delete", "reject"])
+
+// Pure function — no side effects, safe to call anywhere
+function buildCategoriesForRole(role: Role): PermissionCategory[] {
     const caps = ROLE_CAPABILITIES[role]
 
-    const groups: Record<string, { label: string; icon: string; perms: string[] }> = {
-        students: { label: "Students", icon: "graduation-cap", perms: [] },
-        teachers: { label: "Teachers", icon: "users", perms: [] },
-        grades: { label: "Grades", icon: "graduation-cap", perms: [] },
-        subjects: { label: "Subjects", icon: "book-open", perms: [] },
-        attendance: { label: "Attendance", icon: "calendar", perms: [] },
-        fees: { label: "Fees", icon: "credit-card", perms: [] },
-        exams: { label: "Exams", icon: "file-text", perms: [] },
-        notices: { label: "Notices", icon: "bell", perms: [] },
-        reports: { label: "Reports", icon: "bar-chart-3", perms: [] },
-        documents: { label: "Documents", icon: "file-text", perms: [] },
-        org: { label: "Organization", icon: "building-2", perms: [] },
-        users: { label: "Users", icon: "users", perms: [] },
-        complaints: { label: "Complaints", icon: "alert-triangle", perms: [] },
-        leaves: { label: "Leaves", icon: "calendar", perms: [] },
-        holidays: { label: "Holidays", icon: "calendar", perms: [] },
-        leads: { label: "Leads", icon: "users", perms: [] },
-        agents: { label: "Agents", icon: "settings", perms: [] },
-        certificates: { label: "Certificates", icon: "file-text", perms: [] },
-        gallery: { label: "Gallery", icon: "file-text", perms: [] },
-        "teaching-assignments": { label: "Teaching", icon: "book-open", perms: [] },
-        assignments: { label: "Assignments", icon: "file-text", perms: [] },
-        profile: { label: "Profile", icon: "users", perms: [] },
-        children: { label: "Children", icon: "users", perms: [] },
-        transport: { label: "Transport", icon: "calendar", perms: [] },
-    }
-
-    caps.forEach((cap) => {
+    // Group capabilities by resource
+    const grouped: Record<string, string[]> = {}
+    for (const cap of caps) {
         const resource = cap.split(":")[0]
-        if (groups[resource]) {
-            groups[resource].perms.push(cap)
+        if (GROUPS_TEMPLATE[resource]) {
+            ; (grouped[resource] ??= []).push(cap)
         }
-    })
+    }
 
     const categories: PermissionCategory[] = []
 
-    Object.entries(groups).forEach(([, { label, icon, perms }]) => {
-        if (perms.length === 0) return
+    for (const [resource, { label, icon }] of Object.entries(GROUPS_TEMPLATE)) {
+        const perms = grouped[resource]
+        if (!perms?.length) continue
 
-        const permissions: PermissionRow[] = perms.map((perm, idx) => {
-            const action = perm.split(":").slice(1).join(":")
-            const viewLike = ["view", "manage", "mark", "analytics", "reminders", "reports", "resolve", "approve", "verify", "reject", "convert", "generate", "publish", "assign", "apply", "upload", "submit", "pay", "receipt:download", "results:view", "view:own", "view:child", "manage:assigned", "results:view:child", "pay:child", "edit:own", "track"].includes(action)
-            const createLike = ["create", "convert"].includes(action)
-            const editLike = ["manage", "update", "mark", "assign", "resolve", "approve", "verify", "reject", "generate", "publish", "reminders", "analytics", "reports"].includes(action)
-            const deleteLike = ["delete", "reject"].includes(action)
-
-            return {
-                id: `${perm}`,
-                label: action.replace(/:/g, " · "),
-                icon,
-                view: viewLike,
-                create: createLike,
-                edit: editLike,
-                delete: deleteLike,
-            }
+        categories.push({
+            id: resource,
+            label,
+            permissions: perms.map((perm) => {
+                const action = perm.split(":").slice(1).join(":")
+                return {
+                    id: perm,
+                    label: action.replace(/:/g, " · "),
+                    icon,
+                    view: VIEW_LIKE_ACTIONS.has(action),
+                    create: CREATE_LIKE_ACTIONS.has(action),
+                    edit: EDIT_LIKE_ACTIONS.has(action),
+                    delete: DELETE_LIKE_ACTIONS.has(action),
+                }
+            }),
         })
-
-        categories.push({ id: label.toLowerCase(), label, permissions })
-    })
+    }
 
     return categories
 }
@@ -157,12 +170,15 @@ function UserList({
     onSelect: (id: string) => void
     onClose?: () => void
 }) {
-    const filtered = users.filter(
-        (u) =>
-            u.name.toLowerCase().includes(search.toLowerCase()) ||
-            u.role.toLowerCase().includes(search.toLowerCase()) ||
-            u.organization.toLowerCase().includes(search.toLowerCase())
-    )
+    const filtered = useMemo(() => {
+        const q = search.toLowerCase()
+        return users.filter(
+            (u) =>
+                u.name.toLowerCase().includes(q) ||
+                u.role.toLowerCase().includes(q) ||
+                u.organization.toLowerCase().includes(q)
+        )
+    }, [users, search])
 
     return (
         <div className="flex flex-col">
@@ -236,7 +252,7 @@ function PermissionRowComponent({
     permission: PermissionRow
     onToggle: (id: string, action: "view" | "create" | "edit" | "delete", checked: boolean) => void
 }) {
-    const Icon = ICON_MAP[permission.icon] || FileText
+    const Icon = ICON_MAP[permission.icon] ?? FileText
 
     return (
         <div className="grid grid-cols-[1fr_repeat(4,5rem)] px-4 py-2.5 hover:bg-slate-50/50 transition-colors border-b border-slate-100 last:border-0 items-center">
@@ -262,32 +278,40 @@ function PermissionRowComponent({
 // PERMISSION PANEL
 // ─────────────────────────────────────────────────────────────
 
-function PermissionPanel({
-    user,
-}: {
-    user: RolePermissionsUser
-}) {
-    const [categories, setCategories] = useState<PermissionCategory[]>(() => buildCategoriesForUser(user.role as Role))
-    const meta = ROLE_META[user.role as Role]
+function PermissionPanel({ user }: { user: RolePermissionsUser }) {
+    // Initialize once from the role — no remount hack needed
+    const [categories, setCategories] = useState<PermissionCategory[]>(() =>
+        buildCategoriesForRole(user.role)
+    )
 
-    // Rebuild categories when user changes
-    const [key, setKey] = useState(0)
+    // FIX: When the selected user changes role, rebuild categories in an effect
+    // instead of via a key-remount, which caused the "state update on unmounted
+    // component" warning and an expensive full teardown/recreation of the panel.
+    useEffect(() => {
+        setCategories(buildCategoriesForRole(user.role))
+    }, [user.role])
 
-    const handleReset = () => {
-        setCategories(buildCategoriesForUser(user.role as Role))
-        setKey((k) => k + 1)
-    }
+    const meta = ROLE_META[user.role]
 
-    const handleToggle = (id: string, action: "view" | "create" | "edit" | "delete", checked: boolean) => {
-        setCategories((prev) =>
-            prev.map((cat) => ({
-                ...cat,
-                permissions: cat.permissions.map((p) =>
-                    p.id === id ? { ...p, [action]: checked } : p
-                ),
-            }))
-        )
-    }
+    // FIX: Stable callback reference — recreating this on every render caused
+    // every PermissionRowComponent to re-render even when its own data didn't change.
+    const handleToggle = useCallback(
+        (id: string, action: "view" | "create" | "edit" | "delete", checked: boolean) => {
+            setCategories((prev) =>
+                prev.map((cat) => ({
+                    ...cat,
+                    permissions: cat.permissions.map((p) =>
+                        p.id === id ? { ...p, [action]: checked } : p
+                    ),
+                }))
+            )
+        },
+        [] // setCategories is stable, so no deps needed
+    )
+
+    const handleReset = useCallback(() => {
+        setCategories(buildCategoriesForRole(user.role))
+    }, [user.role])
 
     return (
         <div className="flex flex-col">
@@ -372,12 +396,24 @@ function PermissionPanel({
     )
 }
 
+// ─────────────────────────────────────────────────────────────
+// ROOT
+// ─────────────────────────────────────────────────────────────
+
 export default function RolePermissions({ users }: { users: RolePermissionsUser[] }) {
     const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? "")
     const [searchQuery, setSearchQuery] = useState("")
     const [showUserList, setShowUserList] = useState(false)
 
-    const selectedUser = users.find((u) => u.id === selectedUserId)
+    const selectedUser = useMemo(
+        () => users.find((u) => u.id === selectedUserId),
+        [users, selectedUserId]
+    )
+
+    const handleSelect = useCallback((id: string) => {
+        setSelectedUserId(id)
+        setShowUserList(false)
+    }, [])
 
     if (!selectedUser) {
         return (
@@ -409,6 +445,7 @@ export default function RolePermissions({ users }: { users: RolePermissionsUser[
                     </p>
                 </div>
             </CardHeader>
+
             <CardContent className="p-0">
                 {/* Desktop: Two-panel layout */}
                 <div className="flex-1 min-h-0 hidden lg:grid lg:grid-cols-[16rem_1fr] gap-2">
@@ -418,15 +455,15 @@ export default function RolePermissions({ users }: { users: RolePermissionsUser[
                             selectedId={selectedUserId}
                             search={searchQuery}
                             onSearch={setSearchQuery}
-                            onSelect={setSelectedUserId}
+                            onSelect={handleSelect}
                         />
                     </Card>
 
                     <Card className="overflow-hidden flex flex-col min-h-0">
-                        <PermissionPanel
-                            key={selectedUserId}
-                            user={selectedUser}
-                        />
+                        {/* FIX: Removed key={selectedUserId} — the panel now handles
+                            user changes internally via useEffect, so we no longer
+                            need the expensive unmount/remount on every selection. */}
+                        <PermissionPanel user={selectedUser} />
                     </Card>
                 </div>
 
@@ -439,19 +476,15 @@ export default function RolePermissions({ users }: { users: RolePermissionsUser[
                                 selectedId={selectedUserId}
                                 search={searchQuery}
                                 onSearch={setSearchQuery}
-                                onSelect={setSelectedUserId}
+                                onSelect={handleSelect}
                                 onClose={() => setShowUserList(false)}
                             />
                         ) : (
-                            <PermissionPanel
-                                key={selectedUserId}
-                                user={selectedUser}
-                            />
+                            <PermissionPanel user={selectedUser} />
                         )}
                     </Card>
                 </div>
             </CardContent>
-
-        </Card >
+        </Card>
     )
 }

@@ -19,7 +19,15 @@ export async function getAllTeachers() {
       updatedAt: true,
       userId: true,
       profile: true,
-      user: true,
+      user: {
+        include: {
+          memberships: {
+            where: {
+              organizationId,
+            },
+          },
+        },
+      },
     },
   });
 

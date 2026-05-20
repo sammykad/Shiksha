@@ -23,6 +23,7 @@ import { Upload, X, Loader2 } from "lucide-react";
 import { Role } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { useUploadFile } from "@/hooks/use-upload-file";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import {
@@ -186,6 +187,7 @@ interface Step1Props {
 }
 
 function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
+    const { onUpload, isUploading } = useUploadFile("imageUploader");
     const [logo, setLogo] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -253,9 +255,15 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
         let logoUrl: string | undefined;
         if (logo) {
             try {
-                logoUrl = await fileToBase64(logo);
+                const res = await onUpload([logo]);
+                if (res && res[0]) {
+                    logoUrl = res[0].url;
+                } else {
+                    toast.error("Failed to upload logo. Please try again.");
+                    return;
+                }
             } catch {
-                toast.error("Failed to process logo. Please try again.");
+                toast.error("Failed to upload logo. Please try again.");
                 return;
             }
         }
@@ -290,7 +298,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
         }
     };
 
-    const isSubmitting = form.formState.isSubmitting;
+    const isSubmitting = form.formState.isSubmitting || isUploading;
 
     return (
         <Form {...form}>

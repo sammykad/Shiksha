@@ -79,8 +79,6 @@ export async function updateStudent(data: ValidatedUpdate) {
           firstName: input.firstName,
           lastName: input.lastName,
           profileImage: input.profileImage ?? undefined,
-          role: Role.STUDENT,
-          organizationId,
           updatedAt: new Date(),
         },
       });
@@ -117,17 +115,31 @@ export async function updateStudent(data: ValidatedUpdate) {
     });
 
     let sentInvitations = 0;
+    const failures: string[] = [];
     for (const target of parentInviteTargets) {
-      const result = await sendOrganizationRoleInvitation({
-        ...target,
-        organizationId,
-        inviterUserId,
-      });
+      try {
+        const result = await sendOrganizationRoleInvitation({
+          ...target,
+          organizationId,
+          inviterUserId,
+        });
 
-      if (result.sent) sentInvitations++;
+        if (result.sent) sentInvitations++;
+      } catch (err) {
+        console.error(`[Invitation Error] Failed to invite parent ${target.email}:`, err);
+        failures.push(target.email);
+      }
     }
 
     revalidatePath('/dashboard/students');
+
+    if (failures.length > 0) {
+      return {
+        success: true,
+        student,
+        message: `Student updated successfully, but we couldn't send parent invitations to: ${failures.join(', ')}.`,
+      };
+    }
 
     return {
       success: true,

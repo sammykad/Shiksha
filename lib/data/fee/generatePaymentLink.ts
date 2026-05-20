@@ -1,7 +1,7 @@
 'use server';
 
 import { phonePayInitPayment } from './recordOnlinePayment';
-import { getCurrentUserId } from '@/lib/user';
+import { getOrganizationRole } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { Role } from '@/generated/prisma/enums';
 import { revalidatePath } from 'next/cache';
@@ -11,15 +11,10 @@ import { revalidatePath } from 'next/cache';
  * Only accessible by ADMIN and TEACHER roles.
  */
 export const generateFeePaymentLink = async (feeId: string) => {
-  const currentUserId = await getCurrentUserId();
-
   // 1. Verify permissions
-  const user = await prisma.user.findUnique({
-    where: { id: currentUserId },
-    select: { role: true },
-  });
+  const role = await getOrganizationRole();
 
-  if (!user || (user.role !== Role.ADMIN && user.role !== Role.TEACHER)) {
+  if (role !== Role.ADMIN && role !== Role.TEACHER) {
     throw new Error('Unauthorized: Only admins and teachers can generate payment links.');
   }
 

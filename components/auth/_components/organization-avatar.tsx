@@ -2,7 +2,6 @@
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import DefaultOrgIcon from "./organization.svg";
 
 export function OrganizationAvatar({
     name,
@@ -28,7 +27,7 @@ export function OrganizationAvatar({
             {/* If the image fails to load or isn't provided, fall through to default icon */}
             <AvatarFallback>
                 <Image
-                    src={DefaultOrgIcon}
+                    src="/organization.svg"
                     alt={name}
                     width={size}
                     height={size}

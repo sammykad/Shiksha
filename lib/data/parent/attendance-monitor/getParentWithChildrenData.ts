@@ -8,7 +8,7 @@ export async function getParentWithChildrenData() {
 
   const userId = await getCurrentUserId();
 
-  const parentData = await prisma.parent.findUnique({
+  const parentData = await prisma.parent.findFirst({
     where: {
       userId: userId,
     },

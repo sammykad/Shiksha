@@ -1,8 +1,11 @@
 // src/app/api/meta/callback/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import prisma from '@/lib/db';
+import prisma from '@/lib/prisma-base';
 import { encrypt } from '@/lib/data/integration/crypto';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const APP_ID = process.env.META_APP_ID!;
 const APP_SECRET = process.env.META_APP_SECRET!;

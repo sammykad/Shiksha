@@ -25,17 +25,17 @@ export interface MyAttendanceData {
 }
 
 export async function getMyAttendance(userId: string): Promise<MyAttendanceData> {
-  const student = await prisma.student.findUnique({
-    where: { userId },
-    select: { id: true, firstName: true, lastName: true, rollNumber: true },
-  });
-
-  if (!student) throw new Error('Student not found for this user.');
-
   const [organizationId, academicYearId] = await Promise.all([
     getOrganizationId(),
     getActiveAcademicYearId(),
   ]);
+
+  const student = await prisma.student.findFirst({
+    where: { userId, organizationId },
+    select: { id: true, firstName: true, lastName: true, rollNumber: true },
+  });
+
+  if (!student) throw new Error('Student not found for this user.');
 
   const todayIST = toISTDate();
   const monthStartIST = getStartOfMonthIST();

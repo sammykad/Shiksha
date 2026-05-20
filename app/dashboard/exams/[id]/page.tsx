@@ -241,9 +241,10 @@ export default async function UnifiedExamPage({
     );
   }
 
-  const student = await prisma.student.findUnique({
+  const student = await prisma.student.findFirst({
     where: {
       userId: userId,
+      organizationId,
     },
     select: {
       id: true,

@@ -7,24 +7,38 @@ import { getOrganizationId } from '@/lib/organization';
 export async function getAllStaff() {
   const organizationId = await getOrganizationId();
 
-  const staff = await prisma.user.findMany({
+  const staffRecords = await prisma.user.findMany({
     where: {
-      organizationId,
-      role: {
-        notIn: ['STUDENT', 'PARENT'],
-      },
       isActive: true,
+      memberships: {
+        some: {
+          organizationId,
+          status: 'ACTIVE',
+          role: {
+            notIn: ['STUDENT', 'PARENT'],
+          },
+        },
+      },
     },
     select: {
       id: true,
       firstName: true,
       lastName: true,
       email: true,
-      role: true,
       profileImage: true,
       createdAt: true,
       isActive: true,
+      memberships: {
+        where: {
+          organizationId,
+          status: 'ACTIVE',
+        },
+        select: {
+          role: true,
+        },
+      },
       teacher: {
+        where: { organizationId },
         select: {
           id: true,
           employeeCode: true,
@@ -50,5 +64,22 @@ export async function getAllStaff() {
     orderBy: { createdAt: 'desc' },
   });
 
-  return staff;
+  return staffRecords.map((u) => {
+    const activeMembership = u.memberships[0];
+    if (!activeMembership) {
+      throw new Error(`Critical: User ${u.id} has no active membership in organization ${organizationId}`);
+    }
+
+    return {
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      role: activeMembership.role,
+      profileImage: u.profileImage,
+      createdAt: u.createdAt,
+      isActive: u.isActive,
+      teacher: u.teacher,
+    };
+  });
 }

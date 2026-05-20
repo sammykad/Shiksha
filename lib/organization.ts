@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from "@/lib/auth";
-import prisma from "@/lib/db";
+import prisma from "@/lib/prisma-base";
 import { cache } from "react";
 
 export const getOrganizationId = cache(async () => {

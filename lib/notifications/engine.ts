@@ -330,7 +330,15 @@ async function resolveRecipients(
     log(templateId, "info", `Resolving ${userIds.size} user(s)…`);
 
     const users = await prisma.user.findMany({
-      where: { id: { in: Array.from(userIds) }, organizationId },
+      where: {
+        id: { in: Array.from(userIds) },
+        memberships: {
+          some: {
+            organizationId,
+            status: "ACTIVE",
+          },
+        },
+      },
       include: { student: true, parent: true, deviceTokens: true },
     });
 

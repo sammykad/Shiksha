@@ -31,7 +31,11 @@ type LeaveWithUser = Prisma.LeaveGetPayload<{
         firstName: true;
         lastName: true;
         profileImage: true;
-        role: true;
+        memberships: {
+          where: { organizationId: string };
+          select: { role: true };
+          take: 1;
+        };
         student: {
           select: {
             grade: {
@@ -221,7 +225,7 @@ const ApproveRejectLeave = ({ leaves }: ApproveRejectLeaveProps) => {
                         </h2>
                         <div className="flex flex-wrap items-center gap-2 text-sm">
                           <Badge variant="outline" className="font-medium capitalize">
-                            {currentLeave.appliedBy.role}
+                            {currentLeave.appliedBy.memberships[0].role}
                           </Badge>
                           {currentLeave.appliedBy.student && (
                             <>
@@ -333,33 +337,33 @@ const ApproveRejectLeave = ({ leaves }: ApproveRejectLeaveProps) => {
                 </div>
 
                 {currentLeave.currentStatus === 'PENDING' && (
-                <div className="p-2 flex flex-col sm:flex-row items-center gap-4 sm:gap-10">
-                  <Button
-                    variant={'outline'}
-                    onClick={handleSkip}
-                    className="w-full sm:w-auto px-6 py-3 border-2 border-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-                  >
-                    Skip
-                  </Button>
-                  <div className='flex items-center justify-between space-x-2 gap-2 w-full'>
+                  <div className="p-2 flex flex-col sm:flex-row items-center gap-4 sm:gap-10">
                     <Button
                       variant={'outline'}
-                      onClick={handleReject}
-                      className="flex-1 px-6 py-3 border-2 hover:text-red-600 border-red-200 rounded-xl text-red-600 font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                      onClick={handleSkip}
+                      className="w-full sm:w-auto px-6 py-3 border-2 border-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
                     >
-                      <XCircle className="w-5 h-5" />
-                      Reject
+                      Skip
                     </Button>
-                    <Button
-                      variant={'outline'}
-                      onClick={handleApprove}
-                      className="flex-1 px-6 py-3 hover:text-green-600 bg-green-100 rounded-xl text-green-500 font-semibold hover:bg-green-200 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      {isPending ? 'Approving' : 'Approve'}
-                    </Button>
+                    <div className='flex items-center justify-between space-x-2 gap-2 w-full'>
+                      <Button
+                        variant={'outline'}
+                        onClick={handleReject}
+                        className="flex-1 px-6 py-3 border-2 hover:text-red-600 border-red-200 rounded-xl text-red-600 font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <XCircle className="w-5 h-5" />
+                        Reject
+                      </Button>
+                      <Button
+                        variant={'outline'}
+                        onClick={handleApprove}
+                        className="flex-1 px-6 py-3 hover:text-green-600 bg-green-100 rounded-xl text-green-500 font-semibold hover:bg-green-200 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        {isPending ? 'Approving' : 'Approve'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
                 )}
               </CardContent>
             </Card>

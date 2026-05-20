@@ -14,30 +14,59 @@ import { getBillingSummary } from "@/lib/billing"
 import BillingSettings from "./BillingSettings"
 import { getOrganizationNotificationSettings } from "@/lib/notifications/organization-notification-settings"
 import { getAcademicYears, getCurrentAcademicYearIdSafe } from "@/lib/academicYear"
+import { Role } from "@/generated/prisma/enums"
+
+async function getStaffMembers(organizationId: string) {
+  const memberships = await prisma.membership.findMany({
+    where: {
+      organizationId,
+      status: "ACTIVE",
+      role: {
+        in: [Role.ADMIN, Role.TEACHER],
+      },
+      user: {
+        isActive: true,
+      },
+    },
+    select: {
+      role: true,
+      organization: { select: { name: true } },
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          profileImage: true,
+        },
+      },
+    },
+  });
+
+  return memberships.map((m) => {
+    const first = m.user.firstName ?? ""
+    const last = m.user.lastName ?? ""
+    return {
+      id: m.user.id,
+      name: `${first} ${last}`.trim(),
+      role: m.role,
+      organization: m.organization.name,
+      initials: `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase(),
+      avatarUrl: m.user.profileImage ?? undefined,
+    }
+  })
+}
+
 
 export default async function AdminSettingsPage() {
   const organizationId = await getOrganizationId()
   const academicYearId = await getCurrentAcademicYearIdSafe()
 
-  const [organization, academicYears, notificationSettings, staff] = await Promise.all([
+  const [organization, academicYears, notificationSettings, staffMembers] = await Promise.all([
     getDatabaseOrganization(organizationId),
     getAcademicYears(organizationId),
     getOrganizationNotificationSettings(organizationId),
-    prisma.user.findMany({
-      where: {
-        organizationId,
-        isActive: true,
-        role: { in: ["ADMIN", "TEACHER"] },
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        role: true,
-        profileImage: true,
-      },
-    }),
+    getStaffMembers(organizationId),
   ])
 
   const billingSummary = academicYearId
@@ -50,7 +79,6 @@ export default async function AdminSettingsPage() {
     )
   }
 
-  console.log(staff)
 
   return (
     <div className=" bg-background px-2">
@@ -77,14 +105,7 @@ export default async function AdminSettingsPage() {
             <BillingSettingsDisabled />
           )}
           <RolePermissions
-            users={staff.map((user) => ({
-              id: user.id,
-              name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown User",
-              role: user.role,
-              organization: organization.name,
-              initials: `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase() || "?",
-              avatarUrl: user.profileImage || undefined,
-            }))}
+            users={staffMembers}
           />
         </AdminSettingsSidebar>
       </div>
