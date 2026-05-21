@@ -71,7 +71,7 @@ export async function getChildAttendanceData(): Promise<ChildAttendanceData | nu
   const [parentStudent, calendarEvents] = await Promise.all([
     prisma.parentStudent.findFirst({
       where: {
-        parent: { userId },
+        parent: { userId, organizationId: orgId },
         studentId: selectedChildId,
         student: { organizationId: orgId },
       },

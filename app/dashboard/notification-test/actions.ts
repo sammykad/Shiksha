@@ -1,6 +1,7 @@
 "use server"
 
 import { getCurrentUserId } from "@/lib/user"
+import { getOrganizationId } from "@/lib/organization"
 import prisma from "@/lib/db"
 import {
     sendTestPushNotification,
@@ -192,7 +193,10 @@ export interface UserInfoResponse {
  */
 export async function getNotificationTestInfo(): Promise<UserInfoResponse> {
     try {
-        const userId = await getCurrentUserId();
+        const [userId, organizationId] = await Promise.all([
+            getCurrentUserId(),
+            getOrganizationId(),
+        ]);
         if (!userId) {
             return { success: false, userId: null, email: null, deviceCount: 0, error: "Not authenticated" };
         }
@@ -202,7 +206,11 @@ export async function getNotificationTestInfo(): Promise<UserInfoResponse> {
             select: {
                 email: true,
                 student: { select: { phoneNumber: true, whatsAppNumber: true } },
-                parent: { select: { phoneNumber: true, whatsAppNumber: true } },
+                parents: {
+                    where: { organizationId },
+                    take: 1,
+                    select: { phoneNumber: true, whatsAppNumber: true },
+                },
                 deviceTokens: true
             },
         });
@@ -211,8 +219,9 @@ export async function getNotificationTestInfo(): Promise<UserInfoResponse> {
             return { success: false, userId, email: null, deviceCount: 0, error: "User not found" };
         }
 
-        const phone = user.student?.phoneNumber || user.parent?.phoneNumber;
-        const whatsapp = user.student?.whatsAppNumber || user.parent?.whatsAppNumber;
+        const parent = user.parents[0];
+        const phone = user.student?.phoneNumber || parent?.phoneNumber;
+        const whatsapp = user.student?.whatsAppNumber || parent?.whatsAppNumber;
 
         return {
             success: true,

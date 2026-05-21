@@ -203,7 +203,11 @@ async function resolveRecipients(
         email: true,
         deviceTokens: { select: { token: true } },
         student: { select: { id: true, phoneNumber: true, whatsAppNumber: true } },
-        parent: { select: { id: true, phoneNumber: true, whatsAppNumber: true } },
+        parents: {
+          where: { organizationId },
+          take: 1,
+          select: { id: true, phoneNumber: true, whatsAppNumber: true },
+        },
         teacher: { select: { id: true } },
       },
     });
@@ -211,14 +215,15 @@ async function resolveRecipients(
     for (const u of users) {
       if (seen.has(u.id)) continue;
       seen.add(u.id);
+      const parent = u.parents[0];
 
       recipients.push({
         userId: u.id,
         studentId: u.student?.id,
-        parentId: u.parent?.id,
+        parentId: parent?.id,
         email: u.email,
-        phone: u.student?.phoneNumber ?? u.parent?.phoneNumber,
-        whatsappNumber: u.student?.whatsAppNumber ?? u.parent?.whatsAppNumber,
+        phone: u.student?.phoneNumber ?? parent?.phoneNumber,
+        whatsappNumber: u.student?.whatsAppNumber ?? parent?.whatsAppNumber,
         fcmTokens: u.deviceTokens.map((d) => d.token),
       });
     }
@@ -238,7 +243,7 @@ export const updateNoticeApprovalStatus = async (
     getOrganizationId(),
   ]);
 
-  if (user.role !== Role.ADMIN) throw new Error('Only admins can approve or reject notices');
+  if (user.organizationRole !== Role.ADMIN) throw new Error('Only admins can approve or reject notices');
 
   const existing = await prisma.notice.findFirst({
     where: { id: noticeId, organizationId },

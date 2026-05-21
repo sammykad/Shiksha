@@ -876,7 +876,7 @@ export async function onboardExistingTeacherAction(data: CreateTeacherFormData) 
       where: { email: validatedData.email },
       include: {
         memberships: {
-          where: { organizationId },
+          where: { organizationId, status: 'ACTIVE' },
         },
       },
     });
@@ -1126,7 +1126,7 @@ export async function updateAcademicYear(data: AcademicYearUpdateFormData) {
   try {
     const organizationId = await getOrganizationId();
     const user = await getCurrentUser();
-    if (!user || user.role !== 'ADMIN') {
+    if (user.organizationRole !== 'ADMIN') {
       return {
         success: false,
         error: 'You do not have permission to perform this action. Only Admin can perform this action.',
@@ -1242,7 +1242,7 @@ export async function setCurrentAcademicYear(
     const organizationId = await getOrganizationId();
     // Check Admin Only
     const user = await getCurrentUser();
-    if (!user || user.role !== 'ADMIN') {
+    if (user.organizationRole !== 'ADMIN') {
       return {
         success: false,
         error: 'You do not have permission to perform this action. Only Admin can perform this action.',

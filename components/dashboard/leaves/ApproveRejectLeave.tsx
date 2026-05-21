@@ -225,7 +225,7 @@ const ApproveRejectLeave = ({ leaves }: ApproveRejectLeaveProps) => {
                         </h2>
                         <div className="flex flex-wrap items-center gap-2 text-sm">
                           <Badge variant="outline" className="font-medium capitalize">
-                            {currentLeave.appliedBy.memberships[0].role}
+                            {currentLeave.appliedBy.memberships[0]?.role ?? 'Unknown'}
                           </Badge>
                           {currentLeave.appliedBy.student && (
                             <>

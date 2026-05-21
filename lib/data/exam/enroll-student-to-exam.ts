@@ -1,21 +1,22 @@
 'use server';
 
-import { getCurrentUserByRole } from '@/lib/auth';
+import { getCurrentUserByRole, getOrganizationId } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
 export async function enrollStudentToExam(examId: string) {
   const currentUser = await getCurrentUserByRole();
 
-  if (!currentUser || currentUser.role !== "STUDENT") {
-    throw new Error("Unauthorized: Student role required");
+  if (!currentUser || currentUser.role !== "STUDENT" || !currentUser.studentId) {
+    throw new Error("Unauthorized: Student account not found");
   }
 
   const studentId = currentUser.studentId;
 
-  // 2) Check exam exists
-  const exam = await prisma.exam.findUnique({
-    where: { id: examId },
+  // 2) Check exam exists and belongs to current organization
+  const organizationId = await getOrganizationId();
+  const exam = await prisma.exam.findFirst({
+    where: { id: examId, organizationId },
   });
 
   if (!exam) {

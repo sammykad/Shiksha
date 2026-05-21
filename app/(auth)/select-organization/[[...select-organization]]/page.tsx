@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/card';
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth';
+import { getSession, resolveDefaultOrganizationId } from '@/lib/auth';
 import { OrganizationList } from '@/components/auth/organization-list';
 import { CreateOrganization } from '@/components/auth/create-organization';
 import { getSafeAuthCallbackUrl } from '@/lib/auth-navigation';
@@ -130,26 +130,3 @@ function getBooleanParam(value: string | string[] | undefined) {
   return raw === 'true' || raw === '1' || raw === '';
 }
 
-async function resolveDefaultOrganizationId(userId: string, organizationIds: string[]) {
-  if (organizationIds.length === 0) return null;
-
-  const lastSession = await prisma.session.findFirst({
-    where: {
-      userId,
-      activeOrganizationId: {
-        in: organizationIds,
-      },
-      expiresAt: {
-        gt: new Date(),
-      },
-    },
-    select: {
-      activeOrganizationId: true,
-    },
-    orderBy: {
-      updatedAt: 'desc',
-    },
-  });
-
-  return lastSession?.activeOrganizationId ?? null;
-}

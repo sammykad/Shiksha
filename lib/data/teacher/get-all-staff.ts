@@ -7,79 +7,61 @@ import { getOrganizationId } from '@/lib/organization';
 export async function getAllStaff() {
   const organizationId = await getOrganizationId();
 
-  const staffRecords = await prisma.user.findMany({
+  const memberships = await prisma.membership.findMany({
     where: {
-      isActive: true,
-      memberships: {
-        some: {
-          organizationId,
-          status: 'ACTIVE',
-          role: {
-            notIn: ['STUDENT', 'PARENT'],
-          },
-        },
-      },
+      organizationId,
+      status: 'ACTIVE',
+      role: { notIn: ['STUDENT', 'PARENT'] },
     },
     select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      profileImage: true,
-      createdAt: true,
-      isActive: true,
-      memberships: {
-        where: {
-          organizationId,
-          status: 'ACTIVE',
-        },
-        select: {
-          role: true,
-        },
-      },
-      teacher: {
-        where: { organizationId },
+      role: true,
+      user: {
         select: {
           id: true,
-          employeeCode: true,
-          employmentStatus: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          profileImage: true,
+          createdAt: true,
           isActive: true,
-          profile: {
+          teacher: {
+            where: { organizationId },
             select: {
-              qualification: true,
-              experienceInYears: true,
-              contactPhone: true,
-              specializedSubjects: true,
-            },
-          },
-          teachingAssignment: {
-            select: {
-              subject: { select: { name: true } },
-              grade: { select: { grade: true } },
+              id: true,
+              employeeCode: true,
+              employmentStatus: true,
+              isActive: true,
+              profile: {
+                select: {
+                  qualification: true,
+                  experienceInYears: true,
+                  contactPhone: true,
+                  specializedSubjects: true,
+                },
+              },
+              teachingAssignment: {
+                select: {
+                  subject: { select: { name: true } },
+                  grade: { select: { grade: true } },
+                },
+              },
             },
           },
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { user: { createdAt: 'desc' } },
   });
 
-  return staffRecords.map((u) => {
-    const activeMembership = u.memberships[0];
-    if (!activeMembership) {
-      throw new Error(`Critical: User ${u.id} has no active membership in organization ${organizationId}`);
-    }
-
-    return {
-      id: u.id,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      email: u.email,
-      role: activeMembership.role,
-      profileImage: u.profileImage,
-      createdAt: u.createdAt,
-      isActive: u.isActive,
-      teacher: u.teacher,
-    };
-  });
+  return memberships.map((m) => ({
+    id: m.user.id,
+    firstName: m.user.firstName,
+    lastName: m.user.lastName,
+    email: m.user.email,
+    role: m.role,
+    profileImage: m.user.profileImage,
+    createdAt: m.user.createdAt,
+    isActive: m.user.isActive,
+    teacher: m.user.teacher,
+  }));
 }

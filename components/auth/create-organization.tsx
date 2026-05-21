@@ -11,14 +11,14 @@
  * Tech: shadcn/ui Form · Sonner toasts · Better Auth
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Building2, Upload, X, Loader2 } from "lucide-react";
 
 import { Role } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ import { authClient } from "@/lib/auth-client";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
+import { BrandAuthHeader } from "./_components/brand";
 import {
     Form,
     FormControl,
@@ -44,7 +45,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAX_LOGO_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_LOGO_BYTES = 3 * 1024 * 1024; // 3 MB
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,15 +77,6 @@ function getAuthErrorMessage(error: unknown, fallback: string) {
     ].filter(Boolean);
 
     return parts.length > 0 ? parts.join(" - ") : fallback;
-}
-
-function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsDataURL(file);
-    });
 }
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -187,7 +179,7 @@ interface Step1Props {
 }
 
 function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
-    const { onUpload, isUploading } = useUploadFile("imageUploader");
+    const { onUpload, isUploading, progresses, resetUploadState } = useUploadFile("organizationLogo");
     const [logo, setLogo] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -212,6 +204,21 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
 
     // ── Logo helpers ──────────────────────────────────────────────────────────
 
+    useEffect(() => {
+        return () => {
+            if (logoPreview) URL.revokeObjectURL(logoPreview);
+        };
+    }, [logoPreview]);
+
+    const clearLogo = useCallback(() => {
+        setLogo(null);
+        setLogoError(null);
+        resetUploadState();
+        if (logoPreview) URL.revokeObjectURL(logoPreview);
+        setLogoPreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    }, [logoPreview, resetUploadState]);
+
     const processFile = useCallback(
         (file: File) => {
             setLogoError(null);
@@ -220,23 +227,25 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                 return;
             }
             if (file.size > MAX_LOGO_BYTES) {
-                setLogoError("Image must be under 10 MB.");
+                setLogoError("Logo must be 3 MB or smaller.");
                 return;
             }
+            resetUploadState();
             setLogo(file);
             if (logoPreview) URL.revokeObjectURL(logoPreview);
             setLogoPreview(URL.createObjectURL(file));
         },
-        [logoPreview]
+        [logoPreview, resetUploadState]
     );
 
     const removeLogo = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setLogo(null);
-        if (logoPreview) URL.revokeObjectURL(logoPreview);
-        setLogoPreview(null);
-        setLogoError(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        clearLogo();
+    };
+
+    const handleCancel = () => {
+        clearLogo();
+        onCancel?.();
     };
 
     const handleDrop = useCallback(
@@ -299,21 +308,22 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
     };
 
     const isSubmitting = form.formState.isSubmitting || isUploading;
+    const logoProgress = logo ? progresses[logo.name] ?? 0 : 0;
 
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+                <BrandAuthHeader
+                    title="Create organization"
+                    description="Add the basics. You can finish settings later."
+                />
                 {/* ── Body ── */}
-                <div className="px-7 pt-7 pb-6 space-y-5">
+                <div className="flex flex-col gap-5 px-7 py-6">
                     {/* Title */}
-                    <h2 className="text-[17px] font-semibold leading-6 tracking-[-0.17px] text-[#212126]">
-                        Create organization
-                    </h2>
-
                     {/* Logo */}
                     <div className="space-y-1.5">
                         <span className="block text-[12.5px] font-medium text-[#212126]">
-                            Logo
+                            Organization logo
                         </span>
                         <div className="flex items-center gap-3">
                             {/* Drop-zone */}
@@ -332,8 +342,8 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                                 }}
                                 onDragLeave={() => setIsDragging(false)}
                                 className={cn(
-                                    "relative flex-shrink-0 size-[52px] rounded-xl overflow-hidden",
-                                    "border-2 border-dashed flex items-center justify-center",
+                                    "relative flex-shrink-0 size-16 rounded-xl overflow-hidden",
+                                    "border border-dashed flex items-center justify-center",
                                     "cursor-pointer select-none transition-colors",
                                     isDragging
                                         ? "border-[#4c6ef5] bg-[#f5f7ff]"
@@ -360,10 +370,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                                         </button>
                                     </>
                                 ) : (
-                                    <Upload
-                                        className="size-[18px] text-[#b0acaa]"
-                                        strokeWidth={1.8}
-                                    />
+                                    <Building2 className="size-6 text-[#b0acaa]" strokeWidth={1.8} />
                                 )}
                             </div>
 
@@ -374,11 +381,19 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                                     onClick={() => fileInputRef.current?.click()}
                                     className="self-start px-3 py-[5px] text-[13px] font-medium text-[#212126] bg-white border border-[#c4bfbb] rounded-md hover:bg-[#fafafa] transition-colors"
                                 >
-                                    Upload
+                                    {logo ? "Change" : "Upload logo"}
                                 </button>
                                 <p className="text-[11.5px] text-[#9c9896] leading-tight">
-                                    Recommended size 1:1, up to 10MB.
+                                    Square PNG, JPG, or WebP. Max 3 MB.
                                 </p>
+                                {isUploading && logo && (
+                                    <div className="h-1.5 w-36 overflow-hidden rounded-full bg-[#eeeeef]">
+                                        <div
+                                            className="h-full rounded-full bg-[#212126] transition-all"
+                                            style={{ width: `${Math.max(8, logoProgress)}%` }}
+                                        />
+                                    </div>
+                                )}
                                 {logoError && (
                                     <p className="text-[11.5px] text-red-500">{logoError}</p>
                                 )}
@@ -387,7 +402,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/*"
+                                accept="image/png,image/jpeg,image/webp"
                                 className="hidden"
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
@@ -477,7 +492,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                 </div>
 
                 {/* ── Actions: Cancel  |  Create organization ── */}
-                <div className="flex items-center justify-end gap-1.5 px-7 pb-7">
+                <div className="flex items-center justify-end gap-1.5 border-t border-[rgba(0,0,0,0.055)] px-7 py-4">
                     {/*
                      * Cancel is always rendered because OrganizationList always
                      * passes onCancel={() => setShowCreate(false)}.
@@ -485,7 +500,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                      */}
                     <button
                         type="button"
-                        onClick={onCancel}
+                        onClick={handleCancel}
                         disabled={isSubmitting}
                         className="px-3 py-[6px] text-[13px] font-[510] text-[#747686] hover:text-[#212126] hover:bg-[#f4f4f5] rounded-md transition-colors disabled:opacity-50"
                     >

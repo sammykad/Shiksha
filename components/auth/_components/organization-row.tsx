@@ -47,13 +47,28 @@ export function OrganizationRow({
     loading?: boolean;
     onClick?: () => void;
 }) {
+    const handleClick = () => {
+        if (loading) return;
+        onClick?.();
+    };
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (loading) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onClick?.();
+    };
+
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={loading}
+        <div
+            role="button"
+            tabIndex={loading ? -1 : 0}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            aria-disabled={loading}
             className={cn(
-                "group flex min-h-[68px] w-full items-center gap-3 border-b border-[rgba(0,0,0,0.055)] px-5 py-4 text-left transition-colors disabled:cursor-not-allowed",
+                "group flex min-h-[68px] w-full items-center gap-3 border-b border-[rgba(0,0,0,0.055)] px-5 py-4 text-left transition-colors",
+                loading && "cursor-not-allowed opacity-70",
                 spacious && "min-h-[102px] gap-4 px-7 py-6",
                 muted ? "bg-[#f7f7f7]" : "bg-white hover:bg-[#fafafa]",
             )}
@@ -109,7 +124,7 @@ export function OrganizationRow({
                     </div>
                 )
             )}
-        </button>
+        </div>
     );
 }
 

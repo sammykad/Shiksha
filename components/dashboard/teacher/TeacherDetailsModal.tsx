@@ -313,9 +313,9 @@ export function TeacherDetailsModal({
                       <DataPoint
                         label="Role"
                         value={
-                          (user.memberships?.[0]?.role ?? 'TEACHER')
-                            .toLowerCase()
-                            .replace(/\b\w/g, (l: string) => l.toUpperCase())
+                          user.memberships?.[0]?.role
+                            ? user.memberships[0].role.toLowerCase().replace(/\b\w/g, (l: string) => l.toUpperCase())
+                            : 'No membership'
                         }
                         icon={Briefcase}
                       />

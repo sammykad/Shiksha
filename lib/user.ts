@@ -4,12 +4,22 @@ import { cache } from "react";
 import {
   auth,
   getCurrentUserId,
-  getOrganizationRole as getCurrentUserRole,
+  getOrganizationRole as getCurrentOrganizationRole,
 } from "@/lib/auth";
+import type { Role } from "@/generated/prisma/enums";
 
-export { auth, getCurrentUserId, getCurrentUserRole };
+export { auth, getCurrentUserId, getCurrentOrganizationRole };
 
-export const getCurrentUser = cache(async () => {
+export type CurrentUser = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  imageUrl: string | null;
+  organizationRole: Role;
+};
+
+export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   const { user, orgRole } = await auth();
   return {
     id: user.id,
@@ -17,6 +27,6 @@ export const getCurrentUser = cache(async () => {
     lastName: user.lastName,
     email: user.email,
     imageUrl: user.image,
-    role: orgRole,
+    organizationRole: orgRole,
   };
 });

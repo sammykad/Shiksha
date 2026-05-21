@@ -57,7 +57,7 @@ export async function getParentFeesStats(): Promise<[SelectedChildStats, FamilyS
                 academicYearId,
                 student: {
                     organizationId,
-                    parents: { some: { parent: { userId } } },
+                    parents: { some: { parent: { userId, organizationId } } },
                 },
             },
             _sum: { totalFee: true, paidAmount: true },
@@ -79,7 +79,7 @@ export async function getParentFeesStats(): Promise<[SelectedChildStats, FamilyS
                 academicYearId,
                 student: {
                     organizationId,
-                    parents: { some: { parent: { userId } } },
+                    parents: { some: { parent: { userId, organizationId } } },
                 },
             },
             _sum: { totalFee: true },
@@ -87,7 +87,7 @@ export async function getParentFeesStats(): Promise<[SelectedChildStats, FamilyS
 
         prisma.parentStudent.count({
             where: {
-                parent: { userId },
+                parent: { userId, organizationId },
                 student: { organizationId },
             },
         }),

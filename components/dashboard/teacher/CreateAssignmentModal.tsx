@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { EmploymentStatus } from "@/generated/prisma/enums";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +71,8 @@ export interface Teacher {
   name: string;
   employmentStatus: EmploymentStatus;
   weeklyPeriodsAssigned?: number;
+  profileImage?: string | null;
+  role?: string;
   profile?: TeacherProfile;
 }
 
@@ -318,6 +322,7 @@ export interface CreateAssignmentModalProps {
   onSubmit: (
     data: CreateAssignmentFormValues
   ) => Promise<{ success?: boolean; error?: string; message?: string } | void>;
+  onCancel?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -391,14 +396,27 @@ function RowCard({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {subjects.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <span className="flex items-baseline gap-1.5">
-                        <span>{s.name}</span>
-                        <span className="text-[11px] text-muted-foreground">({s.code})</span>
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {subjects.length === 0 ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      No subjects found.
+                      <Link
+                        target="_blank"
+                        href="/dashboard/subjects"
+                        className="ml-1 text-blue-500 hover:underline"
+                      >
+                        Create a subject
+                      </Link>
+                    </div>
+                  ) : (
+                    subjects.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <span className="flex items-baseline gap-1.5">
+                          <span>{s.name}</span>
+                          <span className="text-[11px] text-muted-foreground">({s.code})</span>
+                        </span>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage className="text-[11px]" />
@@ -413,8 +431,8 @@ function RowCard({
             name={`rows.${idx}.gradeId`}
             render={({ field }) => (
               <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">{terminology.grade}</FormLabel>
-              <Select
+                <FormLabel className="text-xs text-muted-foreground">{terminology.grade}</FormLabel>
+                <Select
                   onValueChange={(v) => {
                     field.onChange(v);
                     setValue(`rows.${idx}.sectionId`, "", { shouldValidate: false });
@@ -552,6 +570,7 @@ export function CreateAssignmentModal({
   sections,
   existingAssignments = [],
   onSubmit,
+  onCancel,
 }: CreateAssignmentModalProps) {
   const terminology = useTerminology();
   const [step, setStep] = React.useState(1);
@@ -682,7 +701,7 @@ export function CreateAssignmentModal({
       <aside className="hidden sm:flex w-52 shrink-0 flex-col border-r border-border bg-muted/20 p-5">
         {/* Brand */}
         <div className="mb-6 flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-500  shadow-sm">
             <GraduationCap className="h-4 w-4" />
           </div>
           <div className="min-w-0">
@@ -817,49 +836,91 @@ export function CreateAssignmentModal({
                   <FormField
                     control={form.control}
                     name="teacherId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teacher</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a teacher…" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {teachers.map((t) => (
-                              <SelectItem
-                                key={t.id}
-                                value={t.id}
-                                disabled={t.employmentStatus !== "ACTIVE"}
-                              >
-                                <span className="flex items-center gap-2">
-                                  <span>{t.name}</span>
-                                  {t.employmentStatus !== "ACTIVE" && (
-                                    <Badge variant="destructive" className="h-4 text-[10px] px-1.5 py-0">
-                                      {t.employmentStatus.replace(/_/g, " ").toLowerCase()}
-                                    </Badge>
-                                  )}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          Inactive or on-leave teachers are disabled.
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const selected = teachers.find((t) => t.id === field.value);
+                      return (
+                        <FormItem>
+                          <FormLabel>Teacher</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-auto py-2">
+                                {selected ? (
+                                  <div className="flex items-center gap-2.5 w-full">
+                                    <Avatar className="h-7 w-7 border border-border shrink-0">
+                                      <AvatarImage src={selected.profileImage ?? undefined} />
+                                      <AvatarFallback className="bg-primary/5 text-primary text-[10px]">
+                                        {selected.name.split(" ").map((n) => n[0]).join("")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                      <span className="text-sm font-medium leading-tight truncate">
+                                        {selected.name}
+                                      </span>
+                                      <span className="text-[11px] text-muted-foreground leading-tight">
+                                        {selected.role
+                                          ? selected.role.charAt(0) + selected.role.slice(1).toLowerCase()
+                                          : "Teacher"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <SelectValue placeholder="Select a teacher…" />
+                                )}
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {teachers.map((t) => (
+                                <SelectItem
+                                  key={t.id}
+                                  value={t.id}
+                                  disabled={t.employmentStatus !== "ACTIVE"}
+                                >
+                                  <div className="flex items-center gap-2.5 py-0.5">
+                                    <Avatar className="h-7 w-7 border border-border shrink-0">
+                                      <AvatarImage src={t.profileImage ?? undefined} />
+                                      <AvatarFallback className="bg-primary/5 text-primary text-[10px]">
+                                        {t.name.split(" ").map((n) => n[0]).join("")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="text-sm font-medium leading-tight truncate">
+                                        {t.name}
+                                      </span>
+                                      <span className="text-[11px] text-muted-foreground leading-tight">
+                                        {t.role
+                                          ? t.role.charAt(0) + t.role.slice(1).toLowerCase()
+                                          : "Teacher"}
+                                      </span>
+                                    </div>
+                                    {t.employmentStatus !== "ACTIVE" && (
+                                      <Badge variant="destructive" className="h-4 text-[10px] px-1.5 py-0 shrink-0">
+                                        {t.employmentStatus.replace(/_/g, " ").toLowerCase()}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Inactive or on-leave teachers are disabled.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   {/* Teacher profile card */}
                   {selectedTeacher && selectedTeacher.employmentStatus === "ACTIVE" && (
                     <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <User className="h-4 w-4" />
-                        </div>
+                        <Avatar className="h-9 w-9 border border-border shrink-0">
+                          <AvatarImage src={selectedTeacher.profileImage ?? undefined} />
+                          <AvatarFallback className="bg-primary/5 text-primary text-xs">
+                            {selectedTeacher.name.split(" ").map((n) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-foreground truncate">
                             {selectedTeacher.name}
@@ -921,7 +982,12 @@ export function CreateAssignmentModal({
                   {/* Teacher context chip */}
                   {selectedTeacher && (
                     <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
-                      <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <Avatar className="h-6 w-6 shrink-0 border border-border">
+                        <AvatarImage src={selectedTeacher.profileImage ?? undefined} />
+                        <AvatarFallback className="bg-primary/5 text-primary text-[9px]">
+                          {selectedTeacher.name.split(" ").map((n) => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="text-xs font-medium text-foreground truncate flex-1">
                         {selectedTeacher.name}
                       </span>
@@ -1088,7 +1154,10 @@ export function CreateAssignmentModal({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={resetForm}
+                  onClick={() => {
+                    onCancel?.();
+                    resetForm();
+                  }}
                 >
                   Cancel
                 </Button>

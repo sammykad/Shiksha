@@ -117,7 +117,7 @@ export async function createStudent(data: ValidatedStudent, leadId?: string) {
           createMembership: false,
         });
 
-        const parent = await upsertParentRecord(tx, parentUser.id, parentData);
+        const parent = await upsertParentRecord(tx, parentUser.id, organizationId, parentData);
 
         await tx.parentStudent.create({
           data: {

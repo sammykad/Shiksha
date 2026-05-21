@@ -205,56 +205,45 @@ export async function getReportStats() {
 export async function getStaffDirectoryData(): Promise<StaffReportData[]> {
     const organizationId = await getOrganizationId();
 
-    const staffRecords = await prisma.user.findMany({
+    const memberships = await prisma.membership.findMany({
         where: {
-            isActive: true,
-            memberships: {
-                some: {
-                    organizationId,
-                    status: 'ACTIVE',
-                    role: { in: ['ADMIN', 'TEACHER'] },
-                },
-            },
+            organizationId,
+            status: 'ACTIVE',
+            role: { in: ['ADMIN', 'TEACHER'] },
         },
-        include: {
-            memberships: {
-                where: {
-                    organizationId,
-                    status: 'ACTIVE',
-                },
+        select: {
+            role: true,
+            user: {
                 select: {
-                    role: true,
-                },
-            },
-            teacher: {
-                where: { organizationId },
-                include: {
-                    profile: true,
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    isActive: true,
+                    teacher: {
+                        where: { organizationId },
+                        include: {
+                            profile: true,
+                        },
+                    },
                 },
             },
         },
     });
 
-    const staff = staffRecords.map((member) => {
-        const activeMembership = member.memberships[0];
-        if (!activeMembership) {
-            throw new Error(`Critical: User ${member.id} has no active membership in organization ${organizationId}`);
-        }
-
-        return {
-            id: member.id,
-            employeeCode: member.teacher?.employeeCode || undefined,
-            firstName: member.firstName,
-            lastName: member.lastName,
-            email: member.email,
-            role: activeMembership.role,
-            phone: member.teacher?.profile?.contactPhone || '-',
-            employmentStatus: member.teacher?.employmentStatus || 'ACTIVE',
-            joinedAt: member.teacher?.profile?.joinedAt || undefined,
-            qualification: member.teacher?.profile?.qualification || '-',
-            isActive: member.isActive,
-        };
-    });
+    const staff = memberships.map((m) => ({
+        id: m.user.id,
+        employeeCode: m.user.teacher?.employeeCode || undefined,
+        firstName: m.user.firstName,
+        lastName: m.user.lastName,
+        email: m.user.email,
+        role: m.role,
+        phone: m.user.teacher?.profile?.contactPhone || '-',
+        employmentStatus: m.user.teacher?.employmentStatus || 'ACTIVE',
+        joinedAt: m.user.teacher?.profile?.joinedAt || undefined,
+        qualification: m.user.teacher?.profile?.qualification || '-',
+        isActive: m.user.isActive,
+    }));
 
     const ROLE_PRIORITY: Record<string, number> = {
         ADMIN: 1,

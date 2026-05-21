@@ -99,7 +99,7 @@ export const betterAuthServer = betterAuth({
     updateAge: 60 * 60 * 24,    // 1 day
     cookieCache: {
       enabled: true,
-      maxAge: 60 * 5, // 5 minutes
+      maxAge: 60 * 5, // 5 minutes — fast revocation for suspended/removed members
     },
   },
 
@@ -370,7 +370,8 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
       where: { userId, organizationId: orgId },
       select: { id: true },
     });
-    return { role: Role.TEACHER, userId, teacherId: teacher?.id ?? "", organizationId: orgId };
+    if (!teacher) throw new Error(`Teacher profile missing for user ${userId} in org ${orgId}`);
+    return { role: Role.TEACHER, userId, teacherId: teacher.id, organizationId: orgId };
   }
 
   if (orgRole === Role.STUDENT) {
@@ -378,12 +379,16 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
       where: { userId, organizationId: orgId },
       select: { id: true },
     });
-    return { role: Role.STUDENT, userId, studentId: student?.id ?? "", organizationId: orgId };
+    if (!student) throw new Error(`Student profile missing for user ${userId} in org ${orgId}`);
+    return { role: Role.STUDENT, userId, studentId: student.id, organizationId: orgId };
   }
 
   // PARENT
   const parent = await prisma.parent.findFirst({
-    where: { userId },
+    where: {
+      userId,
+      organizationId: orgId,
+    },
     select: {
       id: true,
       students: {
@@ -404,32 +409,39 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
 
 // ─── Private Helpers ──────────────────────────────────────────────────────────
 
-async function resolveDefaultOrganizationId(userId: string) {
-  const memberships = await prisma.membership.findMany({
-    where: {
-      userId,
-      status: "ACTIVE",
-      organization: { isActive: true },
-    },
-    select: { organizationId: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-  });
+export async function resolveDefaultOrganizationId(
+  userId: string,
+  organizationIds?: string[]
+) {
+  let orgIds = organizationIds;
 
-  if (memberships.length === 0) return null;
+  if (!orgIds) {
+    const memberships = await prisma.membership.findMany({
+      where: {
+        userId,
+        status: "ACTIVE",
+        organization: { isActive: true },
+      },
+      select: { organizationId: true },
+    });
 
-  const membershipIds = new Set(memberships.map((m) => m.organizationId));
+    if (memberships.length === 0) return null;
+    orgIds = memberships.map((m) => m.organizationId);
+  }
+
+  if (orgIds.length === 0) return null;
 
   const lastSession = await prisma.session.findFirst({
     where: {
       userId,
-      activeOrganizationId: { in: Array.from(membershipIds) },
+      activeOrganizationId: { in: orgIds },
       expiresAt: { gt: new Date() },
     },
     select: { activeOrganizationId: true },
     orderBy: { updatedAt: "desc" },
   });
 
-  return lastSession?.activeOrganizationId ?? memberships[0].organizationId;
+  return lastSession?.activeOrganizationId ?? null;
 }
 
 async function getMembershipLimit(organizationId: string) {

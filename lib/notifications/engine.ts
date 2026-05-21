@@ -339,17 +339,22 @@ async function resolveRecipients(
           },
         },
       },
-      include: { student: true, parent: true, deviceTokens: true },
+      include: {
+        student: true,
+        parents: { where: { organizationId }, take: 1 },
+        deviceTokens: true,
+      },
     });
 
     for (const u of users) {
+      const parent = u.parents[0];
       resolved.push({
         userId: u.id,
         studentId: u.student?.id,
-        parentId: u.parent?.id,
+        parentId: parent?.id,
         email: u.email,
-        phone: u.student?.phoneNumber ?? u.parent?.phoneNumber,
-        whatsappNumber: u.student?.whatsAppNumber ?? u.parent?.whatsAppNumber,
+        phone: u.student?.phoneNumber ?? parent?.phoneNumber,
+        whatsappNumber: u.student?.whatsAppNumber ?? parent?.whatsAppNumber,
         fcmTokens: u.deviceTokens.map((d) => d.token),
       });
     }
@@ -359,7 +364,7 @@ async function resolveRecipients(
     log(templateId, "info", `Resolving ${parentIds.size} parent(s)…`);
 
     const parents = await prisma.parent.findMany({
-      where: { id: { in: Array.from(parentIds) } },
+      where: { id: { in: Array.from(parentIds) }, organizationId },
       include: { user: { include: { deviceTokens: true } } },
     });
 

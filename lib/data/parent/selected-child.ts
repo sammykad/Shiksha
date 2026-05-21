@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import prisma from '@/lib/db';
 import { getCurrentUserId } from '@/lib/user';
+import { getOrganizationId } from '@/lib/organization';
 
 const COOKIE_KEY = 'selectedChildId';
 const COOKIE_OPTIONS = {
@@ -52,9 +53,12 @@ export async function clearSelectedChildId(): Promise<void> {
 // ─────────────────────────────────────────────
 
 export async function getChildrenForParent(userId: string): Promise<ChildSummary[]> {
+    const organizationId = await getOrganizationId();
+
     const parentStudents = await prisma.parentStudent.findMany({
         where: {
-            parent: { userId },
+            parent: { userId, organizationId },
+            student: { organizationId },
         },
         orderBy: [
             { isPrimary: 'desc' }, // primary child first
@@ -88,13 +92,17 @@ export async function getChildrenForParent(userId: string): Promise<ChildSummary
 // ─────────────────────────────────────────────
 
 export async function selectChildAction(studentId: string): Promise<void> {
-    const userId = await getCurrentUserId();
+    const [userId, organizationId] = await Promise.all([
+        getCurrentUserId(),
+        getOrganizationId(),
+    ]);
 
     // Guard: ensure the student actually belongs to this parent
     const ownership = await prisma.parentStudent.findFirst({
         where: {
             studentId,
-            parent: { userId },
+            parent: { userId, organizationId },
+            student: { organizationId },
         },
         select: { id: true },
     });

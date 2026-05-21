@@ -1,7 +1,7 @@
 "use server";
 
 import { StudentExamStatus } from "@/generated/prisma/enums";
-import { getCurrentUserByRole } from "@/lib/auth";
+import { getCurrentUserByRole, getOrganizationId } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { getCurrentUserId } from "@/lib/user";
 import { revalidatePath } from "next/cache";
@@ -17,9 +17,10 @@ export async function enrollStudentsInExam(
     }
     const userId = await getCurrentUserId();
 
-    // Verify exam exists
-    const exam = await prisma.exam.findUnique({
-        where: { id: examId },
+    // Verify exam exists and belongs to current organization
+    const organizationId = await getOrganizationId();
+    const exam = await prisma.exam.findFirst({
+        where: { id: examId, organizationId },
         select: { id: true }
     });
 

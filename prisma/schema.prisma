@@ -56,7 +56,7 @@ model User {
   // Profile relations
   teacher Teacher?
   student Student?
-  parent  Parent?
+  parents Parent[]
 
   feePayment    FeePayment[]
   notifications Notification[]
@@ -238,6 +238,7 @@ model Organization {
   NotificationLog      NotificationLog[]
   certificates         Certificate[]
   reportCards          ReportCard[]
+  parents              Parent[]
 
   // Branches - physical locations
   // branches    Branch[]
@@ -251,6 +252,7 @@ model Organization {
   metaIntegration MetaIntegration?
 
   gradingScales GradingScale[]
+  idCards       IdCard[]
 
   @@index([id])
   @@index([slug])
@@ -433,6 +435,7 @@ model Student {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  idCards   IdCard[]
 
   @@unique([organizationId, rollNumber])
   @@index([email]) // User lookup
@@ -444,13 +447,17 @@ model Student {
 }
 
 model Parent {
-  id     String  @id @default(cuid())
-  userId String? @unique // one parent profile per user, nullable (manual entry)
+  id String @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  userId String?
   user   User?   @relation(fields: [userId], references: [id])
 
   firstName      String
   lastName       String
-  email          String @unique
+  email          String
   phoneNumber    String
   whatsAppNumber String
 
@@ -462,6 +469,11 @@ model Parent {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   notifications Notification[]
+
+  @@unique([organizationId, email])
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([email])
 }
 
 model ParentStudent {
@@ -501,6 +513,7 @@ model Teacher {
   // Link through membership instead of direct user
   // membershipId String @unique
   // membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  idCards            IdCard[]
 
   // salaries           Salary[]
   // model TeacherAttendance {}
@@ -2179,3 +2192,46 @@ model AcademicYear {
 //   ROOM_CHANGE
 //   TEACHER_ABSENT
 // }
+
+enum IdCardOrientation {
+  HORIZONTAL
+  VERTICAL
+}
+
+model IdCard {
+  id         String @id @default(cuid())
+  cardNumber String @unique
+  version    Int    @default(1)
+
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  academicYear  String
+  issuedAt      DateTime  @default(now())
+  expiresAt     DateTime?
+  revokedAt     DateTime?
+  revokedBy     String?
+  revokedReason String?
+
+  qrCodeUrl    String?
+  cardImageUrl String?
+  cardPdfUrl   String?
+
+  generatedBy String
+  template    String            @default("default")
+  orientation IdCardOrientation @default(HORIZONTAL)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, studentId, academicYear])
+  @@unique([organizationId, teacherId, academicYear])
+  @@index([organizationId, studentId])
+  @@index([organizationId, teacherId])
+  @@index([cardNumber])
+}

@@ -2,11 +2,12 @@
 'use server';
 
 import prisma from '@/lib/db';
+import { Role } from '@/generated/prisma/enums';
 
 export interface MentionUser {
   id: string;
   name: string;
-  role: string;
+  role: Role;
   department?: string;
   email: string;
   profileImage?: string;
@@ -16,69 +17,63 @@ export async function getMentionUsers(
   organizationId: string,
   searchQuery?: string
 ): Promise<MentionUser[]> {
-  const users = await prisma.user.findMany({
+  const memberships = await prisma.membership.findMany({
     where: {
-      isActive: true,
-      memberships: {
-        some: {
-          organizationId,
-          status: "ACTIVE",
-        },
+      organizationId,
+      status: "ACTIVE",
+      user: {
+        isActive: true,
+        ...(searchQuery && searchQuery.length >= 2 && {
+          OR: [
+            { firstName: { contains: searchQuery, mode: 'insensitive' } },
+            { lastName: { contains: searchQuery, mode: 'insensitive' } },
+            { email: { contains: searchQuery, mode: 'insensitive' } },
+          ],
+        }),
       },
-      ...(searchQuery && searchQuery.length >= 2 && {
-        OR: [
-          { firstName: { contains: searchQuery, mode: 'insensitive' } },
-          { lastName: { contains: searchQuery, mode: 'insensitive' } },
-          { email: { contains: searchQuery, mode: 'insensitive' } },
-        ],
-      }),
     },
     select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      profileImage: true,
-      memberships: {
-        where: {
-          organizationId,
-          status: "ACTIVE",
-        },
+      role: true,
+      user: {
         select: {
-          role: true,
-        },
-      },
-      teacher: {
-        where: { organizationId },
-        select: {
-          profile: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          profileImage: true,
+          teacher: {
+            where: { organizationId },
             select: {
-              qualification: true,
-              specializedSubjects: true,
+              profile: {
+                select: {
+                  qualification: true,
+                  specializedSubjects: true,
+                },
+              },
+            },
+          },
+          student: {
+            where: { organizationId },
+            select: {
+              grade: { select: { grade: true } },
+              section: { select: { name: true } },
             },
           },
         },
       },
-      student: {
-        where: { organizationId },
-        select: {
-          grade: { select: { grade: true } },
-          section: { select: { name: true } },
-        },
-      },
     },
     take: searchQuery ? 10 : 50,
-    orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    orderBy: [{ user: { firstName: 'asc' } }, { user: { lastName: 'asc' } }],
   });
 
-  return users.map((user) => {
-    const role = user.memberships[0]?.role ?? "STUDENT";
+  return memberships.map((m) => {
+    const user = m.user;
     return {
       id: user.id,
       name: `${user.firstName} ${user.lastName}`.trim(),
-      role,
+      role: m.role,
       department: getDepartmentInfo({
-        role,
+        role: m.role,
         teacher: user.teacher,
         student: user.student,
       }),
@@ -91,7 +86,7 @@ export async function getMentionUsers(
 
 
 function getDepartmentInfo(user: {
-  role: string;
+  role: Role;
   teacher?: {
     profile?: {
       specializedSubjects?: string[];

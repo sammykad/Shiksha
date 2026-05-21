@@ -13,6 +13,13 @@ import {
   ZapIcon,
 } from 'lucide-react';
 
+export const ID_CARD_MOTTO: Record<string, string> = {
+  STUDENT: 'Inspire  •  Learn  •  Grow',
+  TEACHER: 'Empower  •  Educate  •  Excel',
+  ADMIN: 'Lead  •  Serve  •  Inspire',
+  PARENT: 'Support  •  Guide  •  Nurture',
+};
+
 
 export const features = [
   {

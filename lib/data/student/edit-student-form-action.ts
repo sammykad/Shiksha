@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { StudentProfileFormData, studentProfileSchema } from '@/lib/schemas';
 import prisma from '@/lib/db';
-import { getCurrentUserByRole } from '@/lib/auth';
+import { getCurrentUserByRole, getOrganizationId } from '@/lib/auth';
 
 export async function editStudentProfileForm(
   studentId: string,
@@ -12,6 +12,7 @@ export async function editStudentProfileForm(
 ) {
   try {
     const userRole = await getCurrentUserByRole();
+    const organizationId = await getOrganizationId();
     const validatedData = studentProfileSchema.parse(data);
     const isOwnProfile =
       userRole.role === 'STUDENT' && userRole.studentId === studentId;
@@ -35,7 +36,7 @@ export async function editStudentProfileForm(
       };
     }
     await prisma.student.update({
-      where: { id: studentId },
+      where: { id: studentId, organizationId },
       data: {
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,

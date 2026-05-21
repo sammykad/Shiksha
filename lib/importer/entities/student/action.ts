@@ -199,7 +199,7 @@ export async function bulkImportStudents(
                         createMembership: false,
                     })
 
-                    const parent = await upsertParentRecord(tx, parentUser.id, {
+                    const parent = await upsertParentRecord(tx, parentUser.id, organizationId, {
                         firstName: row.parentFirstName,
                         lastName: row.parentLastName,
                         email: row.parentEmail,

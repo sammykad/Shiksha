@@ -15,7 +15,7 @@ import {
   getTeacherStats,
   getRevenueStats,
   getIssuesStats,
-} from '@/lib/data/dashboard/admin-dashboard-cards';
+} from '@/lib/data/admin/admin-dashboard-cards';
 import { getActiveAcademicYear } from '@/lib/academicYear';
 
 

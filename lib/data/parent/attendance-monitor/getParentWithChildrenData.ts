@@ -1,16 +1,21 @@
 import prisma from '@/lib/db';
 import { getCurrentUserId } from '@/lib/user';
+import { getOrganizationId } from '@/lib/organization';
 
 import { performance } from 'perf_hooks';
 
 export async function getParentWithChildrenData() {
   const start = performance.now();
 
-  const userId = await getCurrentUserId();
+  const [userId, organizationId] = await Promise.all([
+    getCurrentUserId(),
+    getOrganizationId(),
+  ]);
 
   const parentData = await prisma.parent.findFirst({
     where: {
-      userId: userId,
+      userId,
+      organizationId,
     },
     select: {
       id: true,

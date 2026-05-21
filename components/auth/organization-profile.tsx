@@ -1056,8 +1056,8 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     ) : (
-                                                        <span className="text-[12px] font-[510] text-[#9ca3af]">
-                                                            {getInvitationStatusLabel(invitation)}
+                                                        <span className="inline-flex h-8 w-8 items-center justify-center" aria-label="No available action">
+                                                            <span className="h-px w-3 rounded-full bg-[#d1d5db]" />
                                                         </span>
                                                     )}
                                                 </TableCell>

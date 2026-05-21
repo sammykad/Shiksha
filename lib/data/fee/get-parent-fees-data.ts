@@ -74,7 +74,7 @@ export async function getParentFeesData(): Promise<ChildFeeData | null> {
       academicYearId,
       student: {
         organizationId,
-        parents: { some: { parent: { userId } } }, // ownership guard
+        parents: { some: { parent: { userId, organizationId } } }, // ownership guard
       },
     },
     select: {

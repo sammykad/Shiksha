@@ -246,7 +246,7 @@ function StatCard({
 
 export default async function NotificationLogsPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
-  if (user.role !== "ADMIN") redirect("/dashboard/forbidden");
+  if (user.organizationRole !== "ADMIN") redirect("/dashboard/forbidden");
 
   const params = await searchParams;
   const filters: LogFilters = {

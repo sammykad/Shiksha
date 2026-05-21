@@ -36,7 +36,7 @@ export async function getChildrenByParent(): Promise<ChildSummary[]> {
 
   const parentStudents = await prisma.parentStudent.findMany({
     where: {
-      parent: { userId },
+      parent: { userId, organizationId },
       student: { organizationId },
     },
     orderBy: [

@@ -122,6 +122,7 @@ export async function upsertUserRecord(
 export async function upsertParentRecord(
   tx: TxClient,
   userId: string,
+  organizationId: string,
   parent: ParentInput
 ) {
   const shared = {
@@ -131,8 +132,14 @@ export async function upsertParentRecord(
   };
 
   return tx.parent.upsert({
-    where: { email: parent.email.trim().toLowerCase() },
+    where: {
+      organizationId_email: {
+        organizationId,
+        email: parent.email.trim().toLowerCase(),
+      },
+    },
     create: {
+      organizationId,
       email: parent.email.trim().toLowerCase(),
       firstName: parent.firstName,
       lastName: parent.lastName,

@@ -7,11 +7,12 @@ import {
     useEffect,
     type RefObject,
 } from 'react';
+import type { Role } from '@/generated/prisma/enums';
 
 export interface MentionUser {
     id: string;
     name: string;
-    role?: string;
+    role?: Role;
     department?: string;
     email?: string;
     profileImage?: string;
@@ -20,7 +21,7 @@ export interface MentionUser {
 export interface MentionedPerson {
     id: string;
     name: string;
-    role?: string;
+    role?: Role;
     department?: string;
 }
 

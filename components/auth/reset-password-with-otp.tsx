@@ -8,7 +8,10 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { markEmailVerifiedAfterPasswordReset } from "@/lib/auth-account-actions";
+import {
+  markEmailVerifiedAfterPasswordReset,
+  validatePasswordResetEmail,
+} from "@/lib/auth-account-actions";
 import {
   Form,
   FormControl,
@@ -106,6 +109,13 @@ export function ResetPasswordWithOtp({
     setPending(true);
     setOtpError(null);
     try {
+      const validation = await validatePasswordResetEmail(nextEmail);
+      if (!validation.ok) {
+        emailForm.setError("email", { message: validation.message });
+        toast.error(validation.message);
+        return;
+      }
+
       const { error } = await emailOtp.requestPasswordReset({ email: nextEmail });
       if (error) {
         const message = error.message ?? "Could not send reset code.";

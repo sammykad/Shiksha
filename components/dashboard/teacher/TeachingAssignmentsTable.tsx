@@ -388,8 +388,7 @@ export default function TeachingAssignmentsTable({
               sections={formData.sections}
               existingAssignments={formData.existingAssignments}
               onSubmit={createTeachingAssignment}
-            // You can add an 'initialData' prop to CreateAssignmentModal if you want to support editing
-            // For now, we'll keep it as is.
+              onCancel={() => setIsEditModalOpen(false)}
             />
           )}
         </DialogContent>

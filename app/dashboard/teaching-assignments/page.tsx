@@ -11,14 +11,8 @@ import {
   type Grade,
   type Section,
   type ExistingAssignment,
-  CreateAssignmentModal,
 } from "@/components/dashboard/teacher/CreateAssignmentModal";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { NewAssignmentDialog } from "@/components/dashboard/teacher/NewAssignmentDialog";
 import { createTeachingAssignment } from "@/lib/data/teaching-assignment/createTeachingAssignment";
 import TeachingAssignmentsView from "@/components/dashboard/teacher/Teachingassignmentsview";
 
@@ -53,7 +47,14 @@ async function getFormData(): Promise<{
       prisma.teacher.findMany({
         where: { organizationId, isActive: true },
         include: {
-          user: true,
+          user: {
+            include: {
+              memberships: {
+                where: { organizationId },
+                select: { role: true },
+              },
+            },
+          },
           profile: true,
           teachingAssignment: { where: { status: { not: "INACTIVE" } } },
         },
@@ -89,6 +90,8 @@ async function getFormData(): Promise<{
     name: `${t.user.firstName} ${t.user.lastName}`.trim(),
     employmentStatus: t.employmentStatus as Teacher["employmentStatus"],
     weeklyPeriodsAssigned: t.teachingAssignment.length,
+    profileImage: t.user.profileImage,
+    role: t.user.memberships[0]?.role ?? "TEACHER",
     profile: t.profile
       ? {
         specializedSubjects: t.profile.specializedSubjects,
@@ -138,25 +141,15 @@ export default async function TeachingAssignmentsPage() {
         icon={Users}
         actions={
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm" className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Assignment
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
-                <CreateAssignmentModal
-                  academicYears={academicYears}
-                  teachers={teachers}
-                  subjects={subjects}
-                  grades={grades}
-                  sections={sections}
-                  existingAssignments={existingAssignments}
-                  onSubmit={createTeachingAssignment}
-                />
-              </DialogContent>
-            </Dialog>
+            <NewAssignmentDialog
+              academicYears={academicYears}
+              teachers={teachers}
+              subjects={subjects}
+              grades={grades}
+              sections={sections}
+              existingAssignments={existingAssignments}
+              onSubmit={createTeachingAssignment}
+            />
           </div>
         }
       />

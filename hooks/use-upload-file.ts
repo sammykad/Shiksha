@@ -31,6 +31,7 @@ export function useUploadFile(
   // Add this simple reset function
   const resetUploadState = () => {
     setUploadedFiles([]);
+    setProgresses({});
   };
 
   async function onUpload(files: File[]) {
@@ -52,7 +53,9 @@ export function useUploadFile(
       setUploadedFiles((prev) => (prev ? [...prev, ...res] : res));
       return res;
     } catch (err) {
-      toast.error('err');
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      toast.error(message);
+      throw err;
     } finally {
       setProgresses({});
       setIsUploading(false);

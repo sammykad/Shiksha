@@ -147,45 +147,40 @@ export async function getAvailableUsersForLeads() {
   try {
     const organizationId = await getOrganizationId();
 
-    const users = await prisma.user.findMany({
+    const memberships = await prisma.membership.findMany({
       where: {
-        isActive: true,
-        memberships: {
-          some: {
-            organizationId,
-            status: "ACTIVE",
-            role: {
-              in: ['ADMIN', 'TEACHER'],
-            },
-          },
+        organizationId,
+        status: "ACTIVE",
+        role: { in: ['ADMIN', 'TEACHER'] },
+        user: {
+          isActive: true,
         },
       },
       select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        profileImage: true,
-        memberships: {
-          where: {
-            organizationId,
-            status: "ACTIVE",
-          },
+        role: true,
+        user: {
           select: {
-            role: true,
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            profileImage: true,
           },
         },
       },
-      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      orderBy: [{ user: { firstName: 'asc' } }, { user: { lastName: 'asc' } }],
     });
 
-    const mappedUsers = users.map((u) => {
-      const { memberships, ...rest } = u;
-      return {
-        ...rest,
-        role: memberships[0]?.role ?? 'TEACHER',
-      };
-    });
+    const mappedUsers = memberships
+      .filter((m) => m.user !== null)
+      .map((m) => ({
+        id: m.user.id,
+        firstName: m.user.firstName,
+        lastName: m.user.lastName,
+        email: m.user.email,
+        profileImage: m.user.profileImage,
+        role: m.role,
+      }));
 
     console.log(mappedUsers);
     return { success: true, data: mappedUsers };

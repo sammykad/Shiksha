@@ -1,7 +1,7 @@
 'use server';
 
 import { phonePayInitPayment } from './recordOnlinePayment';
-import { getOrganizationRole } from '@/lib/auth';
+import { getOrganizationRole, getOrganizationId } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { Role } from '@/generated/prisma/enums';
 import { revalidatePath } from 'next/cache';
@@ -18,9 +18,10 @@ export const generateFeePaymentLink = async (feeId: string) => {
     throw new Error('Unauthorized: Only admins and teachers can generate payment links.');
   }
 
-  // 2. Fetch the fee and its associated student's userId (the default payer)
-  const fee = await prisma.fee.findUnique({
-    where: { id: feeId },
+  // 2. Fetch the fee scoped to current organization (prevents cross-org access)
+  const organizationId = await getOrganizationId();
+  const fee = await prisma.fee.findFirst({
+    where: { id: feeId, organizationId },
     select: {
       student: {
         select: {
