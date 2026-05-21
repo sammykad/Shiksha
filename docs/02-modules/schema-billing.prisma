@@ -1,0 +1,98 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. ADD these two fields inside the existing Organization model
+//    (anywhere in the model block, e.g. after `notificationSettings`)
+// ─────────────────────────────────────────────────────────────────────────────
+
+//  walletBalance      Float               @default(0)
+//  walletTransactions WalletTransaction[]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. NEW — paste these at the bottom of schema.prisma
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum WalletTxType {
+  CREDIT // Money added   — welcome bonus, manual top-up, refund
+  DEBIT  // Money spent   — notification batch
+}
+
+enum TopUpStatus {
+  PENDING   // Request raised by org admin, not yet paid
+  COMPLETED // You collected cash and credited the wallet
+  CANCELLED // Request dropped
+}
+
+model WalletTransaction {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  type   WalletTxType
+  amount Float // Always positive — direction is in `type`
+
+  // Ledger snapshots — lets you audit any point-in-time balance
+  // without replaying the entire history
+  balanceBefore Float
+  balanceAfter  Float
+
+  // Human-readable — shown on the org's billing history page
+  // e.g. "Welcome bonus", "Cash top-up — receipt #001", "Notification batch"
+  reason String
+
+  // What caused this transaction:
+  //   DEBIT  → batch UUID from the notification engine
+  //   CREDIT → receipt number (cash), Razorpay order id (later), "WELCOME_BONUS"
+  referenceId String?
+
+  // Only set for CREDIT transactions recorded by a human
+  addedByUserId String?
+
+  // Back-link to the top-up request that triggered this credit (optional)
+  topUpRequest   TopUpRequest? @relation(fields: [topUpRequestId], references: [id])
+  topUpRequestId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, type])
+  @@index([referenceId]) // look up "was this batch already billed?"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Top-up request — org admin requests credits, you collect cash and fulfill it
+//
+// Flow:
+//   1. Org admin clicks "Request top-up" → TopUpRequest created (PENDING)
+//   2. You receive alert (email / Slack / WhatsApp to yourself)
+//   3. You collect cash offline
+//   4. You open super-admin panel → mark as COMPLETED → wallet is credited
+//      (calling topUpWallet() creates the WalletTransaction and links it here)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model TopUpRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  requestedAmount Float        // What the org asked for
+  status          TopUpStatus  @default(PENDING)
+
+  // Set by the org admin when raising the request
+  requestedByUserId String
+  requestedAt       DateTime   @default(now())
+  note              String?    // e.g. "Need credits for parent day notifications"
+
+  // Filled in when you complete it
+  fulfilledAmount   Float?     // Actual amount you credited (may differ slightly)
+  fulfilledByUserId String?    // Your super-admin user id
+  fulfilledAt       DateTime?
+  receiptNumber     String?    // Your cash receipt / any reference
+
+  // The wallet credit created when this request was completed
+  walletTransactions WalletTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([status, requestedAt]) // your super-admin queue view
+}

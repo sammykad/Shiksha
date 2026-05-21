@@ -1,12 +1,24 @@
- <!-- PROMPT  -->
+<!-- PROMPT  -->
 
 Generate a modern, high-performance Next.js 15 application using server actions, client components, and server components where necessary. Follow a design system inspired by Vercel, ShadCN, Clerk, Neon, and Supabase—clean UI, minimal aesthetics, and well-structured components. Ensure seamless authentication handling (Clerk), database integration (Neon/Supabase), and responsive UI. Code should be modular, maintainable, and optimized for production.
 
 Lead Management : https://tnks-data-table.vercel.app/
 For Big Calender: https://big-calendar.vercel.app/month-view
 For student Register Multi Loader: https://inspira-ui.com/docs/components/miscellaneous/multi-step-loader  
-Need To Buy : RFID biometric retina reader
+Need To Buy : RFID biometric retina reader
 Alpha shop Pimpri arket
+
+<!-- COMPLETED MODULES -->
+
+## Digital ID Card Module (2026-05-21) ✅ 100%
+- Bulk + individual card generation for students/teachers
+- PDF generation matching HTML preview exactly (360x228px)
+- QR code verification at `/verify/id-card/[cardNumber]`
+- Card/List toggle, search, filter, sort in generated tab
+- Profile photo validation, organization logo support
+- Admin-only revocation/reissue with version tracking
+- On-demand PDF download (no storage required)
+- Docs: `docs/id-card-module/` (PRD, Implementation Plan, Technical Reference, Changelog)
 
 - Pending Work
 

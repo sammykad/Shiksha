@@ -1,9 +1,8 @@
-import { Plus, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import prisma from "@/lib/db";
 import { getOrganizationId, getOrganizationType } from "@/lib/organization";
 import { getTerminology } from "@/lib/terminology";
-import TeachingAssignmentsTable from "@/components/dashboard/teacher/TeachingAssignmentsTable";
 import {
   type AcademicYear,
   type Teacher,

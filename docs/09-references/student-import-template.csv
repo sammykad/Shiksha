@@ -1,0 +1,70 @@
+# SHIKSHA.CLOUD — STUDENT + PARENT IMPORT TEMPLATE
+# ================================================
+#
+# HOW TO USE:
+# 1. Fill in ONE row per student below
+# 2. Replace ALL placeholder values (marked with <>) with real data
+# 3. Save as CSV and send to Sameer for bulk import
+#
+# COLUMN GUIDE:
+# ─── STUDENT FIELDS (ALL REQUIRED unless marked optional) ───
+#
+# firstName        → Student's first name              (REQUIRED)
+# middleName       → Student's middle name             (OPTIONAL — leave blank if none)
+# lastName         → Student's last name / surname     (REQUIRED)
+# email            → Student email (unique)            (REQUIRED — use format: studentname@shiksha.cloud)
+# phoneNumber      → Student phone / parent phone      (REQUIRED — 10 digits, used as login password)
+# whatsAppNumber   → Parent WhatsApp number            (REQUIRED — 10 digits)
+# rollNumber       → Roll number in class              (REQUIRED — unique per grade)
+# dateOfBirth      → Date of birth                     (REQUIRED — format: YYYY-MM-DD)
+# gender           → MALE / FEMALE / OTHER             (REQUIRED — uppercase)
+# gradeId          → Grade UUID from system            (REQUIRED — Sameer provides after creating grades)
+# sectionId        → Section UUID from system          (REQUIRED — Sameer provides after creating sections)
+# emergencyContact → Emergency contact phone           (REQUIRED — 10 digits)
+# motherName       → Mother's full name                (OPTIONAL)
+# profileImage     → Photo URL                         (OPTIONAL — leave blank)
+#
+# ─── PARENT 1 FIELDS (AT LEAST ONE PARENT REQUIRED) ───
+#
+# parent1_firstName    → Parent 1 first name           (REQUIRED)
+# parent1_lastName     → Parent 1 last name            (REQUIRED)
+# parent1_email        → Parent 1 email (unique)       (REQUIRED — used for login)
+# parent1_phoneNumber  → Parent 1 phone                (REQUIRED — 10 digits, used as password)
+# parent1_whatsAppNumber → Parent 1 WhatsApp           (OPTIONAL — defaults to phoneNumber)
+# parent1_relationship → FATHER / MOTHER / GUARDIAN    (REQUIRED — uppercase)
+# parent1_isPrimary    → true / false                  (REQUIRED — mark ONE parent as true)
+#
+# ─── PARENT 2 FIELDS (OPTIONAL) ───
+#
+# parent2_firstName    → Parent 2 first name           (OPTIONAL — leave all blank if no second parent)
+# parent2_lastName     → Parent 2 last name            (OPTIONAL)
+# parent2_email        → Parent 2 email (unique)       (OPTIONAL — must be unique if provided)
+# parent2_phoneNumber  → Parent 2 phone                (OPTIONAL — 10 digits if provided)
+# parent2_whatsAppNumber → Parent 2 WhatsApp           (OPTIONAL)
+# parent2_relationship → FATHER / MOTHER / GUARDIAN    (OPTIONAL)
+# parent2_isPrimary    → true / false                  (OPTIONAL — usually false)
+#
+# ⚠️  IMPORTANT NOTES:
+# - Every student MUST have at least Parent 1 filled
+# - parent1_email and student email MUST be unique across the entire system
+# - phoneNumber is used as the INITIAL LOGIN PASSWORD for both student and parent
+# - gradeId and sectionId are UUIDs — you DON'T know these yet. Sameer creates grades/sections first, then gives you the IDs.
+# - Alternatively, Sameer can map by grade name + section name during import.
+#
+# ================================================
+# SAMPLE DATA — 10 STUDENTS (PUNE PUBLIC SCHOOL)
+# ================================================
+# gradeId and sectionId below are PLACEHOLDER UUIDs.
+# Replace with real IDs after Sameer creates the structure.
+
+firstName,middleName,lastName,email,phoneNumber,whatsAppNumber,rollNumber,dateOfBirth,gender,gradeId,sectionId,emergencyContact,motherName,profileImage,parent1_firstName,parent1_lastName,parent1_email,parent1_phoneNumber,parent1_whatsAppNumber,parent1_relationship,parent1_isPrimary,parent2_firstName,parent2_lastName,parent2_email,parent2_phoneNumber,parent2_whatsAppNumber,parent2_relationship,parent2_isPrimary
+Aarav,Raj,Sharma,aarav.sharma@shiksha.cloud,9876543210,9876543210,1,2010-03-15,MALE,<GRADE_ID_10>,<SECTION_ID_A>,9876543211,Sunita Sharma,,Rajesh,Sharma,rajesh.sharma@gmail.com,9876543210,9876543210,FATHER,true,Sunita,Sharma,sunita.sharma@gmail.com,9876543212,9876543212,MOTHER,false
+Priya,Amit,Patil,priya.patil@shiksha.cloud,9876543220,9876543220,2,2010-07-22,FEMALE,<GRADE_ID_10>,<SECTION_ID_A>,9876543221,Meena Patil,,Amit,Patil,amit.patil@gmail.com,9876543220,9876543220,FATHER,true,Meena,Patil,meena.patil@gmail.com,9876543222,9876543222,MOTHER,false
+Rohan,Vijay,Kulkarni,rohan.kulkarni@shiksha.cloud,9876543230,9876543230,3,2010-01-10,MALE,<GRADE_ID_10>,<SECTION_ID_A>,9876543231,Anita Kulkarni,,Vijay,Kulkarni,vijay.k@gmail.com,9876543230,9876543230,FATHER,true,,,,,,,
+Sneha,Suresh,Deshmukh,sneha.deshmukh@shiksha.cloud,9876543240,9876543240,4,2010-11-05,FEMALE,<GRADE_ID_10>,<SECTION_ID_B>,9876543241,Kavita Deshmukh,,Suresh,Deshmukh,suresh.d@gmail.com,9876543240,9876543240,FATHER,true,Kavita,Deshmukh,kavita.d@gmail.com,9876543242,9876543242,MOTHER,false
+Arjun,Pravin,Jadhav,arjun.jadhav@shiksha.cloud,9876543250,9876543250,5,2010-05-18,MALE,<GRADE_ID_10>,<SECTION_ID_B>,9876543251,,,,Pravin,Jadhav,pravin.j@gmail.com,9876543250,9876543250,FATHER,true,,,,,,,
+Komal,Mahesh,Gaikwad,komal.gaikwad@shiksha.cloud,9876543260,9876543260,6,2010-09-30,FEMALE,<GRADE_ID_10>,<SECTION_ID_B>,9876543261,Rekha Gaikwad,,Mahesh,Gaikwad,mahesh.g@gmail.com,9876543260,9876543260,FATHER,true,Rekha,Gaikwad,rekha.g@gmail.com,9876543262,9876543262,MOTHER,false
+Aditya,Deepak,More,aditya.more@shiksha.cloud,9876543270,9876543270,7,2010-02-14,MALE,<GRADE_ID_10>,<SECTION_ID_A>,9876543271,Priya More,,Deepak,More,deepak.m@gmail.com,9876543270,9876543270,FATHER,true,Priya,More,priya.m@gmail.com,9876543272,9876543272,MOTHER,false
+Isha,Ramesh,Pawar,isha.pawar@shiksha.cloud,9876543280,9876543280,8,2010-06-25,FEMALE,<GRADE_ID_10>,<SECTION_ID_A>,9876543281,Swati Pawar,,Ramesh,Pawar,ramesh.p@gmail.com,9876543280,9876543280,FATHER,true,Swati,Pawar,swati.p@gmail.com,9876543282,9876543282,MOTHER,false
+Sagar,Anil,Bhosale,sagar.bhosale@shiksha.cloud,9876543290,9876543290,9,2010-04-08,MALE,<GRADE_ID_10>,<SECTION_ID_B>,9876543291,,,,Anil,Bhosale,anil.b@gmail.com,9876543290,9876543290,FATHER,true,,,,,,,
+Neha,Sanjay,Chavan,neha.chavan@shiksha.cloud,9876543300,9876543300,10,2010-12-20,FEMALE,<GRADE_ID_10>,<SECTION_ID_B>,9876543301,Sarita Chavan,,Sanjay,Chavan,sanjay.c@gmail.com,9876543300,9876543300,FATHER,true,Sarita,Chavan,sarita.c@gmail.com,9876543302,9876543302,MOTHER,false

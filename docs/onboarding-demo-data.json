@@ -1,0 +1,341 @@
+{
+  "SCHOOL": {
+    "grades": [
+      { "grade": "Grade 9", "sections": ["A", "B"] },
+      { "grade": "Grade 10", "sections": ["Science", "Commerce"] }
+    ],
+    "feeCategories": [
+      {
+        "name": "Annual Tuition Fee",
+        "description": "Standard yearly tuition"
+      },
+      { "name": "Transport Fee", "description": "Bus service charges" },
+      { "name": "Lab Fee", "description": "Science lab equipment usage" }
+    ],
+    "leads": [
+      {
+        "studentName": "Aarav Sharma",
+        "parentName": "Rahul Sharma",
+        "phone": "+919876543210",
+        "email": "rahul.s@example.com",
+        "enquiryFor": "Grade 9 Admission",
+        "source": "WALK_IN",
+        "priority": "HIGH",
+        "status": "NEW",
+        "notes": "Parent visited campus, very interested in sports facilities."
+      },
+      {
+        "studentName": "Diya Patel",
+        "parentName": "Sneha Patel",
+        "phone": "+919123456780",
+        "email": "sneha.p@example.com",
+        "enquiryFor": "Grade 10 Science",
+        "source": "WEBSITE",
+        "priority": "MEDIUM",
+        "status": "CONTACTED",
+        "notes": "Requested call back regarding transport availability."
+      }
+    ],
+    "notices": [
+      {
+        "title": "Annual Science Exhibition 2026",
+        "summary": "Details and participation guidelines for the upcoming exhibition.",
+        "content": "Dear Students and Parents, We are excited to announce our Annual Science Exhibition. Students interested in presenting projects must submit their abstracts by Friday.",
+        "noticeType": "EVENT",
+        "priority": "MEDIUM",
+        "daysFromNowStart": 0,
+        "daysFromNowEnd": 7
+      },
+      {
+        "title": "Upcoming Unit Tests Reminder",
+        "summary": "Schedule for Term 1 Unit Tests.",
+        "content": "This is a gentle reminder that Term 1 Unit Tests will commence from next Monday. The detailed timetable has been shared on the student portal.",
+        "noticeType": "EXAM",
+        "priority": "HIGH",
+        "daysFromNowStart": 0,
+        "daysFromNowEnd": 7
+      }
+    ],
+    "calendarEvents": [
+      {
+        "name": "Diwali Break",
+        "type": "PLANNED",
+        "daysFromNowStart": 7,
+        "daysFromNowEnd": 30,
+        "reason": "Festival Holidays"
+      }
+    ],
+    "teachers": [
+      {
+        "firstName": "Kavita",
+        "lastName": "Deshmukh",
+        "email": "kavita.d@demo.shiksha.cloud",
+        "phone": "+919876511111",
+        "employeeCode": "EMP-001",
+        "subjects": ["Mathematics", "Physics"]
+      }
+    ],
+    "students": [
+      {
+        "firstName": "Rohan",
+        "lastName": "Verma",
+        "email": "rohan.v@demo.shiksha.cloud",
+        "phone": "+919876522222",
+        "whatsAppNumber": "+919876522222",
+        "rollNumber": "DEMO-001",
+        "gender": "MALE",
+        "targetGrade": "Grade 10",
+        "targetSection": "Science",
+        "parent": {
+          "firstName": "Amit",
+          "lastName": "Verma",
+          "email": "amit.v@example.com",
+          "phone": "+919876533333"
+        },
+        "fee": {
+          "categoryName": "Annual Tuition Fee",
+          "totalFee": 45000,
+          "paidAmount": 15000,
+          "paymentMethod": "UPI"
+        }
+      }
+    ],
+    "complaints": [
+      {
+        "subject": "Library AC not cooling",
+        "category": "Infrastructure",
+        "description": "The AC in the senior library section is blowing warm air.",
+        "severity": "LOW"
+      }
+    ]
+  },
+  "COLLEGE": {
+    "grades": [
+      { "grade": "First Year B.Tech", "sections": ["CS-A", "CS-B"] },
+      { "grade": "Second Year B.Tech", "sections": ["Mechanical", "Civil"] }
+    ],
+    "feeCategories": [
+      { "name": "Semester Fee", "description": "Academic semester tuition" },
+      { "name": "Hostel Fee", "description": "Accommodation charges" },
+      { "name": "Library Deposit", "description": "Refundable caution deposit" }
+    ],
+    "leads": [
+      {
+        "studentName": "Rohan Gupta",
+        "parentName": "Amit Gupta",
+        "phone": "+919988776655",
+        "email": "rohan.g@example.com",
+        "enquiryFor": "B.Tech Computer Science",
+        "source": "FACEBOOK_ADS",
+        "priority": "HIGH",
+        "status": "INTERESTED",
+        "notes": "Asked about placement statistics and hostel fees."
+      }
+    ],
+    "notices": [
+      {
+        "title": "Tech Fest \"Avishkar 2026\" Registration",
+        "summary": "Registrations are open for the annual technical festival.",
+        "content": "The organizing committee of Avishkar 2026 is officially accepting registrations for hackathons and robotics challenges.",
+        "noticeType": "EVENT",
+        "priority": "MEDIUM",
+        "daysFromNowStart": 0,
+        "daysFromNowEnd": 7
+      }
+    ],
+    "calendarEvents": [
+      {
+        "name": "Semester 1 Exams",
+        "type": "PLANNED",
+        "daysFromNowStart": 7,
+        "daysFromNowEnd": 30,
+        "reason": "University Exams"
+      }
+    ],
+    "teachers": [
+      {
+        "firstName": "Dr. Sanjay",
+        "lastName": "Rathore",
+        "email": "sanjay.r@demo.shiksha.cloud",
+        "phone": "+919999911111",
+        "employeeCode": "PROF-001",
+        "subjects": ["Data Structures", "Algorithms"]
+      }
+    ],
+    "students": [
+      {
+        "firstName": "Priya",
+        "lastName": "Singh",
+        "email": "priya.s@demo.shiksha.cloud",
+        "phone": "+919999922222",
+        "whatsAppNumber": "+919999922222",
+        "rollNumber": "CS-DEMO-01",
+        "gender": "FEMALE",
+        "targetGrade": "First Year B.Tech",
+        "targetSection": "CS-A",
+        "parent": {
+          "firstName": "Rajender",
+          "lastName": "Singh",
+          "email": "rajender.s@example.com",
+          "phone": "+919999933333"
+        },
+        "fee": {
+          "categoryName": "Semester Fee",
+          "totalFee": 85000,
+          "paidAmount": 85000,
+          "paymentMethod": "BANK_TRANSFER"
+        }
+      }
+    ],
+    "complaints": [
+      {
+        "subject": "Wi-Fi connectivity in Hostel B",
+        "category": "IT/Network",
+        "description": "Internet frequently drops on the 3rd floor of Hostel B.",
+        "severity": "MEDIUM"
+      }
+    ]
+  },
+  "COACHING_CLASS": {
+    "grades": [
+      { "grade": "JEE Mains", "sections": ["Morning Batch", "Evening Batch"] },
+      {
+        "grade": "JEE Advanced",
+        "sections": ["Morning Batch", "Evening Batch"]
+      },
+      { "grade": "NEET", "sections": ["Morning Batch", "Evening Batch"] },
+      {
+        "grade": "11th Science",
+        "sections": ["Morning Batch", "Evening Batch"]
+      },
+      {
+        "grade": "12th Science",
+        "sections": ["Morning Batch", "Evening Batch"]
+      },
+      {
+        "grade": "Foundation (9th & 10th)",
+        "sections": ["Morning Batch", "Evening Batch"]
+      }
+    ],
+    "feeCategories": [
+      { "name": "Admission Fee", "description": "One-time registration fee" },
+      { "name": "Tuition Fee", "description": "Monthly or yearly course fee" },
+      { "name": "Study Material Fee", "description": "Books, notes and DPPs" },
+      {
+        "name": "Test Series Fee",
+        "description": "Mock tests and practice papers"
+      },
+      { "name": "Late Fee", "description": "Penalty for late fee payment" }
+    ],
+    "leads": [
+      {
+        "studentName": "Karan Sharma",
+        "parentName": "Ravi Sharma",
+        "phone": "+919988112233",
+        "email": "karan.sharma@example.com",
+        "enquiryFor": "Dropper Batch NEET 2026",
+        "source": "WALK_IN",
+        "priority": "URGENT",
+        "status": "VISITED",
+        "notes": "Walk-in enquiry. Gave scholarship test (ASAT). Scored 85%. Proceeding to admission."
+      },
+      {
+        "studentName": "Megha Singh",
+        "parentName": "Anil Singh",
+        "phone": "+919876598765",
+        "email": "megha.singh@example.com",
+        "enquiryFor": "Class 11 Foundation JEE",
+        "source": "FACEBOOK_ADS",
+        "priority": "MEDIUM",
+        "status": "CONTACTED",
+        "notes": "Interested in evening batch. Requested details on EMI options for fee payment."
+      }
+    ],
+    "notices": [
+      {
+        "title": "Rescheduling of Major Test - 3 (JEE Adv)",
+        "summary": "MT-3 has been shifted to Sunday afternoon.",
+        "content": "Dear Students, the Major Test-3 (JEE Advanced Pattern) scheduled for Saturday has been postponed to Sunday 2:00 PM to 5:00 PM due to a clash with school board practicals.",
+        "noticeType": "EXAM",
+        "priority": "HIGH",
+        "daysFromNowStart": 0,
+        "daysFromNowEnd": 7
+      },
+      {
+        "title": "Distribution of Study Material (Module 4)",
+        "summary": "Collect your physics and chemistry modules from the front desk.",
+        "content": "Students of Class 12 Target batches can collect Module 4 (Optics and Organic Chemistry) from the reception desk between 10 AM and 5 PM starting tomorrow. ID card is mandatory.",
+        "noticeType": "GENERAL",
+        "priority": "LOW",
+        "daysFromNowStart": 0,
+        "daysFromNowEnd": 7
+      }
+    ],
+    "calendarEvents": [
+      {
+        "name": "All India Open Mock Test",
+        "type": "INSTITUTION_SPECIFIC",
+        "daysFromNowStart": 7,
+        "daysFromNowEnd": 7,
+        "reason": "National level preparation analysis"
+      }
+    ],
+    "teachers": [
+      {
+        "firstName": "Vikash",
+        "lastName": "Gupta",
+        "email": "vikash.g@demo.shiksha.cloud",
+        "phone": "+918888844444",
+        "employeeCode": "FAC-PHY-01",
+        "subjects": ["Physics (Mechanics)", "Physics (Electrodynamics)"]
+      },
+      {
+        "firstName": "Neha",
+        "lastName": "Sharma",
+        "email": "neha.s@demo.shiksha.cloud",
+        "phone": "+918888855555",
+        "employeeCode": "FAC-ZOO-01",
+        "subjects": ["Zoology", "Botany"]
+      }
+    ],
+    "students": [
+      {
+        "firstName": "Arjun",
+        "lastName": "Nair",
+        "email": "arjun.n@demo.shiksha.cloud",
+        "phone": "+918888822222",
+        "whatsAppNumber": "+918888822222",
+        "rollNumber": "JEE-26-001",
+        "gender": "MALE",
+        "targetGrade": "Dropper / Repeater Batch",
+        "targetSection": "Spark Batch",
+        "parent": {
+          "firstName": "Manoj",
+          "lastName": "Nair",
+          "email": "manoj.n@example.com",
+          "phone": "+918888833333"
+        },
+        "fee": {
+          "categoryName": "Course Tuition Fee",
+          "totalFee": 120000,
+          "paidAmount": 60000,
+          "paymentMethod": "UPI"
+        }
+      }
+    ],
+    "complaints": [
+      {
+        "subject": "App crashing during online DPP submission",
+        "category": "IT/App",
+        "description": "The student portal app crashes when trying to upload PDF solutions for the Physics Daily Practice Paper.",
+        "severity": "HIGH"
+      },
+      {
+        "subject": "AC not working in Room 104",
+        "category": "Infrastructure",
+        "description": "The air conditioner in classroom 104 is blowing warm air, making it difficult for the afternoon batch.",
+        "severity": "MEDIUM"
+      }
+    ]
+  }
+}
