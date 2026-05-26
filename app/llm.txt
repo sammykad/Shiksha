@@ -6,7 +6,7 @@ Connects students, parents, teachers, and administrators on unified platform
 Built specifically for Indian education system requirements
 
 ## Technical Stack
-Frontend: Next.js 15 with App Router, TypeScript
+Frontend: Next.js 16 with App Router, TypeScript
 Backend: Next.js API Routes, Server Actions
 Database: PostgreSQL with Prisma ORM
 Auth: Clerk (secure, passwordless, multi-factor)

@@ -320,7 +320,7 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
                                   <AvatarImage
                                     src={teacher.user.profileImage || '/placeholder.svg'}
                                   />
-                                  <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                                  <AvatarFallback className="text-xs">
                                     {teacher.user.firstName[0]}
                                     {teacher.user.lastName[0]}
                                   </AvatarFallback>

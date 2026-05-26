@@ -1785,6 +1785,7 @@ enum LeadSource {
   WEBINAR
   WORKSHOP
   WORD_OF_MOUTH
+  WHATSAPP
 }
 
 enum LeadActivityType {

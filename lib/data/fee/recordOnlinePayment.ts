@@ -122,7 +122,7 @@ export const phonePayInitPayment = async (
   });
 
   if (!fee) throw new Error('Fee not found');
-  if (fee.status === 'PAID') throw new Error('Fee already paid');
+  if (fee.status === FeeStatus.PAID) throw new Error('Fee already paid');
 
   const pendingAmount = fee.pendingAmount ?? fee.totalFee - fee.paidAmount;
 
@@ -559,16 +559,21 @@ export const verifyPhonePePayment = async (
         },
       });
 
-      // Recalculate from source-of-truth (all COMPLETED payments for this fee)
-      const completed = await tx.feePayment.findMany({
-        where: { feeId: payment.feeId, status: PaymentStatus.COMPLETED },
-        select: { amount: true },
+      // Atomically increment paidAmount — prevents lost updates from concurrent payments
+      await tx.fee.update({
+        where: { id: payment.feeId },
+        data: { paidAmount: { increment: payment.amount } },
       });
 
-      // Assign to the hoisted variable (not re-declare with const)
-      paidAmount = completed.reduce((sum, p) => sum + p.amount, 0);
+      // Read back post-increment values for status computation
+      const updated = await tx.fee.findUniqueOrThrow({
+        where: { id: payment.feeId },
+        select: { paidAmount: true, totalFee: true },
+      });
 
-      const pendingAmount = Math.max(payment.fee.totalFee - paidAmount, 0);
+      paidAmount = updated.paidAmount;
+
+      const pendingAmount = Math.max(updated.totalFee - paidAmount, 0);
 
       const newStatus: FeeStatus =
         pendingAmount === 0
@@ -577,9 +582,10 @@ export const verifyPhonePePayment = async (
             ? FeeStatus.OVERDUE
             : FeeStatus.UNPAID;
 
+      // Update secondary computed fields only (paidAmount already set via increment)
       await tx.fee.update({
         where: { id: payment.feeId },
-        data: { paidAmount, pendingAmount, status: newStatus },
+        data: { pendingAmount, status: newStatus },
       });
     });
 

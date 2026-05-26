@@ -31,15 +31,16 @@ export async function createFeeCategory(data: FeeCategoryData) {
 
 export async function updateFeeCategory(id: string, data: FeeCategoryData) {
   try {
+    const organizationId = await getOrganizationId();
     const result = await prisma.feeCategory.update({
-      where: { id },
+      where: { id, organizationId },
       data: {
         name: data.name,
         description: data.description,
       },
     });
 
-    revalidatePath('/fee-categories');
+    revalidatePath('/dashboard/fees/admin/fee-categories');
     return result;
   } catch (error) {
     console.error('Failed to update fee category:', error);
@@ -49,11 +50,12 @@ export async function updateFeeCategory(id: string, data: FeeCategoryData) {
 
 export async function deleteFeeCategory(id: string) {
   try {
+    const organizationId = await getOrganizationId();
     await prisma.feeCategory.delete({
-      where: { id },
+      where: { id, organizationId },
     });
 
-    revalidatePath('/fee-categories');
+    revalidatePath('/dashboard/fees/admin/fee-categories');
     return { success: true };
   } catch (error) {
     console.error('Failed to delete fee category:', error);

@@ -39,10 +39,15 @@ import {
   CalendarIcon,
   IndianRupeeIcon,
   HashIcon,
+  SearchIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
 } from 'lucide-react';
 import { ChequeStatus } from '@/generated/prisma/enums';
 import { cn, formatCurrencyINWithSymbol, formatDateIN } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 import banks from '@/public/bank/banks.json';
 import Image from 'next/image';
 
@@ -172,7 +177,7 @@ function ResolveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm rounded-lg">
         <DialogHeader>
           <DialogTitle className="text-base">Resolve cheque</DialogTitle>
           <DialogDescription className="text-xs">
@@ -338,11 +343,17 @@ function MetricCard({
   value,
   sub,
   accent,
+  active,
+  onClick,
+  className,
 }: {
   label: string;
   value: string | number;
   sub?: string;
   accent?: 'amber' | 'green' | 'red' | 'default';
+  active?: boolean;
+  onClick?: () => void;
+  className?: string;
 }) {
   const colors = {
     amber: 'text-amber-700 dark:text-amber-400',
@@ -350,12 +361,22 @@ function MetricCard({
     red: 'text-red-700 dark:text-red-400',
     default: 'text-foreground',
   };
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className="rounded-lg bg-muted/50 p-3 space-y-0.5">
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        'rounded-lg bg-muted/50 p-3 space-y-0.5 text-left w-full',
+        onClick && 'cursor-pointer hover:bg-muted/70 transition-colors',
+        active && 'ring-2 ring-primary/40 bg-primary/5',
+        className
+      )}
+    >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={cn('text-xl font-semibold', colors[accent ?? 'default'])}>{value}</p>
       {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
-    </div>
+    </Tag>
   );
 }
 
@@ -364,19 +385,55 @@ export function PdcChequesAdminView({ cheques }: PdcChequesAdminViewProps) {
   const [rows, setRows] = useState(cheques);
   const [resolving, setResolving] = useState<PdcChequeRow | null>(null);
   const [bankFilter, setBankFilter] = useState<string>('all');
+  const [resolvedBankFilter, setResolvedBankFilter] = useState<string>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'cleared' | 'bounced' | 'cancelled'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pendingOpen, setPendingOpen] = useState(true);
+  const [resolvedOpen, setResolvedOpen] = useState(false);
+  const [pendingPage, setPendingPage] = useState(1);
+  const [resolvedPage, setResolvedPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   const pending = rows.filter((c) => c.status === ChequeStatus.PENDING);
   const resolved = rows.filter((c) => c.status !== ChequeStatus.PENDING);
   const pendingValue = pending.reduce((s, c) => s + c.feePayment.amount, 0);
   const clearedCount = rows.filter((c) => c.status === ChequeStatus.CLEARED).length;
   const bouncedCount = rows.filter((c) => c.status === ChequeStatus.BOUNCED).length;
+  const cancelledCount = rows.filter((c) => c.status === ChequeStatus.CANCELLED).length;
+  const totalCount = rows.length;
 
   const uniqueBanks = Array.from(new Set(rows.map((c) => c.bankName)));
 
-  const filteredPending =
-    bankFilter === 'all'
-      ? pending
-      : pending.filter((c) => c.bankName === bankFilter);
+  const lowerSearch = searchQuery.toLowerCase();
+  const matchesSearch = (c: PdcChequeRow) => {
+    if (!searchQuery) return true;
+    const s = c.feePayment.fee.student;
+    return (
+      `${s.firstName} ${s.lastName}`.toLowerCase().includes(lowerSearch) ||
+      c.chequeNumber.toLowerCase().includes(lowerSearch) ||
+      c.bankName.toLowerCase().includes(lowerSearch) ||
+      c.feePayment.fee.feeCategory.name.toLowerCase().includes(lowerSearch)
+    );
+  };
+
+  const pendingFiltered = pending
+    .filter(matchesSearch)
+    .filter((c) => bankFilter === 'all' || c.bankName === bankFilter);
+
+  const resolvedBase = resolved.filter((c) =>
+    activeFilter === 'all' ? true : c.status.toLowerCase() === activeFilter
+  );
+  const resolvedFiltered = resolvedBase
+    .filter(matchesSearch)
+    .filter((c) => resolvedBankFilter === 'all' || c.bankName === resolvedBankFilter);
+
+  const resolvedUniqueBanks = Array.from(new Set(resolvedFiltered.map((c) => c.bankName)));
+
+  const paginatedPending = pendingFiltered.slice(0, pendingPage * PAGE_SIZE);
+  const paginatedResolved = resolvedFiltered.slice(0, resolvedPage * PAGE_SIZE);
+
+  const showPending = activeFilter === 'all' || activeFilter === 'pending';
+  const showResolved = activeFilter === 'all' || activeFilter !== 'pending';
 
   const handleResolved = (
     id: string,
@@ -408,240 +465,511 @@ export function PdcChequesAdminView({ cheques }: PdcChequesAdminViewProps) {
       <CardContent className="space-y-4">
 
         {/* ── Summary metrics ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <MetricCard
-            label="Pending cheques"
-            value={pending.length}
-            accent="amber"
+            label="Total"
+            value={totalCount}
+            active={activeFilter === 'all'}
+            onClick={() => {
+              setActiveFilter('all');
+              setPendingPage(1);
+              setResolvedPage(1);
+            }}
           />
           <MetricCard
-            label="Pending value"
-            value={`₹${pendingValue.toLocaleString('en-IN')}`}
+            label="Pending"
+            value={pending.length}
             accent="amber"
+            active={activeFilter === 'pending'}
+            onClick={() => {
+              setActiveFilter(activeFilter === 'pending' ? 'all' : 'pending');
+              setPendingPage(1);
+            }}
           />
           <MetricCard
             label="Cleared"
             value={clearedCount}
             accent="green"
+            active={activeFilter === 'cleared'}
+            onClick={() => {
+              setActiveFilter(activeFilter === 'cleared' ? 'all' : 'cleared');
+              setResolvedPage(1);
+              setResolvedOpen(true);
+            }}
           />
           <MetricCard
             label="Bounced"
             value={bouncedCount}
             accent="red"
+            active={activeFilter === 'bounced'}
+            onClick={() => {
+              setActiveFilter(activeFilter === 'bounced' ? 'all' : 'bounced');
+              setResolvedPage(1);
+              setResolvedOpen(true);
+            }}
+          />
+          <MetricCard
+            label="Pending value"
+            value={`₹${pendingValue.toLocaleString('en-IN')}`}
+            accent="amber"
+            className="col-span-2 sm:col-span-1"
           />
         </div>
 
-        {/* ── Pending cheques ──────────────────────────────────────────── */}
-        <PageHeader
-          title="Pending PDC cheques"
-          description="Click 'Resolve' to mark cleared, bounced, or cancelled"
-          icon={ClockIcon}
-          actions={
-            <Select value={bankFilter} onValueChange={setBankFilter}>
-              <SelectTrigger className="h-9 text-xs w-[180px] bg-white">
-                <SelectValue placeholder="All banks" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  <div className="flex items-center gap-2">
-                    <BuildingIcon className="h-3.5 w-3.5 opacity-50" />
-                    <span>All banks</span>
-                  </div>
-                </SelectItem>
-                {uniqueBanks.map((b) => {
-                  const bankEntry = Object.entries(banks).find(([_, name]) => name === b);
-                  const code = bankEntry?.[0];
-                  return (
-                    <SelectItem key={b} value={b} className="text-xs">
-                      <div className="flex items-center gap-2 py-0.5">
-                        {code ? (
-                          <img
-                            src={`/bank/${code}/symbol.svg`}
-                            className="h-4 w-4 object-contain"
-                            alt=""
-                          />
+        {/* ── Search ──────────────────────────────────────────────────── */}
+        <div className="relative">
+          <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Search by name, cheque#, bank..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPendingPage(1);
+              setResolvedPage(1);
+            }}
+            className="pl-8 h-9"
+          />
+        </div>
+
+        {/* ── Pending cheques (collapsible + paginated) ─────────────── */}
+        {showPending && (
+          <Collapsible open={pendingOpen} onOpenChange={setPendingOpen}>
+            <div className="mb-3">
+              <PageHeader
+                title="Pending PDC cheques"
+                description="Click 'Resolve' to mark cleared, bounced, or cancelled"
+                icon={ClockIcon}
+                actions={
+                  <>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 px-2 max-sm:flex-none">
+                        {pendingOpen ? (
+                          <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : (
-                          <BuildingIcon className="h-4 w-4 opacity-30" />
+                          <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
-                        <span>{b}</span>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          }
-        />
+                        <span className="text-muted-foreground">{pendingOpen ? 'Collapse' : 'Expand'}</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <Select value={bankFilter} onValueChange={(v) => { setBankFilter(v); setPendingPage(1); }}>
+                      <SelectTrigger className="h-9 text-xs w-[180px] bg-white">
+                        <SelectValue placeholder="All banks" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          <div className="flex items-center gap-2">
+                            <BuildingIcon className="h-3.5 w-3.5 opacity-50" />
+                            <span>All banks</span>
+                          </div>
+                        </SelectItem>
+                        {uniqueBanks.map((b) => {
+                          const bankEntry = Object.entries(banks).find(([_, name]) => name === b);
+                          const code = bankEntry?.[0];
+                          return (
+                            <SelectItem key={b} value={b} className="text-xs">
+                              <div className="flex items-center gap-2 py-0.5">
+                                {code ? (
+                                  <img
+                                    src={`/bank/${code}/symbol.svg`}
+                                    className="h-4 w-4 object-contain"
+                                    alt=""
+                                  />
+                                ) : (
+                                  <BuildingIcon className="h-4 w-4 opacity-30" />
+                                )}
+                                <span>{b}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </>
+                }
+              />
+            </div>
 
-        <Card>
-          <CardContent className="p-0">
-            {filteredPending.length === 0 ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
-                <ClockIcon className="h-5 w-5 opacity-30" />
-                <p className="text-sm">
-                  {bankFilter === 'all'
-                    ? 'No pending cheques'
-                    : 'No pending cheques for this bank'}
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredPending.map((cheque) => {
-                  const chequeDate = new Date(cheque.chequeDate);
-                  chequeDate.setHours(0, 0, 0, 0);
-                  const isDueToday = chequeDate.getTime() === today.getTime();
-                  const isOverdue = chequeDate < today;
-                  const student = cheque.feePayment.fee.student;
+            <CollapsibleContent>
+              <Card>
+                <CardContent className="p-0">
+                  {paginatedPending.length === 0 ? (
+                    <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+                      <ClockIcon className="h-5 w-5 opacity-30" />
+                      <p className="text-sm">
+                        {searchQuery
+                          ? 'No matching cheques'
+                          : bankFilter !== 'all'
+                            ? 'No pending cheques for this bank'
+                            : 'No pending cheques'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {paginatedPending.map((cheque) => {
+                        const chequeDate = new Date(cheque.chequeDate);
+                        chequeDate.setHours(0, 0, 0, 0);
+                        const isDueToday = chequeDate.getTime() === today.getTime();
+                        const isOverdue = chequeDate < today;
+                        const student = cheque.feePayment.fee.student;
 
-                  return (
-                    <div
-                      key={cheque.id}
-                      className={cn(
-                        'flex items-center gap-4 px-4 py-2.5 hover:bg-muted/30 transition-colors',
-                        (isDueToday || isOverdue) && 'bg-red-50/50 dark:bg-red-950/10'
-                      )}
-                    >
-                      {/* Student info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {student.firstName} {student.lastName}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {cheque.feePayment.fee.feeCategory.name} &middot;{' '}
-                          {cheque.bankName}
-                          {cheque.branchName ? ` — ${cheque.branchName}` : ''}
-                        </p>
-                      </div>
+                        return (
+                          <div key={cheque.id}>
+                            {/* Mobile card layout */}
+                            <div
+                              className={cn(
+                                'flex sm:hidden flex-col gap-1.5 px-4 py-3 border-b last:border-b-0',
+                                (isDueToday || isOverdue) && 'bg-red-50/50 dark:bg-red-950/10'
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate">
+                                    {student.firstName} {student.lastName}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground truncate">
+                                    {cheque.feePayment.fee.feeCategory.name}
+                                  </p>
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <p className="text-sm font-semibold tabular-nums">
+                                    ₹{cheque.feePayment.amount.toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[11px] text-muted-foreground truncate">
+                                  #{cheque.chequeNumber} &middot;{' '}
+                                  {new Date(cheque.chequeDate).toLocaleDateString('en-IN', {
+                                    day: '2-digit', month: 'short',
+                                  })}
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <ChequeBadge status={cheque.status} />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 text-[10px] px-2"
+                                    onClick={() => setResolving(cheque)}
+                                  >
+                                    Resolve
+                                  </Button>
+                                </div>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {cheque.bankName}
+                                {cheque.branchName ? ` — ${cheque.branchName}` : ''}
+                                {isOverdue && <span className="text-red-500 ml-1">Overdue</span>}
+                                {isDueToday && <span className="text-amber-600 ml-1">Due today</span>}
+                              </p>
+                            </div>
 
-                      {/* Cheque number */}
-                      <div className="hidden sm:block text-right flex-shrink-0 w-20">
-                        <p className="text-xs text-muted-foreground">Cheque no.</p>
-                        <p className="text-sm font-mono font-medium">
-                          #{cheque.chequeNumber}
-                        </p>
-                      </div>
+                            {/* Desktop row layout */}
+                            <div
+                              className={cn(
+                                'hidden sm:flex items-center gap-4 px-4 py-2.5 hover:bg-muted/30 transition-colors',
+                                (isDueToday || isOverdue) && 'bg-red-50/50 dark:bg-red-950/10'
+                              )}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {student.firstName} {student.lastName}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {cheque.feePayment.fee.feeCategory.name} &middot;{' '}
+                                  {cheque.bankName}
+                                  {cheque.branchName ? ` — ${cheque.branchName}` : ''}
+                                </p>
+                              </div>
 
-                      {/* Cheque date */}
-                      <div className="hidden sm:block text-right flex-shrink-0 w-28">
-                        <p className="text-xs text-muted-foreground">Date</p>
-                        <p
-                          className={cn(
-                            'text-xs font-medium',
-                            isOverdue || isDueToday
-                              ? 'text-red-600 dark:text-red-400'
-                              : ''
-                          )}
-                        >
-                          {new Date(cheque.chequeDate).toLocaleDateString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                          {isDueToday && (
-                            <span className="block text-[10px]">Due today</span>
-                          )}
-                          {isOverdue && (
-                            <span className="block text-[10px]">Overdue</span>
-                          )}
-                        </p>
-                      </div>
+                              <div className="text-right flex-shrink-0 w-20">
+                                <p className="text-xs text-muted-foreground">Cheque no.</p>
+                                <p className="text-sm font-mono font-medium">
+                                  #{cheque.chequeNumber}
+                                </p>
+                              </div>
 
-                      {/* Amount */}
-                      <div className="text-right flex-shrink-0 w-24">
-                        <p className="text-xs text-muted-foreground">Amount</p>
-                        <p className="text-sm font-semibold">
-                          ₹{cheque.feePayment.amount.toLocaleString('en-IN')}
-                        </p>
-                      </div>
+                              <div className="text-right flex-shrink-0 w-28">
+                                <p className="text-xs text-muted-foreground">Date</p>
+                                <p
+                                  className={cn(
+                                    'text-xs font-medium',
+                                    isOverdue || isDueToday ? 'text-red-600 dark:text-red-400' : ''
+                                  )}
+                                >
+                                  {new Date(cheque.chequeDate).toLocaleDateString('en-IN', {
+                                    day: '2-digit', month: 'short', year: 'numeric',
+                                  })}
+                                  {isDueToday && <span className="block text-[10px]">Due today</span>}
+                                  {isOverdue && <span className="block text-[10px]">Overdue</span>}
+                                </p>
+                              </div>
 
-                      {/* Status + action */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <ChequeBadge status={cheque.status} />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={() => setResolving(cheque)}
-                        >
-                          Resolve
-                        </Button>
+                              <div className="text-right flex-shrink-0 w-24">
+                                <p className="text-xs text-muted-foreground">Amount</p>
+                                <p className="text-sm font-semibold">
+                                  ₹{cheque.feePayment.amount.toLocaleString('en-IN')}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <ChequeBadge status={cheque.status} />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  onClick={() => setResolving(cheque)}
+                                >
+                                  Resolve
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Pending pagination */}
+                  {pendingFiltered.length > PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground">
+                      <span>
+                        Showing {Math.min(pendingPage * PAGE_SIZE, pendingFiltered.length)} of {pendingFiltered.length}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {pendingPage * PAGE_SIZE < pendingFiltered.length ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setPendingPage((p) => p + 1)}
+                          >
+                            Show more
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setPendingPage(1)}
+                          >
+                            Show less
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
-        {/* ── Resolved cheques ─────────────────────────────────────────── */}
-        {resolved.length > 0 && (
-          <Card>
-            <CardHeader className="p-3">
-              <CardTitle className="text-sm font-semibold">Recently resolved</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {resolved.map((cheque) => {
-                  const student = cheque.feePayment.fee.student;
-                  return (
-                    <div
-                      key={cheque.id}
-                      className="flex items-center gap-4 px-4 py-3 opacity-75"
+        {/* ── Resolved cheques (collapsible + paginated) ────────────── */}
+        {showResolved && resolvedFiltered.length > 0 && (
+          <Collapsible open={resolvedOpen} onOpenChange={setResolvedOpen}>
+            <div className="mb-3">
+              <PageHeader
+                title={
+                  activeFilter === 'all'
+                    ? 'Resolved cheques'
+                    : `${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} cheques`
+                }
+                description={
+                  activeFilter === 'all'
+                    ? 'Cleared, bounced, and cancelled cheques'
+                    : activeFilter === 'cleared'
+                      ? 'Cheques that have been successfully cleared'
+                      : activeFilter === 'bounced'
+                        ? 'Cheques that were returned unpaid'
+                        : 'Cheques that were cancelled'
+                }
+                icon={activeFilter === 'bounced' ? XCircleIcon : activeFilter === 'cancelled' ? BanIcon : CheckCircleIcon}
+                actions={
+                  <>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 px-2 max-sm:flex-none">
+                        {resolvedOpen ? (
+                          <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span className="text-muted-foreground">{resolvedOpen ? 'Collapse' : 'Expand'}</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <Select
+                      value={resolvedBankFilter}
+                      onValueChange={(v) => { setResolvedBankFilter(v); setResolvedPage(1); }}
                     >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-lg border border-border flex items-center justify-center flex-shrink-0 bg-white dark:bg-muted/20">
-                          {(() => {
-                            const bankEntry = Object.entries(banks).find(([_, name]) => name === cheque.bankName);
-                            const code = bankEntry?.[0];
-                            return code ? (
-                              <Image
-                                src={`/bank/${code}/symbol.svg`}
-                                className="h-5 w-5 object-contain"
-                                alt={cheque.bankName}
-                                width={50}
-                                height={50}
-                              />
-                            ) : (
-                              <BuildingIcon className="h-3.5 w-3.5 text-muted-foreground/30" />
-                            );
-                          })()}
-                        </div>
+                      <SelectTrigger className="h-9 text-xs w-[180px] bg-white">
+                        <SelectValue placeholder="All banks" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          <div className="flex items-center gap-2">
+                            <BuildingIcon className="h-3.5 w-3.5 opacity-50" />
+                            <span>All banks</span>
+                          </div>
+                        </SelectItem>
+                        {resolvedUniqueBanks.map((b) => {
+                          const bankEntry = Object.entries(banks).find(([_, name]) => name === b);
+                          const code = bankEntry?.[0];
+                          return (
+                            <SelectItem key={b} value={b} className="text-xs">
+                              <div className="flex items-center gap-2 py-0.5">
+                                {code ? (
+                                  <img
+                                    src={`/bank/${code}/symbol.svg`}
+                                    className="h-4 w-4 object-contain"
+                                    alt=""
+                                  />
+                                ) : (
+                                  <BuildingIcon className="h-4 w-4 opacity-30" />
+                                )}
+                                <span>{b}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </>
+                }
+              />
+            </div>
 
-                        <div className="flex flex-col min-w-0">
-                          <p className="text-sm font-semibold truncate">
-                            {student.firstName} {student.lastName}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground truncate italic">
-                            {cheque.bankName} &middot; #{cheque.chequeNumber}
-                          </p>
+            <CollapsibleContent>
+              <Card>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {paginatedResolved.map((cheque) => {
+                      const student = cheque.feePayment.fee.student;
+                      return (
+                        <div key={cheque.id}>
+                          {/* Mobile card layout */}
+                          <div className="flex sm:hidden flex-col gap-1.5 px-4 py-3 border-b last:border-b-0 opacity-75">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate">
+                                  {student.firstName} {student.lastName}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground truncate">
+                                  {cheque.bankName} &middot; #{cheque.chequeNumber}
+                                </p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <p className="text-sm font-bold text-muted-foreground tabular-nums">
+                                  ₹{cheque.feePayment.amount.toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] text-muted-foreground">
+                                {formatDateIN(cheque.chequeDate)}
+                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <ChequeBadge status={cheque.status} />
+                              </div>
+                            </div>
+                            {cheque.bounceReason && (
+                              <p className="text-[10px] text-red-600 dark:text-red-400 truncate">
+                                {cheque.bounceReason}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Desktop row layout */}
+                          <div className="hidden sm:flex items-center gap-4 px-4 py-3 opacity-75">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="h-8 w-8 rounded-lg border border-border flex items-center justify-center flex-shrink-0 bg-white dark:bg-muted/20">
+                                {(() => {
+                                  const bankEntry = Object.entries(banks).find(([_, name]) => name === cheque.bankName);
+                                  const code = bankEntry?.[0];
+                                  return code ? (
+                                    <Image
+                                      src={`/bank/${code}/symbol.svg`}
+                                      className="h-5 w-5 object-contain"
+                                      alt={cheque.bankName}
+                                      width={50}
+                                      height={50}
+                                    />
+                                  ) : (
+                                    <BuildingIcon className="h-3.5 w-3.5 text-muted-foreground/30" />
+                                  );
+                                })()}
+                              </div>
+
+                              <div className="flex flex-col min-w-0">
+                                <p className="text-sm font-semibold truncate">
+                                  {student.firstName} {student.lastName}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground truncate italic">
+                                  {cheque.bankName} &middot; #{cheque.chequeNumber}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="hidden sm:block text-right flex-shrink-0 w-28">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                                {cheque.status === 'CLEARED' ? 'Cleared' : cheque.status === 'BOUNCED' ? 'Bounced' : 'Cancelled'}
+                              </p>
+                              <p className="text-xs font-medium">
+                                {formatDateIN(cheque.chequeDate)}
+                              </p>
+                            </div>
+
+                            <div className="text-right flex-shrink-0 w-24">
+                              <p className="text-sm font-bold text-muted-foreground">
+                                {formatCurrencyINWithSymbol(cheque.feePayment.amount)}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <ChequeBadge status={cheque.status} />
+                              {cheque.bounceReason && (
+                                <span className="text-[10px] text-red-600 dark:text-red-400 max-w-[100px] truncate">
+                                  {cheque.bounceReason}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="hidden sm:block text-right flex-shrink-0 w-28">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Cleared</p>
-                        <p className="text-xs font-medium">
-                          {formatDateIN(cheque.chequeDate)}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0 w-24">
-                        <p className="text-sm font-bold text-muted-foreground">
-                          {formatCurrencyINWithSymbol(cheque.feePayment.amount)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <ChequeBadge status={cheque.status} />
-                        {cheque.bounceReason && (
-                          <span className="text-[10px] text-red-600 dark:text-red-400 max-w-[100px] truncate">
-                            {cheque.bounceReason}
-                          </span>
+                      );
+                    })}
+                  </div>
+
+                  {/* Resolved pagination */}
+                  {resolvedFiltered.length > PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground">
+                      <span>
+                        Showing {Math.min(resolvedPage * PAGE_SIZE, resolvedFiltered.length)} of {resolvedFiltered.length}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {resolvedPage * PAGE_SIZE < resolvedFiltered.length ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setResolvedPage((p) => p + 1)}
+                          >
+                            Show more
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setResolvedPage(1)}
+                          >
+                            Show less
+                          </Button>
                         )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* ── Resolve dialog ───────────────────────────────────────────── */}

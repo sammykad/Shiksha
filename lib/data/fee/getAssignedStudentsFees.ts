@@ -4,10 +4,13 @@
 import prisma from '@/lib/db';
 import { FeeRecord } from '@/types';
 import { FeeStatus, PaymentStatus } from '@/generated/prisma/enums';
+import { getOrganizationId } from '@/lib/organization';
 
 export async function getAssignedStudentsFees(
   teacherId: string
 ): Promise<FeeRecord[]> {
+  const organizationId = await getOrganizationId();
+
   // Step 1: Get the section & grade IDs where this teacher is assigned
   const assignments = await prisma.teachingAssignment.findMany({
     where: { teacherId },
@@ -27,6 +30,7 @@ export async function getAssignedStudentsFees(
   // Step 2: Get fees of students in those grades/sections
   const fees = await prisma.fee.findMany({
     where: {
+      organizationId,
       student: {
         gradeId: { in: gradeIds },
         sectionId: { in: sectionIds },

@@ -371,6 +371,16 @@ Focus On Blogs Only : Anaylize The the Blog Human Touch , Real Issues, People sh
 IMP : Find Best Sutable / Cheap Domain
 
 - Preper Script for 3 Videos
-- Get S3 Bucket
--
-
+- Get AWS S3 Bucket
+- Add pagination to Students and Cheques 
+- Single Source of truth For Fees / Payments
+- ID Cards : RFID , Scanner , Parent Phone Numbers , Principal sign
+- ReSearch GST 
+- Fee Management : GST+ ,Strict Sequential Receipt Numbering, Discounts, Waivers, and Scholarships, fine & penalty
+Rules To Create Institution 
+Introduce New Role SuperAdmin
+Only Super Admin Can See /dashboard/institution 
+Other Role Can't See This page or Cant take any actions 
+Add Another Organzaiton Flow : CreateOrganization And Invite Flow keep Same
+If we introduce SUPERADMIN Then Many Pages Get Errors We have to fixed this
+Decide What they will See 

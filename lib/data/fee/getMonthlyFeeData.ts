@@ -39,6 +39,21 @@ export async function getMonthlyFeeData(): Promise<MonthlyFeeData[]> {
     },
   });
 
+  const fees = await prisma.fee.findMany({
+    where: {
+      organizationId,
+      academicYearId: activeAcademicYearId,
+    },
+    select: {
+      paidAmount: true,
+      updatedAt: true,
+      payments: {
+        where: { status: PaymentStatus.COMPLETED },
+        select: { amount: true },
+      },
+    },
+  });
+
   // Group payments by yyyy-MM
   const paymentTotals = new Map<string, { amount: number; count: number }>();
 
@@ -47,6 +62,20 @@ export async function getMonthlyFeeData(): Promise<MonthlyFeeData[]> {
     const existing = paymentTotals.get(key) ?? { amount: 0, count: 0 };
     paymentTotals.set(key, {
       amount: existing.amount + (payment.amount ?? 0),
+      count: existing.count + 1,
+    });
+  }
+
+  for (const fee of fees) {
+    const ledgerPaid = fee.payments.reduce((sum, payment) => sum + (payment.amount ?? 0), 0);
+    const legacyCollectionWithoutPaymentRows = Math.max((fee.paidAmount ?? 0) - ledgerPaid, 0);
+
+    if (legacyCollectionWithoutPaymentRows <= 0) continue;
+
+    const key = format(fee.updatedAt, 'yyyy-MM');
+    const existing = paymentTotals.get(key) ?? { amount: 0, count: 0 };
+    paymentTotals.set(key, {
+      amount: existing.amount + legacyCollectionWithoutPaymentRows,
       count: existing.count + 1,
     });
   }

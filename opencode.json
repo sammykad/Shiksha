@@ -1,8 +1,2 @@
 {
-  "mcpServers": {
-    "motion": {
-      "command": "npx",
-      "args": ["-y", "https://api.motion.dev/registry.tgz?package=motion-studio-mcp&version=latest"]
-    }
-  }
-}
+  "$schema": "https://opencode.ai/config.json",}

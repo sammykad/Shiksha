@@ -52,12 +52,13 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
   const receiptNumber = `REC-${randomUUID().slice(0, 8).toUpperCase()}`;
 
   // ── 2. Persist payment in a transaction ───────────────────────────────────
+  const paymentAmount = validatedData.amount;
   await prisma.$transaction(async (tx) => {
     // Record the new payment
     await tx.feePayment.create({
       data: {
         feeId: fee.id,
-        amount: validatedData.amount,
+        amount: paymentAmount,
         status: PaymentStatus.COMPLETED,
         receiptNumber,
         transactionId: validatedData.transactionId,
@@ -71,13 +72,20 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
       },
     });
 
-    // Recalculate totals from ALL completed payments (source of truth)
-    const allCompletedPayments = await tx.feePayment.findMany({
-      where: { feeId: fee.id, status: PaymentStatus.COMPLETED },
+    // Atomically increment paidAmount — prevents lost updates from concurrent payments
+    await tx.fee.update({
+      where: { id: fee.id },
+      data: { paidAmount: { increment: paymentAmount } },
     });
 
-    const totalPaid = allCompletedPayments.reduce((sum, p) => sum + p.amount, 0);
-    const totalPending = Math.max(fee.totalFee - totalPaid, 0);
+    // Read back post-increment values for status computation
+    const updated = await tx.fee.findUniqueOrThrow({
+      where: { id: fee.id },
+      select: { paidAmount: true, totalFee: true },
+    });
+
+    const totalPaid = updated.paidAmount;
+    const totalPending = Math.max(updated.totalFee - totalPaid, 0);
 
     // Determine correct fee status
     let updatedStatus: FeeStatus;
@@ -89,10 +97,10 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
       updatedStatus = FeeStatus.UNPAID;
     }
 
-    // Persist the updated fee record
+    // Persist the secondary computed fields (paidAmount was already set via increment)
     await tx.fee.update({
       where: { id: fee.id },
-      data: { paidAmount: totalPaid, pendingAmount: totalPending, status: updatedStatus },
+      data: { pendingAmount: totalPending, status: updatedStatus },
     });
 
     return { totalPaid, totalPending, updatedStatus };

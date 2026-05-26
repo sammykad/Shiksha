@@ -71,7 +71,7 @@ export default async function FilterStudents({
         },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
-      take: 120, // protect against massive payloads
+      // take: 120, // protect against massive payloads
     });
 
     return students;
