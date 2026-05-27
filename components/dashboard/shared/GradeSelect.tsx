@@ -9,6 +9,7 @@ import { useState } from 'react';
 
 import useSWR from 'swr';
 import { z } from 'zod';
+import { sortByNaturalText } from '@/lib/utils';
 
 const GradeSchema = z.object({
   id: z.string().cuid('Invalid grade ID'),
@@ -29,6 +30,9 @@ const GradeSelect: React.FC<GradeSelectProps> = ({
   defaultGrade,
 }) => {
   const { data: grades, error } = useSWR<Grade[]>('/api/grade', fetcher);
+  const sortedGrades = grades
+    ? sortByNaturalText(grades, (grade) => grade.grade)
+    : [];
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -58,8 +62,8 @@ const GradeSelect: React.FC<GradeSelectProps> = ({
           <SelectValue placeholder="Select Grade" />
         </SelectTrigger>
         <SelectContent>
-          {grades && grades.length > 0 ? (
-            grades.map((item) => (
+          {sortedGrades.length > 0 ? (
+            sortedGrades.map((item) => (
               <SelectItem key={item.id} value={item.id.toString()}>
                 {item.grade}
               </SelectItem>

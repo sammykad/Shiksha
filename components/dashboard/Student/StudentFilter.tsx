@@ -32,12 +32,21 @@ import {
 } from '@/components/ui/select';
 import FilterStudents from '@/lib/data/student/FilterStudents';
 import StudentsGridList from '@/components/dashboard/Student/StudentsGridList';
-import { cn } from '@/lib/utils';
+import { cn, sortByNaturalText } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
 } from '@/components/ui/card';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 type GradeAndSection = {
   id: string;
@@ -65,9 +74,17 @@ interface Student {
   };
 }
 
+interface PaginatedStudentsResult {
+  students: Student[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 interface StudentFilterProps {
   organizationId: string;
-  initialStudents: Student[];
+  initialResult: PaginatedStudentsResult;
   initialGradeId?: string;
   initialSectionId?: string;
   initialSearch?: string;
@@ -75,13 +92,17 @@ interface StudentFilterProps {
 
 export default function StudentFilter({
   organizationId,
-  initialStudents,
+  initialResult,
   initialGradeId = 'all',
   initialSectionId = 'all',
   initialSearch = '',
 }: StudentFilterProps) {
   const [grades, setGrades] = useState<GradeAndSection[]>([]);
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [students, setStudents] = useState<Student[]>(initialResult.students);
+  const [totalCount, setTotalCount] = useState(initialResult.totalCount);
+  const [currentPage, setCurrentPage] = useState(initialResult.page);
+  const [pageSize, setPageSize] = useState(initialResult.pageSize);
+  const [totalPages, setTotalPages] = useState(initialResult.totalPages);
 
   const [isPending, startTransition] = useTransition();
   const [showFilters, setShowFilters] = useState(false);
@@ -91,6 +112,7 @@ export default function StudentFilter({
   const [selectedSection, setSection] = useState<string>(initialSectionId);
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const isFirstLoadRef = useRef(true);
+  const latestRequestRef = useRef(0);
 
 
   // Memoize active filters count
@@ -117,6 +139,35 @@ export default function StudentFilter({
 
   const selectedGradeName = selectedGradeObj?.name || 'All Grades';
   const selectedSectionName = selectedSectionObj?.name || 'All Sections';
+  const startResult = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endResult = Math.min(currentPage * pageSize, totalCount);
+  const visiblePages = useMemo<(number | 'start-ellipsis' | 'end-ellipsis')[]>(
+    () => {
+      if (totalPages <= 7) {
+        return Array.from({ length: totalPages }, (_, index) => index + 1);
+      }
+
+      const pages: (number | 'start-ellipsis' | 'end-ellipsis')[] = [1];
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      if (start > 2) {
+        pages.push('start-ellipsis');
+      }
+
+      for (let page = start; page <= end; page++) {
+        pages.push(page);
+      }
+
+      if (end < totalPages - 1) {
+        pages.push('end-ellipsis');
+      }
+
+      pages.push(totalPages);
+      return pages;
+    },
+    [currentPage, totalPages]
+  );
 
   // Fetch grades and sections only once
   useEffect(() => {
@@ -126,7 +177,17 @@ export default function StudentFilter({
       try {
         const data = await fetchGradesAndSections(organizationId);
         if (mounted) {
-          setGrades(data || []);
+          setGrades(
+            sortByNaturalText(data || [], (grade) => grade.name).map(
+              (grade) => ({
+                ...grade,
+                sections: sortByNaturalText(
+                  grade.sections,
+                  (section) => section.name
+                ),
+              })
+            )
+          );
         }
       } catch (error) {
         console.error('Error loading grades:', error);
@@ -140,28 +201,58 @@ export default function StudentFilter({
     };
   }, [organizationId]);
 
-  // Reset section when grade changes
+  // Keep any server-provided section filter on hydration, but clear invalid pairs.
   useEffect(() => {
-    setSection('all');
-  }, [selectedGrade]);
+    if (selectedGrade === 'all') {
+      if (selectedSection !== 'all') {
+        setSection('all');
+      }
+      return;
+    }
+
+    if (selectedSection === 'all' || grades.length === 0) return;
+
+    const grade = grades.find((g) => g.id === selectedGrade);
+    if (grade && !grade.sections.some((section) => section.id === selectedSection)) {
+      setSection('all');
+    }
+  }, [grades, selectedGrade, selectedSection]);
 
   // Fetch students with debouncing
   const fetchStudents = useCallback(
-    async (search: string, gradeId: string, sectionId: string) => {
-      try {
-        startTransition(async () => {
-          // Avoid capturing stale closure by passing args through
+    (
+      search: string,
+      gradeId: string,
+      sectionId: string,
+      page: number,
+      size: number
+    ) => {
+      const requestId = latestRequestRef.current + 1;
+      latestRequestRef.current = requestId;
+
+      startTransition(async () => {
+        try {
           const data = await FilterStudents({
             search: search.trim(),
             gradeId,
             sectionId,
+            page,
+            pageSize: size,
           });
 
-          setStudents(data || []);
-        });
-      } catch (error) {
-        console.error('Error fetching students:', error);
-      }
+          if (requestId !== latestRequestRef.current) return;
+
+          setStudents(data.students || []);
+          setTotalCount(data.totalCount);
+          setCurrentPage(data.page);
+          setPageSize(data.pageSize);
+          setTotalPages(data.totalPages);
+        } catch (error) {
+          if (requestId === latestRequestRef.current) {
+            console.error('Error fetching students:', error);
+          }
+        }
+      });
     },
     []
   );
@@ -178,13 +269,56 @@ export default function StudentFilter({
       isFirstLoadRef.current = false;
       return;
     }
-    fetchStudents(searchQuery, selectedGrade, selectedSection);
-  }, [selectedGrade, selectedSection, searchQuery, fetchStudents]);
+    const timeout = window.setTimeout(() => {
+      fetchStudents(
+        searchQuery,
+        selectedGrade,
+        selectedSection,
+        currentPage,
+        pageSize
+      );
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    selectedGrade,
+    selectedSection,
+    searchQuery,
+    currentPage,
+    pageSize,
+    fetchStudents,
+  ]);
 
   const resetFilters = () => {
     setGrade('all');
     setSection('all');
     setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleGradeChange = (value: string) => {
+    setGrade(value);
+    setSection('all');
+    setCurrentPage(1);
+  };
+
+  const handleSectionChange = (value: string) => {
+    setSection(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
   };
 
   const hasActiveFilters = activeFiltersCount > 0;
@@ -242,7 +376,7 @@ export default function StudentFilter({
               placeholder="Search by name or roll number..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setSearchQuery(e.target.value)
+                handleSearchChange(e.target.value)
               }
               className="pl-9 pr-9 h-10 bg-background"
             />
@@ -251,7 +385,7 @@ export default function StudentFilter({
                 variant="ghost"
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                onClick={() => setSearchQuery('')}
+                onClick={() => handleSearchChange('')}
               >
                 <X className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
@@ -269,7 +403,7 @@ export default function StudentFilter({
                 <GraduationCap className="h-3.5 w-3.5" />
                 Grade Level
               </Label>
-              <Select value={selectedGrade} onValueChange={setGrade}>
+              <Select value={selectedGrade} onValueChange={handleGradeChange}>
                 <SelectTrigger
                   className={cn(
                     'h-10 bg-background transition-colors',
@@ -297,7 +431,7 @@ export default function StudentFilter({
               </Label>
               <Select
                 value={selectedSection}
-                onValueChange={setSection}
+                onValueChange={handleSectionChange}
                 disabled={selectedGrade === 'all'}
               >
                 <SelectTrigger
@@ -332,7 +466,7 @@ export default function StudentFilter({
               {selectedGrade !== 'all' && (
                 <Badge variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-0">
                   {selectedGradeName}
-                  <button onClick={() => setGrade('all')} className="ml-0.5 hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5">
+                  <button onClick={() => handleGradeChange('all')} className="ml-0.5 hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5">
                     <X className="h-2.5 w-2.5" />
                   </button>
                 </Badge>
@@ -340,7 +474,7 @@ export default function StudentFilter({
               {selectedSection !== 'all' && (
                 <Badge variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-0">
                   {selectedSectionName}
-                  <button onClick={() => setSection('all')} className="ml-0.5 hover:bg-green-200 dark:hover:bg-green-800 rounded-full p-0.5">
+                  <button onClick={() => handleSectionChange('all')} className="ml-0.5 hover:bg-green-200 dark:hover:bg-green-800 rounded-full p-0.5">
                     <X className="h-2.5 w-2.5" />
                   </button>
                 </Badge>
@@ -348,7 +482,7 @@ export default function StudentFilter({
               {searchQuery && (
                 <Badge variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-0">
                   "{searchQuery}"
-                  <button onClick={() => setSearchQuery('')} className="ml-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5">
+                  <button onClick={() => handleSearchChange('')} className="ml-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5">
                     <X className="h-2.5 w-2.5" />
                   </button>
                 </Badge>
@@ -358,11 +492,122 @@ export default function StudentFilter({
         </CardContent>
       </Card>
 
-      <StudentsGridList
-        students={students}
-        hasActiveFilters={hasActiveFilters}
-        totalStudentsCount={initialStudents.length}
-      />
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-muted-foreground">
+          {isPending ? (
+            'Updating students...'
+          ) : totalCount > 0 ? (
+            <>
+              Showing <span className="font-medium text-foreground">{startResult}</span>
+              {' - '}
+              <span className="font-medium text-foreground">{endResult}</span>
+              {' of '}
+              <span className="font-medium text-foreground">{totalCount}</span>
+              {' students'}
+            </>
+          ) : (
+            'No students to show'
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Rows</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={handlePageSizeChange}
+            disabled={isPending}
+          >
+            <SelectTrigger className="h-9 w-[84px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[24, 48, 96].map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className={cn(isPending && 'pointer-events-none opacity-60')}>
+        <StudentsGridList
+          students={students}
+          hasActiveFilters={hasActiveFilters}
+          totalStudentsCount={totalCount}
+        />
+      </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page <span className="font-medium text-foreground">{currentPage}</span> of{' '}
+            <span className="font-medium text-foreground">{totalPages}</span>
+          </p>
+          <Pagination className="mx-0 w-auto justify-start sm:justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    if (currentPage > 1 && !isPending) {
+                      handlePageChange(currentPage - 1);
+                    }
+                  }}
+                  className={cn(
+                    (currentPage <= 1 || isPending) &&
+                      'pointer-events-none opacity-50'
+                  )}
+                />
+              </PaginationItem>
+              {visiblePages.map((page) =>
+                typeof page === 'number' ? (
+                  <PaginationItem key={page} className="hidden sm:list-item">
+                    <PaginationLink
+                      href="#"
+                      isActive={page === currentPage}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        if (!isPending) {
+                          handlePageChange(page);
+                        }
+                      }}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={page} className="hidden sm:list-item">
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem className="sm:hidden">
+                <span className="flex h-9 items-center px-3 text-sm font-medium">
+                  {currentPage}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    if (currentPage < totalPages && !isPending) {
+                      handlePageChange(currentPage + 1);
+                    }
+                  }}
+                  className={cn(
+                    (currentPage >= totalPages || isPending) &&
+                      'pointer-events-none opacity-50'
+                  )}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </>
   );
 }

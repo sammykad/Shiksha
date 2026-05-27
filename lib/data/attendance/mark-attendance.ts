@@ -71,16 +71,40 @@ export async function markAttendance({ sectionId, selectedDate, records }: markA
 
     const recordedBy = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown";
 
-    const attendanceRecords = await prisma.$transaction(
-        records.map(({ studentId, status, note }) =>
-            prisma.studentAttendance.upsert({
-                where: { studentId_date: { studentId, date } },
-                update: { status, updatedAt: new Date(), recordedBy, academicYearId, note },
-                create: { studentId, academicYearId, date, status, note, recordedBy, sectionId, createdAt: new Date(), updatedAt: new Date() },
-                select: { id: true, studentId: true, status: true },
-            })
+
+    const chunkSize = 50; // tune this — 50–100 is a good starting point
+    const chunks: typeof records[] = [];
+    for (let i = 0; i < records.length; i += chunkSize) {
+        chunks.push(records.slice(i, i + chunkSize));
+    }
+
+    const attendanceRecords = (
+        await Promise.all(
+            chunks.map((chunk) =>
+                prisma.$transaction(
+                    chunk.map(({ studentId, status, note }) =>
+                        prisma.studentAttendance.upsert({
+                            where: { studentId_date: { studentId, date } },
+                            update: { status, updatedAt: new Date(), recordedBy, academicYearId, note },
+                            create: { studentId, academicYearId, date, status, note, recordedBy, sectionId, createdAt: new Date(), updatedAt: new Date() },
+                            select: { id: true, studentId: true, status: true },
+                        })
+                    )
+                )
+            )
         )
-    );
+    ).flat();
+
+    // const attendanceRecords = await prisma.$transaction(
+    //     records.map(({ studentId, status, note }) =>
+    //         prisma.studentAttendance.upsert({
+    //             where: { studentId_date: { studentId, date } },
+    //             update: { status, updatedAt: new Date(), recordedBy, academicYearId, note },
+    //             create: { studentId, academicYearId, date, status, note, recordedBy, sectionId, createdAt: new Date(), updatedAt: new Date() },
+    //             select: { id: true, studentId: true, status: true },
+    //         })
+    //     )
+    // );
 
     revalidatePath("/dashboard/attendance");
     revalidatePath("/dashboard/attendance/analytics");

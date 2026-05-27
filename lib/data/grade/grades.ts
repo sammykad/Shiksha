@@ -1,4 +1,5 @@
 import prisma from '@/lib/db';
+import { sortByNaturalText } from '@/lib/utils';
 import { getOrganizationId } from '@/lib/organization';
 
 export const getGradesWithCounts = async () => {
@@ -31,7 +32,7 @@ export const getGradesWithCounts = async () => {
     },
   });
 
-  return grades.map((grade) => ({
+  return sortByNaturalText(grades, (grade) => grade.grade).map((grade) => ({
     id: grade.id,
     grade: grade.grade,
     sectionCount: grade._count.section,

@@ -64,6 +64,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { getAttendanceByDateAndSection, getSectionPreviousDayAttendance } from '@/app/actions';
@@ -157,6 +158,31 @@ const generateNoteSuggestion = (studentName: string, status: AttendanceStatus): 
   return template.replace('{name}', studentName);
 };
 
+const createAttendanceRecord = (
+  student: Student,
+  selectedSection: string
+): AttendanceRecord => {
+  const last = student.StudentAttendance
+    .slice()
+    .sort((a, b) => compareDesc(new Date(a.date), new Date(b.date)))
+    .find((a) => a.sectionId === selectedSection);
+
+  return {
+    id: student.id,
+    firstName: student.firstName,
+    lastName: student.lastName,
+    rollNumber: student.rollNumber,
+    profileImage: student.profileImage,
+    sectionId: student.section?.id || null,
+    status: null,
+    note: '',
+    marked: false,
+    lastAttendance: last
+      ? { status: last.status, date: last.date, createdAt: last.createdAt }
+      : undefined,
+  };
+};
+
 const getStatusBadge = (status: AttendanceStatus) => {
   switch (status) {
     case 'PRESENT':
@@ -187,6 +213,7 @@ const getStatusBadge = (status: AttendanceStatus) => {
 interface StudentCardProps {
   student: AttendanceRecord;
   attendancePercentage: number;
+  disabled?: boolean;
   onStatusChange: (id: string, status: AttendanceStatus) => void;
   onNoteChange: (id: string, note: string) => void;
   onAISuggest: (id: string) => void;
@@ -195,6 +222,7 @@ interface StudentCardProps {
 const StudentCard = React.memo(function StudentCard({
   student,
   attendancePercentage,
+  disabled = false,
   onStatusChange,
   onNoteChange,
   onAISuggest,
@@ -292,6 +320,7 @@ const StudentCard = React.memo(function StudentCard({
               size="sm"
               variant={student.status === 'PRESENT' ? 'default' : 'outline'}
               onClick={() => onStatusChange(student.id, 'PRESENT')}
+              disabled={disabled}
               className={cn(
                 'h-8 md:h-9 flex-1 sm:flex-none text-xs md:text-sm',
                 student.status === 'PRESENT' && 'bg-green-500 hover:bg-green-600 text-white'
@@ -303,6 +332,7 @@ const StudentCard = React.memo(function StudentCard({
               size="sm"
               variant={student.status === 'ABSENT' ? 'default' : 'outline'}
               onClick={() => onStatusChange(student.id, 'ABSENT')}
+              disabled={disabled}
               className={cn(
                 'h-8 md:h-9 flex-1 sm:flex-none text-xs md:text-sm',
                 student.status === 'ABSENT' && 'bg-red-500 hover:bg-red-600 text-white'
@@ -314,6 +344,7 @@ const StudentCard = React.memo(function StudentCard({
               size="sm"
               variant={student.status === 'LATE' ? 'default' : 'outline'}
               onClick={() => onStatusChange(student.id, 'LATE')}
+              disabled={disabled}
               className={cn(
                 'h-8 md:h-9 flex-1 sm:flex-none text-xs md:text-sm',
                 student.status === 'LATE' && 'bg-yellow-500 hover:bg-yellow-600 text-white'
@@ -336,6 +367,7 @@ const StudentCard = React.memo(function StudentCard({
                 size="sm"
                 variant="outline"
                 onClick={() => onAISuggest(student.id)}
+                disabled={disabled}
                 className="h-7 text-xs p-2 rounded-lg bg-blue-50 hover:bg-blue-100 border-dashed border-blue-500 shadow-lg"
               >
                 <Sparkles className="h-3 w-3 mr-1 text-blue-500" />
@@ -350,6 +382,7 @@ const StudentCard = React.memo(function StudentCard({
               }
               value={student.note}
               onChange={(e) => onNoteChange(student.id, e.target.value)}
+              disabled={disabled}
               className="h-20 resize-none placeholder:text-muted-foreground text-muted-foreground"
             />
           </div>
@@ -380,6 +413,7 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
     type: 'date' | 'grade' | 'section' | 'leave';
     value: any;
   } | null>(null);
+  const attendanceCheckRef = useRef(0);
 
   // ── Derived stats (useMemo — no extra render cycle) ───────────────────────
   const attendanceStats = useMemo<AttendanceStats>(() => {
@@ -446,23 +480,7 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
     }
     const sectionStudents = students
       .filter((s) => s.section?.id === selectedSection)
-      .map((student) => ({
-        id: student.id,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        rollNumber: student.rollNumber,
-        profileImage: student.profileImage,
-        sectionId: student.section?.id || null,
-        status: null as AttendanceStatus,
-        note: '',
-        marked: false,
-        lastAttendance: (() => {
-          const last = student.StudentAttendance
-            .sort((a, b) => compareDesc(new Date(a.date), new Date(b.date)))
-            .find((a) => a.sectionId === selectedSection);
-          return last ? { status: last.status, date: last.date, createdAt: last.createdAt } : undefined;
-        })(),
-      }));
+      .map((student) => createAttendanceRecord(student, selectedSection));
     setAttendanceData(sectionStudents);
   }, [selectedSection, students]);
 
@@ -473,7 +491,6 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
     if (!selectedSection) return;
 
     const dateKey = selectedDate.toISOString();
-    const checkKey = `${selectedSection}:${dateKey}`;
 
     if (
       prevCheckRef.current?.sectionId === selectedSection &&
@@ -481,11 +498,15 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
     ) return;
 
     prevCheckRef.current = { sectionId: selectedSection, date: dateKey };
+    const requestId = attendanceCheckRef.current + 1;
+    attendanceCheckRef.current = requestId;
 
     const checkExisting = async () => {
       const sectionStudents = students.filter((s) => s.section?.id === selectedSection);
       if (sectionStudents.length === 0) {
+        if (requestId !== attendanceCheckRef.current) return;
         setAttendanceMode('new');
+        setIsFetchingAttendance(false);
         return;
       }
 
@@ -494,6 +515,8 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
 
       try {
         const existing = await getAttendanceByDateAndSection(selectedSection, selectedDate);
+
+        if (requestId !== attendanceCheckRef.current) return;
 
         if (existing.length > 0) {
           setAttendanceData((prev) =>
@@ -519,10 +542,13 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
         }
         setHasUnsavedChanges(false);
       } catch {
+        if (requestId !== attendanceCheckRef.current) return;
         toast.error('Failed to check attendance status');
         setAttendanceMode('new');
       } finally {
-        setIsFetchingAttendance(false);
+        if (requestId === attendanceCheckRef.current) {
+          setIsFetchingAttendance(false);
+        }
       }
     };
 
@@ -766,9 +792,20 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
 
             {selectedSection && (
               <div className="flex items-center gap-2 px-2.5 py-1 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] md:text-sm font-medium text-green-700 dark:text-green-400">
-                  Ready
+                {isFetchingAttendance ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                )}
+                <span
+                  className={cn(
+                    'text-[10px] md:text-sm font-medium',
+                    isFetchingAttendance
+                      ? 'text-blue-700 dark:text-blue-400'
+                      : 'text-green-700 dark:text-green-400'
+                  )}
+                >
+                  {isFetchingAttendance ? 'Syncing' : 'Ready'}
                 </span>
               </div>
             )}
@@ -876,11 +913,6 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
             compact
           />
         </div>
-      ) : isFetchingAttendance ? (
-        <div className="flex flex-col items-center justify-center p-12 space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground animate-pulse">Checking records...</p>
-        </div>
       ) : attendanceData.length === 0 ? (
         <div className="flex justify-center items-center py-10">
           <EmptyState
@@ -960,7 +992,7 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
                 <Button
                   variant="outline"
                   onClick={copyPreviousDayAttendance}
-                  disabled={isCopyingPrevious}
+                  disabled={isCopyingPrevious || isFetchingAttendance}
                   className="h-9"
                 >
                   {isCopyingPrevious ? (
@@ -970,14 +1002,31 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
                   )}
                   Copy Previous
                 </Button>
-                <Button variant="outline" onClick={() => markAllWithStatus('PRESENT')} className="h-9">
+                <Button
+                  variant="outline"
+                  onClick={() => markAllWithStatus('PRESENT')}
+                  disabled={isFetchingAttendance}
+                  className="h-9"
+                >
                   <CheckIcon className="mr-2 h-4 w-4" />
                   All Present
                 </Button>
               </div>
 
               <div className="w-full mb-4">
-                {attendanceMode === 'edit' ? (
+                {isFetchingAttendance ? (
+                  <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
+                      <span className="text-sm text-blue-800 dark:text-blue-400">
+                        Syncing existing attendance records. The student list is ready.
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 border-blue-400 text-blue-700 dark:text-blue-400">
+                      Syncing
+                    </Badge>
+                  </div>
+                ) : attendanceMode === 'edit' ? (
                   <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -1012,19 +1061,22 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
+            <CardContent>
+              <ScrollArea className="h-[56vh] pr-3 sm:h-[60vh]">
+                <div className="flex flex-col gap-4">
                 {attendanceData.map((student) => (
                   <StudentCard
                     key={student.id}
                     student={student}
                     attendancePercentage={attendancePercentageMap.get(student.id) ?? 100}
+                    disabled={isFetchingAttendance}
                     onStatusChange={handleStatusChange}
                     onNoteChange={handleNoteChange}
                     onAISuggest={generateAISuggestion}
                   />
                 ))}
-              </div>
+                </div>
+              </ScrollArea>
             </CardContent>
 
             <CardFooter className="flex justify-between">

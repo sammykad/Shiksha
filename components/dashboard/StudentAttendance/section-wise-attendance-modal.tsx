@@ -19,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -173,8 +174,8 @@ export function SectionWiseAttendanceViewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[calc(100dvh-1rem)] flex-col overflow-hidden sm:max-h-[90vh] sm:max-w-[800px]">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{section} Attendance</DialogTitle>
           <DialogDescription>
             {formattedDate} • Recorded by: {reportedBy || 'System'}
@@ -185,14 +186,17 @@ export function SectionWiseAttendanceViewModal({
           defaultValue="overview"
           value={activeTab}
           onValueChange={setActiveTab}
-          className="w-full"
+          className="flex min-h-0 flex-1 flex-col"
         >
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full shrink-0 grid-cols-2">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="students">Student List</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4 mt-4">
+          <TabsContent
+            value="overview"
+            className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 space-y-4"
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium">Attendance Summary</h3>
               <SectionStatusBadge status={status} />
@@ -316,17 +320,20 @@ export function SectionWiseAttendanceViewModal({
             </div>
           </TabsContent>
 
-          <TabsContent value="students" className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
+          <TabsContent
+            value="students"
+            className="mt-4 flex min-h-0 flex-1 flex-col gap-4"
+          >
+            <div className="flex shrink-0 items-center justify-between">
               <h3 className="text-lg font-medium">Student Attendance</h3>
               <div className="text-sm text-muted-foreground">
                 Total: {totalStudents} students
               </div>
             </div>
 
-            <div className="rounded-md border overflow-hidden">
+            <ScrollArea className="h-[48vh] rounded-md border sm:h-[56vh]">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
                     <TableHead>Roll No.</TableHead>
                     <TableHead>Student Name</TableHead>
@@ -364,9 +371,9 @@ export function SectionWiseAttendanceViewModal({
                   )}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollArea>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex shrink-0 justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setActiveTab('overview')}

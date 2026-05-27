@@ -7,6 +7,24 @@ import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+const naturalCollator = new Intl.Collator('en-IN', {
+  numeric: true,
+  sensitivity: 'base',
+  ignorePunctuation: true,
+});
+
+export function compareNaturalText(a: string, b: string) {
+  return naturalCollator.compare(a.trim(), b.trim());
+}
+
+export function sortByNaturalText<T>(
+  items: T[],
+  getText: (item: T) => string
+) {
+  return [...items].sort((a, b) => compareNaturalText(getText(a), getText(b)));
+}
+
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 

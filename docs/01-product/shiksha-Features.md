@@ -377,6 +377,8 @@ IMP : Find Best Sutable / Cheap Domain
 - ID Cards : RFID , Scanner , Parent Phone Numbers , Principal sign
 - ReSearch GST 
 - Fee Management : GST+ ,Strict Sequential Receipt Numbering, Discounts, Waivers, and Scholarships, fine & penalty
+- Holiday : Show the toggle to see dynamic calendar wise  Academic Calendar For all Users 
+
 Rules To Create Institution 
 Introduce New Role SuperAdmin
 Only Super Admin Can See /dashboard/institution 

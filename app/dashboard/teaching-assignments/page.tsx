@@ -14,6 +14,7 @@ import {
 import { NewAssignmentDialog } from "@/components/dashboard/teacher/NewAssignmentDialog";
 import { createTeachingAssignment } from "@/lib/data/teaching-assignment/createTeachingAssignment";
 import TeachingAssignmentsView from "@/components/dashboard/teacher/Teachingassignmentsview";
+import { sortByNaturalText } from "@/lib/utils";
 
 async function getAssignments() {
   const organizationId = await getOrganizationId();
@@ -65,7 +66,6 @@ async function getFormData(): Promise<{
       prisma.grade.findMany({
         where: { organizationId },
         include: { section: true },
-        orderBy: { grade: "asc" },
       }),
       prisma.academicYear.findMany({
         where: { organizationId },
@@ -105,13 +105,19 @@ async function getFormData(): Promise<{
     code: s.code,
   }));
 
-  const grades: Grade[] = rawGrades.map((g) => ({
+  const sortedGrades = sortByNaturalText(rawGrades, (g) => g.grade);
+
+  const grades: Grade[] = sortedGrades.map((g) => ({
     id: g.id,
     grade: g.grade,
   }));
 
-  const sections: Section[] = rawGrades.flatMap((g) =>
-    g.section.map((s) => ({ id: s.id, name: s.name, gradeId: s.gradeId }))
+  const sections: Section[] = sortedGrades.flatMap((g) =>
+    sortByNaturalText(g.section, (s) => s.name).map((s) => ({
+      id: s.id,
+      name: s.name,
+      gradeId: s.gradeId,
+    }))
   );
 
   const existingAssignments: ExistingAssignment[] = rawAssignments.map((a) => ({

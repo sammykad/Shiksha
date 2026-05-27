@@ -125,13 +125,13 @@ const InfoCard = ({
   className?: string;
 }) => (
   <div
-    className={`group relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6  transition-all hover:shadow-sm hover:border-gray-300 ${className}`}
+    className={`group relative overflow-hidden rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-gray-300 hover:shadow-sm sm:p-6 ${className}`}
   >
     <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     <div className="relative">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 group-hover:bg-gray-200 transition-colors">
-          <Icon className="h-5 w-5 text-gray-600" />
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-gray-200">
+          <Icon className="size-5 text-gray-600" />
         </div>
         <h3 className="font-semibold text-gray-900">{title}</h3>
       </div>
@@ -149,15 +149,15 @@ const DataPoint = ({
   value: string | number | null | undefined;
   icon?: LucideIcon;
 }) => (
-  <div className="flex items-start space-x-3 py-0">
+  <div className="flex items-start gap-3 py-0">
     {Icon && (
-      <div className="flex h-5 w-5 items-center justify-center mt-0.5">
-        <Icon className="h-4 w-4 text-gray-400" />
+      <div className="mt-0.5 flex size-5 items-center justify-center">
+        <Icon className="size-4 text-gray-400" />
       </div>
     )}
     <div className="flex-1 min-w-0">
       <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="text-sm text-gray-900 font-medium mt-0.5">
+      <p className="mt-0.5 break-words text-sm font-medium text-gray-900">
         {value || 'Not specified'}
       </p>
     </div>
@@ -200,57 +200,58 @@ export function TeacherDetailsModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-
-        <DialogContent className="max-w-6xl h-[75vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] md:h-[85vh]">
+          <DialogHeader className="shrink-0 border-b px-4 py-4 pr-12 sm:px-6">
             <DialogTitle>Teacher Details</DialogTitle>
             <DialogDescription>Preview the teacher details</DialogDescription>
           </DialogHeader>
           {/* Header */}
-          <div className="flex items-start space-x-6">
-            <div className="relative">
-              <Avatar className="h-20 w-20 ring-4 ring-white shadow-lg">
+          <div className="flex shrink-0 flex-row items-start gap-3 border-b px-4 py-4 sm:gap-6 sm:px-6">
+            <div className="relative w-fit shrink-0">
+              <Avatar className="size-14 ring-2 ring-background shadow-sm sm:size-20">
                 <AvatarImage
-                  src={user.profileImage || '/placeholder.png'}
+                  src={user.profileImage || '/placeholder.svg'}
                   alt={fullName}
                 />
-                <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                <AvatarFallback className="text-sm font-medium text-muted-foreground sm:text-lg">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div
-                className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border-2 border-white ${statusConfig.dot}`}
+                className={`absolute -bottom-1 right-1.5 size-4 rounded-full border-2 border-white sm:size-6 ${statusConfig.dot}`}
               />
             </div>
-            <div className="space-y-3">
+            <div className="min-w-0 flex-1">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{fullName}</h1>
-                <p className="text-lg text-gray-600 font-medium">
+                <h1 className="break-words text-xl font-bold text-gray-900 sm:text-2xl">
+                  {fullName}
+                </h1>
+                <p className="mt-1 break-words text-sm font-medium text-gray-600 sm:text-lg">
                   {profile?.qualification || 'Teacher'}
                 </p>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="mt-3 flex flex-wrap items-start gap-2 sm:gap-3">
                 <Badge
-                  className={`${statusConfig.color} border font-medium px-3 py-1 hover:bg-${statusConfig.color}-100`}
+                  className={`${statusConfig.color} border px-3 py-1 font-medium`}
                 >
                   <div
-                    className={`w-2 h-2 rounded-full ${statusConfig.dot} mr-2`}
+                    className={`mr-2 size-2 rounded-full ${statusConfig.dot}`}
                   />
                   {statusConfig.label}
                 </Badge>
                 {teacher.employeeCode && (
                   <Badge
                     variant="outline"
-                    className="font-mono bg-gray-50 border-gray-300"
+                    className="border-gray-300 bg-gray-50 font-mono"
                   >
                     ID: {teacher.employeeCode}
                   </Badge>
                 )}
                 <Badge
                   variant="outline"
-                  className="bg-blue-50 border-blue-200 text-blue-700"
+                  className="border-blue-200 bg-blue-50 text-blue-700"
                 >
-                  <Clock className="w-3 h-3 mr-1" />
+                  <Clock className="mr-1 size-3" />
                   {profile?.experienceInYears || 0} years exp.
                 </Badge>
               </div>
@@ -258,43 +259,45 @@ export function TeacherDetailsModal({
           </div>
 
           {/* Content */}
-          <div className="p-4 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-8 bg-gray-100 p-1 rounded-lg">
-                <TabsTrigger
-                  value="overview"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                >
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="contact"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                >
-                  Contact
-                </TabsTrigger>
-                <TabsTrigger
-                  value="professional"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                >
-                  Professional
-                </TabsTrigger>
-                <TabsTrigger
-                  value="teaching"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                >
-                  Teaching
-                </TabsTrigger>
-              </TabsList>
+              <div className="mb-6">
+                <TabsList className="flex h-auto w-full flex-wrap justify-start rounded-lg bg-gray-100 p-1">
+                  <TabsTrigger
+                    value="overview"
+                    className="min-w-0 basis-1/2 px-3 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm sm:basis-1/4 sm:text-sm"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="contact"
+                    className="min-w-0 basis-1/2 px-3 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm sm:basis-1/4 sm:text-sm"
+                  >
+                    Contact
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="professional"
+                    className="min-w-0 basis-1/2 px-3 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm sm:basis-1/4 sm:text-sm"
+                  >
+                    Professional
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="teaching"
+                    className="min-w-0 basis-1/2 px-3 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm sm:basis-1/4 sm:text-sm"
+                  >
+                    Teaching
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              <TabsContent value="overview" className="space-y-3">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 space-y-3">
+              <TabsContent value="overview" className="mt-0 space-y-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                   <InfoCard
                     icon={User}
                     title="Personal Information"
                     className="lg:col-span-2"
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <DataPoint
                         label="Full Name"
                         value={fullName}
@@ -377,8 +380,8 @@ export function TeacherDetailsModal({
                 )}
               </TabsContent>
 
-              <TabsContent value="contact" className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TabsContent value="contact" className="mt-0 space-y-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
                   <InfoCard icon={Mail} title="Email & Communication">
                     <div className="space-y-4">
                       <DataPoint
@@ -427,7 +430,7 @@ export function TeacherDetailsModal({
                             value={profile.address}
                             icon={MapPin}
                           />
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <DataPoint label="City" value={profile.city} />
                             <DataPoint label="State" value={profile.state} />
                           </div>
@@ -438,8 +441,8 @@ export function TeacherDetailsModal({
                 </div>
               </TabsContent>
 
-              <TabsContent value="professional" className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TabsContent value="professional" className="mt-0 space-y-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
                   <InfoCard icon={GraduationCap} title="Education & Experience">
                     <div className="space-y-4">
                       <DataPoint
@@ -503,8 +506,8 @@ export function TeacherDetailsModal({
                 </div>
               </TabsContent>
 
-              <TabsContent value="teaching" className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TabsContent value="teaching" className="mt-0 space-y-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
                   <InfoCard icon={BookOpen} title="Subject Expertise">
                     <div>
                       <p className="text-sm font-medium text-gray-500 mb-3">

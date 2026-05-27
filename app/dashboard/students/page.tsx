@@ -23,7 +23,7 @@ export default async function Students({ searchParams }: PageProps) {
 
   const { search, sectionId, gradeId } = searchParamsParsed;
 
-  const students = await FilterStudents({ search, gradeId, sectionId });
+  const studentsResult = await FilterStudents({ search, gradeId, sectionId });
 
   if (orgRole === 'STUDENT' || orgRole === 'PARENT')
     redirect('/dashboard');
@@ -50,7 +50,7 @@ export default async function Students({ searchParams }: PageProps) {
       />
       <StudentFilter
         organizationId={orgId}
-        initialStudents={students}
+        initialResult={studentsResult}
         initialGradeId={gradeId || 'all'}
         initialSectionId={sectionId || 'all'}
         initialSearch={search || ''}

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { getCurrentAcademicYearId } from '@/lib/academicYear';
+import { sortByNaturalText } from '@/lib/utils';
 
 // ✅ searchParams is a Promise in Next.js 15 — must be awaited
 const CreateStudentPage = async ({
@@ -33,15 +34,21 @@ const CreateStudentPage = async ({
   const organizationId = await getOrganizationId()
   const academicYearId = await getCurrentAcademicYearId();
 
-  const grades = await prisma.grade.findMany({
+  const rawGrades = await prisma.grade.findMany({
     where: { organizationId },
     select: {
       id: true,
       grade: true,
       section: { select: { id: true, name: true } },
     },
-    orderBy: { grade: 'asc' },
   });
+
+  const grades = sortByNaturalText(rawGrades, (grade) => grade.grade).map(
+    (grade) => ({
+      ...grade,
+      section: sortByNaturalText(grade.section, (section) => section.name),
+    })
+  );
 
   return (
     <Suspense fallback={<StudentProfileEditSkeleton />}>

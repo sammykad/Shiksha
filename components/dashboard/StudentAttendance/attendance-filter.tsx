@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn, sortByNaturalText } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useQueryState } from 'nuqs';
 import { fetchGradesAndSections } from '@/app/actions';
@@ -80,7 +80,15 @@ export default function AttendanceFilters({
     const loadGrades = async () => {
       try {
         const data = await fetchGradesAndSections(organizationId);
-        setGrades(data || []);
+        setGrades(
+          sortByNaturalText(data || [], (grade) => grade.name).map((grade) => ({
+            ...grade,
+            sections: sortByNaturalText(
+              grade.sections,
+              (section) => section.name
+            ),
+          }))
+        );
       } catch (error) {
         console.error('Failed to load grades and sections:', error);
       }

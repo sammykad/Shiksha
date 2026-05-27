@@ -8,14 +8,20 @@ interface FilterStudentsProps {
   search?: string;
   gradeId?: string;
   sectionId?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export default async function FilterStudents({
   search = '',
   gradeId = 'all',
   sectionId = 'all',
+  page = 1,
+  pageSize = 24,
 }: FilterStudentsProps) {
   const organizationId = await getOrganizationId();
+  const safePage = Math.max(1, page);
+  const safePageSize = Math.min(Math.max(1, pageSize), 96);
 
   const where: Prisma.StudentWhereInput = {
     organizationId,
@@ -45,6 +51,11 @@ export default async function FilterStudents({
   }
 
   try {
+    const totalCount = await prisma.student.count({ where });
+    const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+    const currentPage = Math.min(safePage, totalPages);
+    const skip = (currentPage - 1) * safePageSize;
+
     const students = await prisma.student.findMany({
       where,
       select: {
@@ -70,11 +81,18 @@ export default async function FilterStudents({
           },
         },
       },
-      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
-      // take: 120, // protect against massive payloads
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }, { id: 'asc' }],
+      skip,
+      take: safePageSize,
     });
 
-    return students;
+    return {
+      students,
+      totalCount,
+      page: currentPage,
+      pageSize: safePageSize,
+      totalPages,
+    };
   } catch (error) {
     console.error('Error filtering students:', error);
     throw new Error('Failed to fetch students');

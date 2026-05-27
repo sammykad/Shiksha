@@ -25,7 +25,7 @@ import { getOrganizationId } from '@/lib/organization';
 import { redis } from '@/lib/redis';
 import { notify } from '@/lib/notifications/engine';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
-import { toISTDate } from '@/lib/utils';
+import { sortByNaturalText, toISTDate } from '@/lib/utils';
 import { SupportFormData } from '@/components/website/support/SupportPopup';
 import { DOCUMENT_TYPE_LABELS } from '@/types/document';
 import {
@@ -83,10 +83,12 @@ export async function fetchGradesAndSections(organizationId: string) {
     },
   });
 
-  return grades.map((grade) => ({
+  return sortByNaturalText(grades, (grade) => grade.grade).map((grade) => ({
     id: grade.id,
     name: grade.grade,
-    sections: grade.section.map((sec) => ({ id: sec.id, name: sec.name })),
+    sections: sortByNaturalText(grade.section, (sec) => sec.name).map(
+      (sec) => ({ id: sec.id, name: sec.name })
+    ),
   }));
 }
 export async function deleteGrade(formData: FormData) {

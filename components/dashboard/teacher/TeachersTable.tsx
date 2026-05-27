@@ -308,6 +308,9 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
                           teacher.employmentStatus,
                           teacher.isActive
                         );
+                        const specializedSubjects =
+                          teacher.profile?.specializedSubjects ?? [];
+
                         return (
                           <TableRow
                             key={teacher.id}
@@ -367,22 +370,42 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
                               </span>
                             </TableCell>
                             <TableCell>
-                              <div className="flex flex-wrap gap-1 max-w-[160px]">
-                                {teacher.profile?.specializedSubjects
-                                  ?.slice(0, 2)
-                                  .map((subject) => (
+                              <div className="flex max-w-[132px] items-center gap-1 sm:max-w-[180px]">
+                                {specializedSubjects.length > 0 ? (
+                                  <>
                                     <Badge
-                                      key={subject}
                                       variant="secondary"
-                                      className="text-[10px] px-1.5 py-0 h-[18px] font-normal"
+                                      className="h-5 max-w-[92px] truncate px-1.5 py-0 text-[10px] font-normal sm:max-w-[76px] lg:max-w-[96px]"
                                     >
-                                      {subject}
+                                      {specializedSubjects[0]}
                                     </Badge>
-                                  ))}
-                                {(teacher.profile?.specializedSubjects?.length ?? 0) > 2 && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-[18px] font-normal">
-                                    +{(teacher.profile?.specializedSubjects?.length ?? 0) - 2}
-                                  </Badge>
+                                    {specializedSubjects[1] && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="hidden h-5 max-w-[76px] truncate px-1.5 py-0 text-[10px] font-normal sm:inline-flex lg:max-w-[96px]"
+                                      >
+                                        {specializedSubjects[1]}
+                                      </Badge>
+                                    )}
+                                    {specializedSubjects.length > 1 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="h-5 shrink-0 px-1.5 py-0 text-[10px] font-normal sm:hidden"
+                                      >
+                                        +{specializedSubjects.length - 1}
+                                      </Badge>
+                                    )}
+                                    {specializedSubjects.length > 2 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="hidden h-5 shrink-0 px-1.5 py-0 text-[10px] font-normal sm:inline-flex"
+                                      >
+                                        +{specializedSubjects.length - 2}
+                                      </Badge>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">No subjects</span>
                                 )}
                               </div>
                             </TableCell>

@@ -2,7 +2,7 @@ import { GradesSidebar } from '@/components/dashboard/class-management/grades-si
 import { GradeListingSkeleton } from '@/components/dashboard/class-management/skeletons';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
-import { cn } from '@/lib/utils';
+import { cn, sortByNaturalText } from '@/lib/utils';
 import type React from 'react';
 import { Suspense } from 'react';
 
@@ -26,7 +26,7 @@ export default async function GradesLayout({
     orderBy: { grade: 'asc' },
   });
 
-  const gradesWithCounts = grades.map((grade) => ({
+  const gradesWithCounts = sortByNaturalText(grades, (grade) => grade.grade).map((grade) => ({
     id: grade.id,
     grade: grade.grade,
     sectionCount: grade._count.section,
