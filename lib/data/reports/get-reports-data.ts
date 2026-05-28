@@ -3,6 +3,7 @@
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { compareNaturalText, sortByNaturalText } from '@/lib/utils';
 import type {
     StudentReportData,
     AttendanceReportData,
@@ -25,7 +26,6 @@ export async function getGradesAndSections(): Promise<{
         prisma.grade.findMany({
             where: { organizationId },
             select: { id: true, grade: true },
-            orderBy: { grade: 'asc' },
         }),
         prisma.section.findMany({
             where: { organizationId },
@@ -35,8 +35,11 @@ export async function getGradesAndSections(): Promise<{
     ]);
 
     return {
-        grades: grades.map((g) => ({ id: g.id, name: g.grade })),
-        sections: sections.map((s) => ({
+        grades: sortByNaturalText(grades, (g) => g.grade).map((g) => ({
+            id: g.id,
+            name: g.grade,
+        })),
+        sections: sortByNaturalText(sections, (s) => s.name).map((s) => ({
             id: s.id,
             name: s.name,
             gradeId: s.gradeId,
@@ -109,7 +112,11 @@ export async function getStudentMasterListData(
             : undefined,
         parentPhone: student.parents[0]?.parent.phoneNumber,
         createdAt: student.createdAt,
-    }));
+    })).sort((a, b) =>
+        compareNaturalText(a.grade, b.grade) ||
+        compareNaturalText(a.section, b.section) ||
+        compareNaturalText(a.rollNumber, b.rollNumber)
+    );
 }
 
 /**
@@ -177,7 +184,11 @@ export async function getAttendanceReportData(
             lateDays,
             attendancePercentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
         };
-    });
+    }).sort((a, b) =>
+        compareNaturalText(a.grade, b.grade) ||
+        compareNaturalText(a.section, b.section) ||
+        compareNaturalText(a.rollNumber, b.rollNumber)
+    );
 }
 
 /**

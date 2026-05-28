@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 
 import { OrganizationType } from '@/generated/prisma/enums';
 import { OrganizationFormData, organizationSchema } from '@/lib/schemas';
-import { updateOrganization } from '@/lib/data/update-organization';
+import { updateOrganization } from '@/lib/data/organization/update-organization';
 import { Organization } from '@/generated/prisma/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

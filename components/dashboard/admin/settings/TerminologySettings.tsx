@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 
 import { Organization } from '@/generated/prisma/client';
 import { TerminologyLabels, getTerminology } from '@/lib/terminology';
-import { updateOrganization } from '@/lib/data/update-organization';
+import { updateOrganization } from '@/lib/data/organization/update-organization';
 
 interface TerminologySettingsProps {
     organization: Organization;

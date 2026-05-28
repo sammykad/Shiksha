@@ -84,6 +84,7 @@ export default function PricingSection() {
                 {/* Slider */}
                 <div className="relative pt-1">
                   <Slider
+                    defaultValue={[300]}
                     value={[students]}
                     min={1}
                     max={1000}

@@ -117,8 +117,7 @@ export default async function SelectOrganizationPage({
                 width={420}
                 height={420}
                 priority
-                className="max-w-[420px]"
-                style={{ width: 'auto', height: 'auto' }}
+                style={{ maxWidth: '420px', width: 'auto', height: 'auto' }}
               />
             </div>
           </div>

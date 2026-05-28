@@ -36,7 +36,7 @@ import { toast } from 'sonner';
 
 import { OrganizationType } from '@/generated/prisma/enums';
 import { OrganizationFormData, organizationSchema } from '@/lib/schemas';
-import { updateOrganization } from '@/lib/data/update-organization';
+import { updateOrganization } from '@/lib/data/organization/update-organization';
 
 interface Organization {
   id: string;

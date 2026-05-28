@@ -8,6 +8,7 @@ import {
   calculateCGPA,
   determineResultStatus,
 } from './grade-utils';
+import { sortByNaturalText } from '@/lib/utils';
 
 /**
  * Get exam session details with all exams
@@ -74,12 +75,9 @@ export async function getGradesInSession(sessionId: string) {
         id: true,
         grade: true,
       },
-      orderBy: {
-        grade: 'asc',
-      },
     });
 
-    return { success: true, data: grades };
+    return { success: true, data: sortByNaturalText(grades, (grade) => grade.grade) };
   } catch (error) {
     console.error('Failed to fetch grades:', error);
     return { success: false, error: 'Failed to fetch grades' };
@@ -108,7 +106,7 @@ export async function getSectionsInSessionGrade(sessionId: string, gradeId: stri
       },
     });
 
-    return { success: true, data: sections };
+    return { success: true, data: sortByNaturalText(sections, (section) => section.name) };
   } catch (error) {
     console.error('Failed to fetch sections:', error);
     return { success: false, error: 'Failed to fetch sections' };
