@@ -11,6 +11,7 @@ import { ExamCreateForm } from '@/components/dashboard/exam/ExamCreateForm';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { getCurrentAcademicYearId } from '@/lib/academicYear';
+import { sortByNaturalText } from '@/lib/utils';
 
 function FormSkeleton() {
   return (
@@ -68,9 +69,8 @@ export default async function ExamCreatePage() {
     lastName: t.user.lastName,
   }));
 
-  const gradesWithSections = await prisma.grade.findMany({
+  const rawGradesWithSections = await prisma.grade.findMany({
     where: { organizationId },
-    orderBy: { grade: "asc" },
     select: {
       id: true,
       grade: true,
@@ -83,6 +83,14 @@ export default async function ExamCreatePage() {
       },
     },
   });
+
+  const gradesWithSections = sortByNaturalText(
+    rawGradesWithSections,
+    (grade) => grade.grade
+  ).map((grade) => ({
+    ...grade,
+    section: sortByNaturalText(grade.section, (section) => section.name),
+  }));
   const examSession = await prisma.examSession.findMany({
     where: { organizationId, academicYearId },
   });

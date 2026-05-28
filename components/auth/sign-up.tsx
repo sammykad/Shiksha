@@ -11,12 +11,21 @@ import { z } from "zod";
 
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Form, FormField } from "@/components/ui/form";
+import {
+  getAuthErrorField,
+  getOAuthErrorMessage,
+  getOtpErrorMessage,
+  getSignInErrorMessage,
+  getSignUpErrorMessage,
+} from "@/lib/auth-errors";
 import { emailOTP, signIn, signUp } from "@/lib/auth-client";
+import { appendAuthCallbackUrl, getAbsoluteAuthCallbackUrl } from "@/lib/auth-navigation";
+import { markEmailVerifiedWithOwnershipToken } from "@/lib/auth-account-actions";
 import { cn } from "@/lib/utils";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 
-type SignUpStep = "form" | "verify";
+type SignUpStep = "email" | "verify" | "existing" | "new";
 type PasswordRequirement = { label: string; met: boolean };
 
 export interface SignUpProps {
@@ -26,23 +35,39 @@ export interface SignUpProps {
   subheading?: string;
   redirectUrl?: string;
   signInUrl?: string;
+  initialError?: string | null;
 }
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 30;
 
-const signUpSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required."),
-  lastName: z.string().trim().min(1, "Last name is required."),
+const emailSchema = z.object({
   email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address."),
-  password: z
-    .string()
-    .min(8, "Use at least 8 characters.")
-    .regex(/[A-Z]/, "Add one uppercase letter.")
-    .regex(/\d/, "Add one number."),
 });
 
-type SignUpValues = z.infer<typeof signUpSchema>;
+const passwordRules = z
+  .string()
+  .min(8, "Use at least 8 characters.")
+  .regex(/[A-Z]/, "Add one uppercase letter.")
+  .regex(/\d/, "Add one number.");
+
+const newAccountSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required."),
+  lastName: z.string().trim().min(1, "Last name is required."),
+  password: passwordRules,
+});
+
+const existingAccountSchema = z.object({
+  password: z.string().min(1, "Password is required."),
+});
+
+type EmailValues = z.infer<typeof emailSchema>;
+type NewAccountValues = z.infer<typeof newAccountSchema>;
+type ExistingAccountValues = z.infer<typeof existingAccountSchema>;
+
+type OwnershipResponse =
+  | { exists: boolean; token: string; error?: never }
+  | { error: string; exists?: never; token?: never };
 
 function getPasswordRequirements(password: string): PasswordRequirement[] {
   return [
@@ -86,36 +111,45 @@ export function BetterAuthSignUp({
   className,
   showOAuth = true,
   heading = "Create your account",
-  subheading = "Welcome! Please fill in the details to get started.",
+  subheading = "Enter your email first. We will verify it before creating a new account.",
   redirectUrl = "/dashboard",
   signInUrl = "/sign-in",
+  initialError = null,
 }: SignUpProps) {
   const router = useRouter();
   const [isRouting, startTransition] = useTransition();
-  const [step, setStep] = useState<SignUpStep>("form");
-  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<SignUpStep>("email");
+  const [error, setError] = useState<string | null>(initialError);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [ownershipToken, setOwnershipToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOAuthSubmitting, setIsOAuthSubmitting] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showExistingPassword, setShowExistingPassword] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpDigits, setOtpDigits] = useState<string[]>(Array.from({ length: OTP_LENGTH }, () => ""));
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const form = useForm<SignUpValues>({
-    resolver: zodResolver(signUpSchema),
+  const emailForm = useForm<EmailValues>({
+    resolver: zodResolver(emailSchema),
     mode: "onChange",
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "" },
   });
 
-  const email = form.watch("email").trim().toLowerCase();
-  const password = form.watch("password");
-  const passwordRequirements = useMemo(() => getPasswordRequirements(password), [password]);
+  const newAccountForm = useForm<NewAccountValues>({
+    resolver: zodResolver(newAccountSchema),
+    mode: "onChange",
+    defaultValues: { firstName: "", lastName: "", password: "" },
+  });
+
+  const existingAccountForm = useForm<ExistingAccountValues>({
+    resolver: zodResolver(existingAccountSchema),
+    mode: "onChange",
+    defaultValues: { password: "" },
+  });
+
+  const newPassword = newAccountForm.watch("password");
+  const passwordRequirements = useMemo(() => getPasswordRequirements(newPassword), [newPassword]);
   const otpCode = useMemo(() => otpDigits.join(""), [otpDigits]);
   const canVerify = otpCode.length === OTP_LENGTH;
   const isBusy = isSubmitting || isOAuthSubmitting || isRouting;
@@ -136,12 +170,26 @@ export function BetterAuthSignUp({
     return () => window.clearInterval(timer);
   }, [resendCooldown]);
 
-  const moveToVerifyStep = useCallback((nextEmail: string) => {
-    form.setValue("email", nextEmail);
+  const resetOtpState = useCallback(() => {
     setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ""));
-    setResendCooldown(RESEND_COOLDOWN_SECONDS);
-    setStep("verify");
-  }, [form]);
+    setOwnershipToken("");
+  }, []);
+
+  const sendOwnershipOtp = useCallback(async (email: string) => {
+    const { error: otpError } = await emailOTP.sendVerificationOtp({
+      email,
+      type: "sign-in",
+    });
+
+    if (otpError) {
+      const message = getOtpErrorMessage(otpError);
+      setError(message);
+      toast.error(message);
+      return false;
+    }
+
+    return true;
+  }, []);
 
   const handleOAuth = useCallback(async () => {
     if (isBusy) return;
@@ -152,71 +200,127 @@ export function BetterAuthSignUp({
     try {
       const { error: oauthError } = await signIn.social({
         provider: "google",
-        callbackURL: redirectUrl,
+        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
+        errorCallbackURL: appendAuthCallbackUrl("/sign-up", redirectUrl),
       });
 
       if (oauthError) {
-        setError(oauthError.message ?? "Google sign up failed. Please try again.");
+        const message = getOAuthErrorMessage(oauthError);
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsOAuthSubmitting(false);
     }
   }, [isBusy, redirectUrl]);
 
-  const handleCreateAccount = useCallback(async (values: SignUpValues) => {
+  const handleRequestCode = useCallback(async (values: EmailValues) => {
     if (isBusy) return;
 
     const normalizedEmail = values.email.trim().toLowerCase();
     setError(null);
-    setIsVerified(false);
     setIsSubmitting(true);
 
     try {
-      const { error: signUpError } = await signUp.email({
-        email: normalizedEmail,
-        password: values.password,
-        name: `${values.firstName} ${values.lastName}`.trim(),
-        callbackURL: redirectUrl,
-      });
+      const sent = await sendOwnershipOtp(normalizedEmail);
+      if (!sent) return;
 
-      if (signUpError) {
-        const message = signUpError.message ?? "Sign up failed.";
-        setError(message.includes("already exists")
-          ? "This email already has an account. Please sign in instead."
-          : message);
-        return;
-      }
-
-      moveToVerifyStep(normalizedEmail);
+      setPendingEmail(normalizedEmail);
+      resetOtpState();
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setStep("verify");
+      toast.success("Verification code sent.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [isBusy, moveToVerifyStep, redirectUrl]);
+  }, [isBusy, resetOtpState, sendOwnershipOtp]);
 
   const handleVerifyEmail = useCallback(async () => {
-    if (!canVerify || isBusy || isVerified) return;
+    if (!canVerify || isBusy || !pendingEmail) return;
 
     setError(null);
     setIsSubmitting(true);
 
     try {
-      const { error: verifyError } = await emailOTP.verifyEmail({ email, otp: otpCode });
-      if (verifyError) {
-        setError(verifyError.message ?? "Verification failed.");
+      const response = await fetch("/api/auth-email-ownership/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail, otp: otpCode }),
+      });
+      const result = (await response.json()) as OwnershipResponse;
+
+      if (!response.ok || "error" in result) {
+        const message =
+          "error" in result && result.error
+            ? result.error
+            : "Verification failed. Please try again.";
+        setError(message);
+        toast.error(message);
         return;
       }
 
-      setIsVerified(true);
-      toast.success("Email verified successfully.");
+      setOwnershipToken(result.token);
+      setError(null);
+      toast.success("Email verified.");
 
+      if (result.exists) {
+        existingAccountForm.reset({ password: "" });
+        setStep("existing");
+        return;
+      }
+
+      newAccountForm.reset({ firstName: "", lastName: "", password: "" });
+      setStep("new");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [canVerify, existingAccountForm, isBusy, newAccountForm, otpCode, pendingEmail]);
+
+  const handleResendCode = useCallback(async () => {
+    if (isBusy || resendCooldown > 0 || !pendingEmail) return;
+
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const sent = await sendOwnershipOtp(pendingEmail);
+      if (!sent) return;
+
+      resetOtpState();
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      otpRefs.current[0]?.focus();
+      toast.success("Code resent.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isBusy, pendingEmail, resendCooldown, resetOtpState, sendOwnershipOtp]);
+
+  const handleExistingSignIn = useCallback(async (values: ExistingAccountValues) => {
+    if (isBusy || !pendingEmail) return;
+
+    setError(null);
+    existingAccountForm.clearErrors();
+    setIsSubmitting(true);
+
+    try {
       const { error: signInError } = await signIn.email({
-        email,
-        password,
-        callbackURL: redirectUrl,
+        email: pendingEmail,
+        password: values.password,
+        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
       });
 
       if (signInError) {
-        setError(signInError.message ?? "Email verified. Please sign in to continue.");
+        const message = getSignInErrorMessage(signInError);
+        const field = getAuthErrorField(signInError);
+
+        if (field === "email" || field === "password") {
+          existingAccountForm.setError("password", { message });
+        }
+
+        setError(message);
+        toast.error(message);
         return;
       }
 
@@ -227,33 +331,69 @@ export function BetterAuthSignUp({
     } finally {
       setIsSubmitting(false);
     }
-  }, [canVerify, email, isBusy, isVerified, otpCode, password, redirectUrl, router, startTransition]);
+  }, [existingAccountForm, isBusy, pendingEmail, redirectUrl, router, startTransition]);
 
-  const handleResendCode = useCallback(async () => {
-    if (isBusy || resendCooldown > 0) return;
+  const handleCreateVerifiedAccount = useCallback(async (values: NewAccountValues) => {
+    if (isBusy || !pendingEmail || !ownershipToken) return;
 
     setError(null);
-    setIsVerified(false);
-    setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ""));
+    newAccountForm.clearErrors();
     setIsSubmitting(true);
 
     try {
-      const { error: resendError } = await emailOTP.sendVerificationOtp({
-        email,
-        type: "email-verification",
+      const { error: signUpError } = await signUp.email({
+        email: pendingEmail,
+        password: values.password,
+        name: `${values.firstName} ${values.lastName}`.trim(),
+        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
       });
 
-      if (resendError) {
-        setError(resendError.message ?? "Failed to resend verification code.");
+      if (signUpError) {
+        const message = getSignUpErrorMessage(signUpError);
+        const field = getAuthErrorField(signUpError);
+
+        if (field === "password") {
+          newAccountForm.setError("password", { message });
+        } else {
+          setError(message);
+        }
+
+        toast.error(message);
         return;
       }
 
-      setResendCooldown(RESEND_COOLDOWN_SECONDS);
-      otpRefs.current[0]?.focus();
+      const verification = await markEmailVerifiedWithOwnershipToken(pendingEmail, ownershipToken);
+      if (!verification.ok) {
+        const message = verification.message ?? "Email verification expired. Please request a new code.";
+        setError(message);
+        toast.error(message);
+        setStep("verify");
+        return;
+      }
+
+      const { error: signInError } = await signIn.email({
+        email: pendingEmail,
+        password: values.password,
+        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
+      });
+
+      if (signInError) {
+        const message = `Account created, but sign in failed. ${getSignInErrorMessage(signInError)}`;
+        setError(message);
+        toast.error(message);
+        return;
+      }
+
+      startTransition(() => {
+        router.push(redirectUrl);
+        router.refresh();
+      });
+    } catch {
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, isBusy, resendCooldown]);
+  }, [isBusy, newAccountForm, ownershipToken, pendingEmail, redirectUrl, router, startTransition]);
 
   const handleOtpChange = useCallback((index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
@@ -286,41 +426,50 @@ export function BetterAuthSignUp({
     otpRefs.current[Math.min(pastedCode.length, OTP_LENGTH) - 1]?.focus();
   }, []);
 
+  const handleBack = useCallback(() => {
+    setError(null);
+
+    if (step === "email") {
+      router.push(signInUrl);
+      return;
+    }
+
+    if (step === "verify") {
+      setStep("email");
+      resetOtpState();
+      return;
+    }
+
+    setStep("verify");
+  }, [resetOtpState, router, signInUrl, step]);
+
   return (
     <AuthCard data-slot="sign-up" className={className}>
       <AuthCardPanel className="rounded-lg border border-neutral-200 shadow-[0_2px_16px_rgba(0,0,0,0.08)]">
         <SignUpHeader
           step={step}
-          email={email}
+          email={pendingEmail}
           heading={heading}
           subheading={subheading}
           isBusy={isBusy}
-          onBack={() => {
-            setIsVerified(false);
-            setStep("form");
-            setError(null);
-          }}
+          onBack={handleBack}
         />
 
-        {step === "form" ? (
-          <SignUpForm
-            form={form}
+        {step === "email" ? (
+          <EmailStep
+            form={emailForm}
             error={error}
             isBusy={isBusy}
             isOAuthSubmitting={isOAuthSubmitting}
             showOAuth={showOAuth}
-            showPassword={showPassword}
-            passwordRequirements={passwordRequirements}
-            onSubmit={handleCreateAccount}
+            onSubmit={handleRequestCode}
             onGoogle={handleOAuth}
-            onTogglePassword={() => setShowPassword((value) => !value)}
             onSignIn={() => router.push(signInUrl)}
           />
-        ) : (
+        ) : step === "verify" ? (
           <VerifyEmailStep
             error={error}
             isBusy={isBusy}
-            isVerified={isVerified}
             otpDigits={otpDigits}
             otpRefs={otpRefs}
             canVerify={canVerify}
@@ -330,6 +479,28 @@ export function BetterAuthSignUp({
             onOtpPaste={handleOtpPaste}
             onVerify={handleVerifyEmail}
             onResend={handleResendCode}
+          />
+        ) : step === "existing" ? (
+          <ExistingAccountStep
+            form={existingAccountForm}
+            error={error}
+            isBusy={isBusy}
+            showPassword={showExistingPassword}
+            onSubmit={handleExistingSignIn}
+            onTogglePassword={() => setShowExistingPassword((value) => !value)}
+            onResetPassword={() => {
+              router.push(appendAuthCallbackUrl("/reset-password", redirectUrl, { email: pendingEmail }));
+            }}
+          />
+        ) : (
+          <NewAccountStep
+            form={newAccountForm}
+            error={error}
+            isBusy={isBusy}
+            showPassword={showNewPassword}
+            passwordRequirements={passwordRequirements}
+            onSubmit={handleCreateVerifiedAccount}
+            onTogglePassword={() => setShowNewPassword((value) => !value)}
           />
         )}
       </AuthCardPanel>
@@ -353,9 +524,26 @@ function SignUpHeader({
   isBusy: boolean;
   onBack: () => void;
 }) {
+  const title =
+    step === "email"
+      ? heading
+      : step === "verify"
+        ? "Verify your email"
+        : step === "existing"
+          ? "Welcome back"
+          : "Finish creating your account";
+  const description =
+    step === "email"
+      ? subheading
+      : step === "verify"
+        ? `Enter the verification code sent to ${email}`
+        : step === "existing"
+          ? `${email} already has an account. Enter your password to continue.`
+          : `Email verified for ${email}. Add your name and password.`;
+
   return (
     <div data-slot="header" className="px-8 pb-5 pt-8 text-center">
-      {step === "verify" ? (
+      {step !== "email" ? (
         <button
           type="button"
           disabled={isBusy}
@@ -367,43 +555,31 @@ function SignUpHeader({
         </button>
       ) : null}
 
-      <h1 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-neutral-900">
-        {step === "form" ? heading : "Verify your email"}
-      </h1>
-      <p className="mt-1.5 text-[0.8125rem] text-neutral-500">
-        {step === "form" ? subheading : `Enter the verification code sent to ${email}`}
-      </p>
+      <h1 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-neutral-900">{title}</h1>
+      <p className="mt-1.5 text-[0.8125rem] text-neutral-500">{description}</p>
     </div>
   );
 }
 
-function SignUpForm({
+function EmailStep({
   form,
   error,
   isBusy,
   isOAuthSubmitting,
   showOAuth,
-  showPassword,
-  passwordRequirements,
   onSubmit,
   onGoogle,
-  onTogglePassword,
   onSignIn,
 }: {
-  form: ReturnType<typeof useForm<SignUpValues>>;
+  form: ReturnType<typeof useForm<EmailValues>>;
   error: string | null;
   isBusy: boolean;
   isOAuthSubmitting: boolean;
   showOAuth: boolean;
-  showPassword: boolean;
-  passwordRequirements: PasswordRequirement[];
-  onSubmit: (values: SignUpValues) => Promise<void>;
+  onSubmit: (values: EmailValues) => Promise<void>;
   onGoogle: () => Promise<void>;
-  onTogglePassword: () => void;
   onSignIn: () => void;
 }) {
-  const password = form.watch("password");
-
   return (
     <div data-slot="form-body" className="px-8 pb-7">
       {showOAuth ? (
@@ -429,81 +605,28 @@ function SignUpForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <FieldGroup className="gap-3.5">
-            <div className="flex gap-3">
-              <NameField form={form} name="firstName" label="First name" />
-              <NameField form={form} name="lastName" label="Last name" />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor="signup-email" className="block text-[0.8125rem] font-medium text-neutral-700">
-                    Email address
-                  </FieldLabel>
-                  <input
-                    id="signup-email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="Enter your email address"
-                    aria-invalid={fieldState.invalid}
-                    disabled={isBusy}
-                    className={cn(
-                      "h-9 w-full rounded-lg border bg-white px-3 text-[0.8125rem] text-neutral-900 outline-none placeholder:text-neutral-400 transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70",
-                      fieldState.invalid
-                        ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                        : "border-neutral-200 focus:border-violet-500 focus:ring-violet-500/20"
-                    )}
-                    {...field}
-                  />
-                  <FieldError errors={fieldState.error ? [fieldState.error] : undefined} className="text-[0.75rem] text-red-500" />
-                </Field>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor="signup-password" className="block text-[0.8125rem] font-medium text-neutral-700">
-                    Password
-                  </FieldLabel>
-                  <div className="relative">
-                    <input
-                      id="signup-password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      placeholder="Create a password"
-                      aria-invalid={fieldState.invalid}
-                      disabled={isBusy}
-                      className={cn(
-                        "h-9 w-full rounded-lg border bg-white px-3 pr-9 text-[0.8125rem] text-neutral-900 outline-none placeholder:text-neutral-400 transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70",
-                        fieldState.invalid
-                          ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                          : "border-neutral-200 focus:border-violet-500 focus:ring-violet-500/20"
-                      )}
-                      {...field}
-                    />
-                    <button
-                      type="button"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                      onClick={onTogglePassword}
-                      disabled={isBusy}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-
-                  {password ? <PasswordChecklist requirements={passwordRequirements} /> : null}
-                  <FieldError errors={fieldState.error ? [fieldState.error] : undefined} className="text-[0.75rem] text-red-500" />
-                </Field>
-              )}
-            />
-          </FieldGroup>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                <FieldLabel htmlFor="signup-email" className="block text-[0.8125rem] font-medium text-neutral-700">
+                  Email address
+                </FieldLabel>
+                <input
+                  id="signup-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Enter your email address"
+                  aria-invalid={fieldState.invalid}
+                  disabled={isBusy}
+                  className={authInputClass(fieldState.invalid)}
+                  {...field}
+                />
+                <FieldError errors={fieldState.error ? [fieldState.error] : undefined} className="text-[0.75rem] text-red-500" />
+              </Field>
+            )}
+          />
 
           {error ? <p className="mt-3 text-center text-[0.8125rem] text-red-500">{error}</p> : null}
 
@@ -513,7 +636,7 @@ function SignUpForm({
             className="mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 text-[0.8125rem] font-medium text-white shadow-sm transition-all hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-violet-300"
           >
             {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-            {isBusy ? "Creating account..." : "Continue"}
+            {isBusy ? "Sending code..." : "Continue"}
           </button>
         </form>
       </Form>
@@ -533,12 +656,130 @@ function SignUpForm({
   );
 }
 
+function ExistingAccountStep({
+  form,
+  error,
+  isBusy,
+  showPassword,
+  onSubmit,
+  onTogglePassword,
+  onResetPassword,
+}: {
+  form: ReturnType<typeof useForm<ExistingAccountValues>>;
+  error: string | null;
+  isBusy: boolean;
+  showPassword: boolean;
+  onSubmit: (values: ExistingAccountValues) => Promise<void>;
+  onTogglePassword: () => void;
+  onResetPassword: () => void;
+}) {
+  return (
+    <div data-slot="existing-account-body" className="px-8 pb-7">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <PasswordField
+            control={form.control}
+            name="password"
+            id="existing-password"
+            label="Password"
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            showPassword={showPassword}
+            disabled={isBusy}
+            onTogglePassword={onTogglePassword}
+          />
+
+          <button
+            type="button"
+            onClick={onResetPassword}
+            disabled={isBusy}
+            className="mt-2 text-[0.75rem] font-medium text-violet-600 underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-violet-300"
+          >
+            Reset password
+          </button>
+
+          {error ? <p className="mt-3 text-center text-[0.8125rem] text-red-500">{error}</p> : null}
+
+          <button
+            type="submit"
+            disabled={isBusy}
+            className="mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 text-[0.8125rem] font-medium text-white shadow-sm transition-all hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-violet-300"
+          >
+            {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+            {isBusy ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
+      </Form>
+    </div>
+  );
+}
+
+function NewAccountStep({
+  form,
+  error,
+  isBusy,
+  showPassword,
+  passwordRequirements,
+  onSubmit,
+  onTogglePassword,
+}: {
+  form: ReturnType<typeof useForm<NewAccountValues>>;
+  error: string | null;
+  isBusy: boolean;
+  showPassword: boolean;
+  passwordRequirements: PasswordRequirement[];
+  onSubmit: (values: NewAccountValues) => Promise<void>;
+  onTogglePassword: () => void;
+}) {
+  const password = form.watch("password");
+
+  return (
+    <div data-slot="new-account-body" className="px-8 pb-7">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <FieldGroup className="gap-3.5">
+            <div className="flex gap-3">
+              <NameField form={form} name="firstName" label="First name" />
+              <NameField form={form} name="lastName" label="Last name" />
+            </div>
+
+            <PasswordField
+              control={form.control}
+              name="password"
+              id="signup-password"
+              label="Password"
+              placeholder="Create a password"
+              autoComplete="new-password"
+              showPassword={showPassword}
+              disabled={isBusy}
+              onTogglePassword={onTogglePassword}
+            />
+
+            {password ? <PasswordChecklist requirements={passwordRequirements} /> : null}
+          </FieldGroup>
+
+          {error ? <p className="mt-3 text-center text-[0.8125rem] text-red-500">{error}</p> : null}
+
+          <button
+            type="submit"
+            disabled={isBusy}
+            className="mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 text-[0.8125rem] font-medium text-white shadow-sm transition-all hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-violet-300"
+          >
+            {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+            {isBusy ? "Creating account..." : "Create account"}
+          </button>
+        </form>
+      </Form>
+    </div>
+  );
+}
+
 function NameField({
   form,
   name,
   label,
 }: {
-  form: ReturnType<typeof useForm<SignUpValues>>;
+  form: ReturnType<typeof useForm<NewAccountValues>>;
   name: "firstName" | "lastName";
   label: string;
 }) {
@@ -556,9 +797,68 @@ function NameField({
             type="text"
             autoComplete={name === "firstName" ? "given-name" : "family-name"}
             aria-invalid={fieldState.invalid}
-            className="h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[0.8125rem] text-neutral-900 outline-none placeholder:text-neutral-400 transition-all focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+            disabled={form.formState.isSubmitting}
+            className={authInputClass(fieldState.invalid)}
             {...field}
           />
+          <FieldError errors={fieldState.error ? [fieldState.error] : undefined} className="text-[0.75rem] text-red-500" />
+        </Field>
+      )}
+    />
+  );
+}
+
+function PasswordField<T extends ExistingAccountValues | NewAccountValues>({
+  control,
+  name,
+  id,
+  label,
+  placeholder,
+  autoComplete,
+  showPassword,
+  disabled,
+  onTogglePassword,
+}: {
+  control: ReturnType<typeof useForm<T>>["control"];
+  name: keyof T & string;
+  id: string;
+  label: string;
+  placeholder: string;
+  autoComplete: string;
+  showPassword: boolean;
+  disabled: boolean;
+  onTogglePassword: () => void;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name as never}
+      render={({ field, fieldState }) => (
+        <Field data-invalid={fieldState.invalid} className="gap-1.5">
+          <FieldLabel htmlFor={id} className="block text-[0.8125rem] font-medium text-neutral-700">
+            {label}
+          </FieldLabel>
+          <div className="relative">
+            <input
+              id={id}
+              type={showPassword ? "text" : "password"}
+              autoComplete={autoComplete}
+              placeholder={placeholder}
+              aria-invalid={fieldState.invalid}
+              disabled={disabled}
+              className={cn(authInputClass(fieldState.invalid), "pr-9")}
+              {...field}
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={onTogglePassword}
+              disabled={disabled}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           <FieldError errors={fieldState.error ? [fieldState.error] : undefined} className="text-[0.75rem] text-red-500" />
         </Field>
       )}
@@ -588,7 +888,6 @@ function PasswordChecklist({ requirements }: { requirements: PasswordRequirement
 function VerifyEmailStep({
   error,
   isBusy,
-  isVerified,
   otpDigits,
   otpRefs,
   canVerify,
@@ -601,7 +900,6 @@ function VerifyEmailStep({
 }: {
   error: string | null;
   isBusy: boolean;
-  isVerified: boolean;
   otpDigits: string[];
   otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>;
   canVerify: boolean;
@@ -626,7 +924,7 @@ function VerifyEmailStep({
             autoComplete={index === 0 ? "one-time-code" : "off"}
             maxLength={1}
             value={digit}
-            disabled={isBusy || isVerified}
+            disabled={isBusy}
             onChange={(event) => onOtpChange(index, event.target.value)}
             onKeyDown={(event) => onOtpKeyDown(index, event)}
             onPaste={onOtpPaste}
@@ -645,17 +943,17 @@ function VerifyEmailStep({
 
       <button
         type="button"
-        disabled={!canVerify || isBusy || isVerified}
+        disabled={!canVerify || isBusy}
         onClick={onVerify}
         className={cn(
           "mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[0.8125rem] font-medium transition-all active:scale-[0.99]",
-          canVerify && !isBusy && !isVerified
+          canVerify && !isBusy
             ? "bg-violet-600 text-white shadow-sm hover:bg-violet-700"
             : "cursor-not-allowed bg-violet-300 text-white"
         )}
       >
         {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        {isVerified ? "Verified" : isBusy ? "Verifying..." : "Verify"}
+        {isBusy ? "Verifying..." : "Verify"}
       </button>
 
       <p className="mt-4 text-center text-[0.8125rem] text-neutral-500">
@@ -670,5 +968,14 @@ function VerifyEmailStep({
         </button>
       </p>
     </div>
+  );
+}
+
+function authInputClass(hasError: boolean) {
+  return cn(
+    "h-9 w-full rounded-lg border bg-white px-3 text-[0.8125rem] text-neutral-900 outline-none placeholder:text-neutral-400 transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70",
+    hasError
+      ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+      : "border-neutral-200 focus:border-violet-500 focus:ring-violet-500/20"
   );
 }

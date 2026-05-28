@@ -90,15 +90,15 @@ export default async function SelectOrganizationPage({
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-7xl ">
-        <CardHeader className="">
-          <CardTitle className="text-2xl">{title}</CardTitle>
+    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-8 sm:px-6">
+      <Card className="w-full max-w-6xl overflow-hidden">
+        <CardHeader className="px-6 pb-4 pt-6 sm:px-8 sm:pt-8">
+          <CardTitle className="text-2xl tracking-tight">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 ">
-            <div className="w-full flex items-center justify-center">
+        <CardContent className="px-6 pb-8 pt-0 sm:px-8">
+          <div className="grid min-h-[520px] items-center gap-10 lg:grid-cols-[minmax(420px,0.95fr)_minmax(360px,0.75fr)]">
+            <div className="flex w-full justify-center lg:justify-start lg:pl-16">
               {hasOrganizations ? (
                 <OrganizationList
                   hidePersonalAccount
@@ -110,12 +110,15 @@ export default async function SelectOrganizationPage({
               )}
 
             </div>
-            <div className="w-full max-w-[564px] hidden lg:flex justify-center">
+            <div className="hidden w-full justify-center lg:flex">
               <Image
                 src="/images/select-organization.svg"
                 alt="Select Organization"
-                width={400}
-                height={400}
+                width={420}
+                height={420}
+                priority
+                className="max-w-[420px]"
+                style={{ width: 'auto', height: 'auto' }}
               />
             </div>
           </div>

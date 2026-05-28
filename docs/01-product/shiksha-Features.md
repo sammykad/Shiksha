@@ -373,11 +373,15 @@ IMP : Find Best Sutable / Cheap Domain
 - Preper Script for 3 Videos
 - Get AWS S3 Bucket
 - Add pagination to Students and Cheques 
-- Single Source of truth For Fees / Payments
+- Single Source of truth For Fees / Payments :Added But not tested properly 
 - ID Cards : RFID , Scanner , Parent Phone Numbers , Principal sign
 - ReSearch GST 
 - Fee Management : GST+ ,Strict Sequential Receipt Numbering, Discounts, Waivers, and Scholarships, fine & penalty
 - Holiday : Show the toggle to see dynamic calendar wise  Academic Calendar For all Users 
+- Student Bulk Import should Need Clarity and also responsive on mobile
+
+
+
 
 Rules To Create Institution 
 Introduce New Role SuperAdmin

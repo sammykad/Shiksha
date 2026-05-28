@@ -29,3 +29,8 @@ export function appendAuthCallbackUrl(
 
   return `${pathname}?${params.toString()}`;
 }
+
+export function getAbsoluteAuthCallbackUrl(callbackUrl: string) {
+  if (typeof window === "undefined") return callbackUrl;
+  return new URL(callbackUrl, window.location.origin).toString();
+}

@@ -1,6 +1,7 @@
 import prisma from '@/lib/db';
 import AttendanceMark from '@/components/dashboard/StudentAttendance/attendance-mark';
 import { getOrganizationId } from '@/lib/organization';
+import { sortByNaturalText } from '@/lib/utils';
 
 async function getStudents() {
   const organizationId = await getOrganizationId();
@@ -42,19 +43,21 @@ export default async function MarkAttendancePage() {
   const organizationId = await getOrganizationId();
 
   const students = await getStudents();
-  const grades = await prisma.grade.findMany({
-    where: { organizationId },
-    select: { id: true, grade: true },
-    orderBy: { grade: 'asc' }, // optional: sort 1 → 12
-  });
+  const grades = sortByNaturalText(
+    await prisma.grade.findMany({
+      where: { organizationId },
+      select: { id: true, grade: true },
+    }),
+    (grade) => grade.grade
+  );
 
-  const sections = await prisma.section.findMany({
-    where: { organizationId },
-    select: { id: true, name: true, gradeId: true },
-    orderBy: { name: 'asc' },
-  });
-
-
+  const sections = sortByNaturalText(
+    await prisma.section.findMany({
+      where: { organizationId },
+      select: { id: true, name: true, gradeId: true },
+    }),
+    (section) => section.name
+  );
 
   return (
     <AttendanceMark students={students} grades={grades} sections={sections} />

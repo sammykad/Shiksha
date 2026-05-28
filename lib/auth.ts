@@ -70,6 +70,11 @@ export const betterAuthServer = betterAuth({
     },
   },
 
+  emailVerification: {
+    sendOnSignUp: false,
+    sendOnSignIn: false,
+  },
+
   // ── Social Providers ───────────────────────────────────────────────────────
   socialProviders: {
     google: {
@@ -180,7 +185,7 @@ export const betterAuthServer = betterAuth({
       allowedAttempts: 3,
       resendStrategy: "reuse",
       storeOTP: "hashed",
-      sendVerificationOnSignUp: true,
+      sendVerificationOnSignUp: false,
       overrideDefaultEmailVerification: true,
       rateLimit: { window: 60, max: 3 },
       async sendVerificationOTP({ email, otp, type }) {

@@ -23,6 +23,7 @@ import { Building2, Upload, X, Loader2 } from "lucide-react";
 import { Role } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { getAuthErrorMessage as getBetterAuthErrorMessage } from "@/lib/auth-errors";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
@@ -147,7 +148,7 @@ interface CreateOrganizationProps {
  */
 function Card({ children }: { children: React.ReactNode }) {
     return (
-        <AuthCard>
+        <AuthCard className="max-w-[480px] shadow-xl">
             <AuthCardPanel>
                 {children}
             </AuthCardPanel>
@@ -285,15 +286,18 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
             });
 
             if (error) {
-                const msg = error.message ?? "";
-                if (msg.toLowerCase().includes("slug")) {
+                const rawMessage = error.message ?? "";
+                const message = getBetterAuthErrorMessage(error, {
+                    fallback: "Failed to create organization. Please check the details and try again.",
+                });
+                if (rawMessage.toLowerCase().includes("slug")) {
                     form.setError("slug", {
                         message: "This slug is already taken. Please choose another.",
                     });
-                } else if (msg.toLowerCase().includes("name")) {
-                    form.setError("name", { message: msg });
+                } else if (rawMessage.toLowerCase().includes("name")) {
+                    form.setError("name", { message });
                 } else {
-                    toast.error(msg || "Failed to create organization.");
+                    toast.error(message);
                 }
                 return;
             }
@@ -643,8 +647,8 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
                 {/* Body */}
-                <div className="px-7 pt-7 pb-5 space-y-4">
-                    <h2 className="text-[17px] font-semibold leading-6 tracking-[-0.17px] text-[#212126]">
+                <div className="space-y-5 px-8 pb-6 pt-8 sm:px-9">
+                    <h2 className="text-xl font-semibold leading-7 text-[#212126]">
                         Invite new members
                     </h2>
 
@@ -661,8 +665,8 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                                         placeholder="example@email.com, example2@email.com"
                                         autoFocus
                                         className={cn(
-                                            "w-full rounded-md border bg-white px-3 py-2.5",
-                                            "text-[13.5px] text-[#212126] placeholder:text-[#b0acaa]",
+                                            "min-h-36 w-full rounded-md border bg-white px-3.5 py-3",
+                                            "text-[14px] text-[#212126] placeholder:text-[#b0acaa]",
                                             "resize-none leading-relaxed",
                                             "outline-none transition-shadow duration-100",
                                             "focus:outline-none focus:ring-[1.5px] focus:border-transparent",
@@ -679,7 +683,7 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                 </div>
 
                 {/* Action row: Role pill | · | Skip | Send invitations */}
-                <div className="flex items-center gap-2 px-7 pb-7">
+                <div className="flex flex-col gap-3 px-8 pb-8 sm:flex-row sm:items-center sm:px-9">
                     <FormField
                         control={form.control}
                         name="role"
@@ -692,13 +696,13 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                                     <FormControl>
                                         <SelectTrigger
                                             className={cn(
-                                                "h-[30px] rounded-md border border-[#c4bfbb] bg-white",
-                                                "text-[12.5px] font-[510] text-[#212126]",
-                                                "pl-2.5 pr-2 gap-1 w-auto min-w-0",
+                                                "h-9 rounded-md border border-[#c4bfbb] bg-white",
+                                                "text-[13px] font-[510] text-[#212126]",
+                                                "w-full gap-1 pl-3 pr-2 sm:w-auto",
                                                 "focus:ring-[1.5px] focus:ring-[#212126] focus:border-transparent"
                                             )}
                                         >
-                                            <span className="text-[#747686] text-[12px] font-normal">
+                                            <span className="text-[12.5px] font-normal text-[#747686]">
                                                 Role:
                                             </span>
                                             <SelectValue />
@@ -720,13 +724,13 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                         )}
                     />
 
-                    <div className="flex-1" />
+                    <div className="hidden flex-1 sm:block" />
 
                     <button
                         type="button"
                         onClick={handleSkip}
                         disabled={isSubmitting}
-                        className="px-3 py-[6px] text-[13px] font-[510] text-[#747686] hover:text-[#212126] hover:bg-[#f4f4f5] rounded-md transition-colors disabled:opacity-50"
+                        className="h-9 rounded-md px-3 text-[13px] font-[510] text-[#747686] transition-colors hover:bg-[#f4f4f5] hover:text-[#212126] disabled:opacity-50"
                     >
                         Skip
                     </button>
@@ -735,7 +739,7 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                         type="submit"
                         disabled={isSubmitting}
                         className={cn(
-                            "inline-flex items-center gap-1.5 px-3.5 py-[7px]",
+                            "inline-flex h-9 items-center justify-center gap-1.5 px-4",
                             "text-[13px] font-[510] rounded-md transition-colors",
                             "bg-[#1a1926] hover:bg-[#0f0f1a] text-white",
                             "disabled:opacity-55 disabled:cursor-not-allowed"

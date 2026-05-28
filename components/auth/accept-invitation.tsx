@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import { BrandAuthHeader } from "./_components/brand";
@@ -42,7 +43,9 @@ export function AcceptInvitation({
             });
 
             if (error) {
-                toast.error(error.message || "Could not accept invitation.");
+                toast.error(getAuthErrorMessage(error, {
+                    fallback: "Could not accept invitation. Please check the invite link and try again.",
+                }));
                 return;
             }
 
@@ -51,7 +54,9 @@ export function AcceptInvitation({
             });
 
             if (activeOrgError) {
-                toast.warning(activeOrgError.message || "Invitation accepted, but we could not switch organizations automatically.");
+                toast.warning(getAuthErrorMessage(activeOrgError, {
+                    fallback: "Invitation accepted, but we could not switch organizations automatically.",
+                }));
             } else {
                 toast.success("Invitation accepted.");
             }

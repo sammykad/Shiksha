@@ -66,8 +66,12 @@ export async function sendAuthEmail({
   });
 
   if (error) {
-    console.error("[Auth Email] Resend error:", error);
-    throw new Error("Failed to send auth email.");
+    const details =
+      typeof error === "object" && error && "message" in error
+        ? String(error.message)
+        : JSON.stringify(error);
+
+    throw new Error(`Failed to send auth email: ${details}`);
   }
 }
 
@@ -113,4 +117,4 @@ export const OTP_SUBJECTS: Record<string, string> = {
   "sign-in": "Your Shiksha Cloud sign-in code",
   "forget-password": "Reset your Shiksha Cloud password",
   "change-email": "Confirm your new Shiksha Cloud email",
-};
+};

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { unstable_noStore as noStore } from 'next/cache';
 import { getOrganizationId } from '@/lib/auth';
+import { sortByNaturalText } from '@/lib/utils';
 
 export async function GET() {
   noStore();
@@ -20,7 +21,7 @@ export async function GET() {
     });
 
     // Return the grades as a JSON response
-    return NextResponse.json(grades);
+    return NextResponse.json(sortByNaturalText(grades, (grade) => grade.grade));
   } catch (error) {
     console.error('Error fetching grades:', error);
     return NextResponse.json(

@@ -8,8 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { getAuthErrorField, getOAuthErrorMessage, getSignInErrorMessage } from "@/lib/auth-errors";
 import { signIn } from "@/lib/auth-client";
-import { appendAuthCallbackUrl } from "@/lib/auth-navigation";
+import { appendAuthCallbackUrl, getAbsoluteAuthCallbackUrl } from "@/lib/auth-navigation";
 import { cn } from "@/lib/utils";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
@@ -32,6 +33,7 @@ export interface SignInProps {
   callbackUrl?: string;
   signUpUrl?: string;
   resetPasswordUrl?: string;
+  initialError?: string | null;
 }
 
 const signInSchema = z.object({
@@ -46,12 +48,13 @@ export function BetterAuthSignIn({
   callbackUrl = "/dashboard",
   signUpUrl = "/sign-up",
   resetPasswordUrl = "/reset-password",
+  initialError = null,
 }: SignInProps) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
 
   const form = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
@@ -69,17 +72,24 @@ export function BetterAuthSignIn({
     if (!canSubmit) return;
 
     setError(null);
+    form.clearErrors();
     setIsEmailSubmitting(true);
 
     try {
       const { error: signInError } = await signIn.email({
         email: values.email.trim().toLowerCase(),
         password: values.password,
-        callbackURL: callbackUrl,
+        callbackURL: getAbsoluteAuthCallbackUrl(callbackUrl),
       });
 
       if (signInError) {
-        const message = signInError.message ?? "Sign in failed. Please check your email and password.";
+        const message = getSignInErrorMessage(signInError);
+        const field = getAuthErrorField(signInError);
+
+        if (field === "email" || field === "password") {
+          form.setError(field, { message });
+        }
+
         setError(message);
         toast.error(message);
         return;
@@ -91,7 +101,7 @@ export function BetterAuthSignIn({
     } finally {
       setIsEmailSubmitting(false);
     }
-  }, [callbackUrl, canSubmit, router]);
+  }, [callbackUrl, canSubmit, form, router]);
 
   const handleGoogleSignIn = useCallback(async () => {
     if (isAuthBusy) return;
@@ -101,11 +111,12 @@ export function BetterAuthSignIn({
     try {
       const { error: googleError } = await signIn.social({
         provider: "google",
-        callbackURL: callbackUrl,
+        callbackURL: getAbsoluteAuthCallbackUrl(callbackUrl),
+        errorCallbackURL: appendAuthCallbackUrl("/sign-in", callbackUrl),
       });
 
       if (googleError) {
-        const message = googleError.message ?? "Google sign in failed. Please try again.";
+        const message = getOAuthErrorMessage(googleError);
         setError(message);
         toast.error(message);
       }
@@ -166,7 +177,7 @@ export function BetterAuthSignIn({
                         )}
                         {...field}
                       />
-                      <FieldError errors={[fieldState.error]} className="text-[0.75rem] text-red-500" />
+                      <FieldError errors={fieldState.error ? [fieldState.error] : undefined} className="text-[0.75rem] text-red-500" />
                     </Field>
                   )}
                 />
@@ -205,7 +216,7 @@ export function BetterAuthSignIn({
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
-                      <FieldError errors={[fieldState.error]} className="text-[0.75rem] text-red-500" />
+                      <FieldError errors={fieldState.error ? [fieldState.error] : undefined} className="text-[0.75rem] text-red-500" />
                     </Field>
                   )}
                 />

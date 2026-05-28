@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { getAuthErrorMessage, getSignInErrorMessage } from "@/lib/auth-errors";
 import { AuthDialog } from "./_components/auth-dialog";
 import { ShikshaCloudWordmark } from "./_components/brand";
 import { UserAvatar } from "./_components/user-avatar";
@@ -569,7 +570,9 @@ export function UserProfile({
             if (cancelled) return;
 
             if (error) {
-                toast.error(error.message ?? "Failed to load active devices.");
+                toast.error(getAuthErrorMessage(error, {
+                    fallback: "Failed to load active devices.",
+                }));
                 setSessions([]);
             } else {
                 setSessions((data ?? []) as ActiveSession[]);
@@ -607,7 +610,7 @@ export function UserProfile({
                 firstName: string;
                 lastName: string;
                 image: string | null;
-            }) => Promise<{ error?: { message?: string } | null }>;
+            }) => Promise<{ error?: { code?: string; message?: string } | null }>;
             const { error } = await updateUser({
                 name,
                 firstName,
@@ -616,7 +619,9 @@ export function UserProfile({
             });
 
             if (error) {
-                toast.error(error.message ?? "Failed to update profile.");
+                toast.error(getAuthErrorMessage(error, {
+                    fallback: "Failed to update profile.",
+                }));
                 return;
             }
 
@@ -636,12 +641,12 @@ export function UserProfile({
             const verifyPassword = (authClient as unknown as {
                 verifyPassword: (input: {
                     password: string;
-                }) => Promise<{ error?: { message?: string } | null }>;
+                }) => Promise<{ error?: { code?: string; message?: string } | null }>;
             }).verifyPassword;
             const { error } = await verifyPassword({ password: values.currentPassword });
 
             if (error) {
-                const message = error.message ?? "Current password is incorrect.";
+                const message = getSignInErrorMessage(error);
                 currentPasswordForm.setError("currentPassword", { message });
                 toast.error(message);
                 return;
@@ -677,7 +682,9 @@ export function UserProfile({
             });
 
             if (error) {
-                const message = error.message ?? "Current password is incorrect.";
+                const message = getAuthErrorMessage(error, {
+                    fallback: "Could not update password. Please check your current password and try again.",
+                });
                 setVerifiedCurrentPassword(null);
                 currentPasswordForm.setError("currentPassword", { message });
                 toast.error(message);
@@ -734,7 +741,7 @@ export function UserProfile({
         try {
             const { error } = await authClient.deleteUser({ password: values.password });
             if (error) {
-                const message = error.message ?? "Password confirmation failed.";
+                const message = getSignInErrorMessage(error);
                 deleteAccountForm.setError("password", { message });
                 toast.error(message);
                 return;

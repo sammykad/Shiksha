@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { getAuthErrorField, getAuthErrorMessage, getOtpErrorMessage } from "@/lib/auth-errors";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
@@ -56,10 +57,10 @@ type EmailValues = z.infer<typeof emailSchema>;
 type PasswordValues = z.infer<typeof passwordSchema>;
 
 type EmailOtpApi = {
-  requestPasswordReset: (input: { email: string }) => Promise<{ error?: { message?: string } | null }>;
-  checkVerificationOtp?: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { message?: string } | null }>;
-  checkVerificationOTP?: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { message?: string } | null }>;
-  resetPassword: (input: { email: string; otp: string; password: string }) => Promise<{ error?: { message?: string } | null }>;
+  requestPasswordReset: (input: { email: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
+  checkVerificationOtp?: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
+  checkVerificationOTP?: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
+  resetPassword: (input: { email: string; otp: string; password: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
 };
 
 export function ResetPasswordWithOtp({
@@ -118,8 +119,12 @@ export function ResetPasswordWithOtp({
 
       const { error } = await emailOtp.requestPasswordReset({ email: nextEmail });
       if (error) {
-        const message = error.message ?? "Could not send reset code.";
-        emailForm.setError("email", { message });
+        const message = getAuthErrorMessage(error, {
+          fallback: "Could not send reset code. Please try again.",
+        });
+        if (getAuthErrorField(error) === "email") {
+          emailForm.setError("email", { message });
+        }
         toast.error(message);
         return;
       }
@@ -185,7 +190,7 @@ export function ResetPasswordWithOtp({
           otp,
         });
         if (error) {
-          const message = error.message ?? "Invalid reset code.";
+          const message = getOtpErrorMessage(error);
           setOtpError(message);
           toast.error(message);
           return;
@@ -211,7 +216,9 @@ export function ResetPasswordWithOtp({
         password: values.password,
       });
       if (error) {
-        const message = error.message ?? "Could not reset password.";
+        const message = getAuthErrorMessage(error, {
+          fallback: "Could not reset password. Please try again.",
+        });
         passwordForm.setError("password", { message });
         toast.error(message);
         return;

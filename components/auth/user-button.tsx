@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { LogOut, Settings } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Loader2, LogOut, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth-client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { cn } from "@/lib/utils";
 import { ShikshaCloudWordmark } from "./_components/brand";
 import { UserAvatar } from "./_components/user-avatar";
@@ -40,19 +41,31 @@ export function UserButton({
     const router = useRouter();
     const [popoverOpen, setPopoverOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [isSigningOut, startSignOutTransition] = useTransition();
     const { data: session } = authClient.useSession();
     const user = session?.user ?? initialUser;
     const name = getDisplayName(user);
     const email = user?.email ?? "";
     const image = user?.image ?? null;
-    const handleSignOut = async () => {
-        const { error } = await authClient.signOut();
-        if (error) {
-            toast.error(error.message ?? "Failed to sign out.");
-            return;
-        }
-        router.push(afterSignOutUrl);
-        router.refresh();
+    const handleSignOut = () => {
+        if (isSigningOut) return;
+
+        startSignOutTransition(async () => {
+            try {
+                const { error } = await authClient.signOut();
+                if (error) {
+                    toast.error(getAuthErrorMessage(error, {
+                        fallback: "Failed to sign out. Please try again.",
+                    }));
+                    return;
+                }
+
+                router.push(afterSignOutUrl);
+                router.refresh();
+            } catch {
+                toast.error("Something went wrong. Please try again.");
+            }
+        });
     };
     return (
         <>
@@ -123,11 +136,16 @@ export function UserButton({
                         <button
                             type="button"
                             onClick={handleSignOut}
-                            className="flex w-full items-center gap-4 px-6 py-5 text-left appearance-none border-0 bg-transparent transition-colors hover:bg-[#f8fafc]"
+                            disabled={isSigningOut}
+                            className="flex w-full items-center gap-4 px-6 py-5 text-left appearance-none border-0 bg-transparent transition-colors hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                            <LogOut className="size-5 shrink-0 text-[#626874]" strokeWidth={2.2} />
+                            {isSigningOut ? (
+                                <Loader2 className="size-5 shrink-0 animate-spin text-[#626874]" strokeWidth={2.2} />
+                            ) : (
+                                <LogOut className="size-5 shrink-0 text-[#626874]" strokeWidth={2.2} />
+                            )}
                             <span className="text-[16px] font-normal text-[#4b5563]">
-                                Sign out
+                                {isSigningOut ? "Signing out..." : "Sign out"}
                             </span>
                         </button>
                     </div>

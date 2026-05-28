@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { getAuthErrorMessage as getBetterAuthErrorMessage } from "@/lib/auth-errors";
 
 // ─── Shared primitives (from organization-switcher) ───────────────────────────
 import { ShikshaCloudWordmark } from "./_components/brand";
@@ -494,7 +495,9 @@ function MembersContent({ org }: { org: OrganizationLike }) {
             },
         });
         if (error) {
-            setError(error.message ?? "Failed to load members.");
+            setError(getBetterAuthErrorMessage(error, {
+                fallback: "Failed to load members.",
+            }));
         } else {
             setMembers((data?.members ?? []) as MemberRow[]);
             setError(null);
