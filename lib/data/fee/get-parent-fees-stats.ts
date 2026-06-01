@@ -6,6 +6,8 @@ import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { getOrganizationId } from '@/lib/organization';
 import { getCurrentUserId } from '@/lib/user';
 import { getStartOfMonthIST, getStartOfNextMonthIST, formatInIST } from '@/lib/utils';
+import { PaymentStatus } from '@/generated/prisma/enums';
+import { getFeesSummary } from './fee-balance';
 
 export type SelectedChildStats = {
     feeSummary: {
@@ -50,7 +52,7 @@ export async function getParentFeesStats(): Promise<[SelectedChildStats, FamilyS
     const month = formatInIST(new Date(), 'MMMM yyyy'); // "March 2026" in IST
 
     const [selectedChildFees, attendanceStats, familyFees, childCount] = await Promise.all([
-        prisma.fee.aggregate({
+        prisma.fee.findMany({
             where: {
                 studentId: selectedChildId,
                 organizationId,
@@ -60,7 +62,14 @@ export async function getParentFeesStats(): Promise<[SelectedChildStats, FamilyS
                     parents: { some: { parent: { userId, organizationId } } },
                 },
             },
-            _sum: { totalFee: true, paidAmount: true },
+            select: {
+                totalFee: true,
+                dueDate: true,
+                payments: {
+                    where: { status: PaymentStatus.COMPLETED },
+                    select: { amount: true, status: true },
+                },
+            },
         }),
 
         prisma.studentAttendance.groupBy({
@@ -93,10 +102,11 @@ export async function getParentFeesStats(): Promise<[SelectedChildStats, FamilyS
         }),
     ]);
 
-    const total = selectedChildFees._sum.totalFee ?? 0;
-    const paid = selectedChildFees._sum.paidAmount ?? 0;
-    const pending = Math.max(0, total - paid);
-    const percentPaid = total > 0 ? Math.round((paid / total) * 100) : 0;
+    const feeSummary = getFeesSummary(selectedChildFees);
+    const total = feeSummary.totalAmount;
+    const paid = feeSummary.paidAmount;
+    const pending = feeSummary.dueAmount;
+    const percentPaid = feeSummary.collectionPercent;
 
     const presentCount = attendanceStats
         .filter((r) => r.status === 'PRESENT' || r.status === 'LATE')

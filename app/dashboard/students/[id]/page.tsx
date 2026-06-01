@@ -35,6 +35,7 @@ import StudentAcademicPerformance from '@/components/dashboard/Student/StudentAc
 import { StudentReportDialog } from '@/components/dashboard/Student/student-report-dialog';
 import { getStudentPerformance } from '@/lib/data/student/get-student-performance';
 import StudentSubjectsRadar from '@/components/dashboard/Student/student-subjects-radar';
+import { getFeesSummary } from '@/lib/data/fee/fee-balance';
 
 const getStudentFullDetails = async (studentId: string, organizationId: string, academicYearId: string) => {
   const student = await prisma.student.findUnique({
@@ -81,15 +82,14 @@ const getStudentFullDetails = async (studentId: string, organizationId: string, 
   const presentAttendance = student.StudentAttendance.filter((a) => a.status === 'PRESENT' || a.status === 'LATE').length;
   const attendanceRate = totalAttendance > 0 ? Math.round((presentAttendance / totalAttendance) * 100) : 0;
 
-  const totalFees = student.Fee.reduce((sum, fee) => sum + fee.totalFee, 0);
-  const paidFees = student.Fee.reduce((sum, fee) => sum + fee.paidAmount, 0);
+  const feeSummary = getFeesSummary(student.Fee);
 
   return {
     student,
     attendanceRate,
-    totalFees,
-    paidFees,
-    pendingFees: totalFees - paidFees,
+    totalFees: feeSummary.totalAmount,
+    paidFees: feeSummary.paidAmount,
+    pendingFees: feeSummary.dueAmount,
   };
 };
 

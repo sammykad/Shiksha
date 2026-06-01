@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { IndianRupee, PlusIcon } from 'lucide-react';
+import { getFeeBalance } from '@/lib/data/fee/fee-balance';
 
 interface FilterAssignFeesProps {
   search: string;
@@ -94,9 +95,11 @@ const FilterAssignFees = async ({
             id: true,
             totalFee: true,
             paidAmount: true,
+            pendingAmount: true,
             dueDate: true,
             status: true,
             feeCategory: true,
+            payments: { select: { amount: true, status: true } },
           },
         },
       },
@@ -111,7 +114,21 @@ const FilterAssignFees = async ({
     prisma.student.count({ where: whereClause }),
   ]);
 
-  return { students, totalCount };
+  return {
+    students: students.map((student) => ({
+      ...student,
+      Fee: student.Fee.map((fee) => {
+        const balance = getFeeBalance(fee);
+        return {
+          ...fee,
+          paidAmount: balance.paidAmount,
+          pendingAmount: balance.dueAmount,
+          status: balance.status,
+        };
+      }),
+    })),
+    totalCount,
+  };
 };
 
 type PageProps = {

@@ -5,6 +5,7 @@ import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { getCurrentUserId } from '@/lib/user';
 import { getOrganizationId } from '@/lib/organization';
 import { AttendanceStatus } from '@/generated/prisma/enums';
+import { getFeesSummary } from '@/lib/data/fee/fee-balance';
 
 export type ChildSummary = {
   id: string;
@@ -66,15 +67,29 @@ export async function getChildrenByParent(): Promise<ChildSummary[]> {
           Fee: academicYearId
             ? {
               where: { organizationId, academicYearId },
-              select: { totalFee: true, paidAmount: true, pendingAmount: true },
+              select: {
+                totalFee: true,
+                dueDate: true,
+                payments: { select: { amount: true, status: true } },
+              },
             }
-            : { where: { organizationId }, select: { totalFee: true, paidAmount: true, pendingAmount: true } },
+            : {
+              where: { organizationId },
+              select: {
+                totalFee: true,
+                dueDate: true,
+                payments: { select: { amount: true, status: true } },
+              },
+            },
         },
       },
     },
   });
 
-  return parentStudents.map(({ student }) => ({
+  return parentStudents.map(({ student }) => {
+    const feeSummary = getFeesSummary(student.Fee);
+
+    return {
     id: student.id,
     profileImage: student.profileImage,
     firstName: student.firstName,
@@ -91,11 +106,9 @@ export async function getChildrenByParent(): Promise<ChildSummary[]> {
       date: a.date,
       status: a.status as AttendanceStatus,
     })),
-    pendingFees: student.Fee.reduce(
-      (sum, f) => sum + (f.pendingAmount ?? Math.max(0, f.totalFee - f.paidAmount)),
-      0
-    ),
-    totalFees: student.Fee.reduce((sum, f) => sum + f.totalFee, 0),
-  }));
+    pendingFees: feeSummary.dueAmount,
+    totalFees: feeSummary.totalAmount,
+    };
+  });
 }
 

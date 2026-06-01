@@ -2,7 +2,8 @@
 
 import prisma from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { AttendanceStatus, OrganizationType } from '@/generated/prisma/enums';
+import { AttendanceStatus, OrganizationType, PaymentStatus } from '@/generated/prisma/enums';
+import { getFeesSummary } from '@/lib/data/fee/fee-balance';
 
 type OrgStatus = 'healthy' | 'warning' | 'critical';
 type BranchStatus = 'ready' | 'multi' | 'pending';
@@ -129,7 +130,7 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
   const location = [institution.city, institution.state].filter(Boolean).join(', ');
 
   // 3. Query academic years, student counts, and fee aggregates for all organizations in parallel (Optimized GroupBys)
-  const [academicYears, studentGroupStats, feeGroupStats] = await Promise.all([
+  const [academicYears, studentGroupStats, fees] = await Promise.all([
     prisma.academicYear.findMany({
       where: { organizationId: { in: orgIds }, isCurrent: true },
       select: { id: true, organizationId: true, name: true },
@@ -139,13 +140,17 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
       _count: { id: true },
       where: { organizationId: { in: orgIds } },
     }),
-    prisma.fee.groupBy({
-      by: ['organizationId'],
-      _sum: {
-        totalFee: true,
-        paidAmount: true,
-      },
+    prisma.fee.findMany({
       where: { organizationId: { in: orgIds } },
+      select: {
+        organizationId: true,
+        totalFee: true,
+        dueDate: true,
+        payments: {
+          where: { status: PaymentStatus.COMPLETED },
+          select: { amount: true, status: true },
+        },
+      },
     }),
   ]);
 
@@ -159,10 +164,11 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
   }
 
   const feeMap = new Map<string, { total: number; collected: number }>();
-  for (const stat of feeGroupStats) {
-    feeMap.set(stat.organizationId, {
-      total: stat._sum.totalFee ?? 0,
-      collected: stat._sum.paidAmount ?? 0,
+  for (const orgId of orgIds) {
+    const summary = getFeesSummary(fees.filter((fee) => fee.organizationId === orgId));
+    feeMap.set(orgId, {
+      total: summary.totalAmount,
+      collected: summary.paidAmount,
     });
   }
 

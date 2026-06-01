@@ -3,6 +3,7 @@
 import prisma from "@/lib/db";
 import { getOrganizationId } from "@/lib/organization";
 import { getActiveAcademicYearId } from "@/lib/academicYear";
+import { getFeesSummary } from "@/lib/data/fee/fee-balance";
 
 export interface CertificateStudentData {
   id: string;
@@ -107,7 +108,8 @@ export async function getStudentsForCertificateGenerator(): Promise<{
           where: { academicYearId },
           select: {
             totalFee: true,
-            paidAmount: true,
+            dueDate: true,
+            payments: { select: { amount: true, status: true } },
           },
         },
       },
@@ -167,9 +169,8 @@ export async function getStudentsForCertificateGenerator(): Promise<{
     const admissionSource = student.admissionDate ?? student.createdAt;
 
     // Fee status calculation
-    const totalFees = student.Fee.reduce((sum, f) => sum + f.totalFee, 0);
-    const totalPaid = student.Fee.reduce((sum, f) => sum + f.paidAmount, 0);
-    const feeStatus: "PAID" | "UNPAID" = totalFees === 0 || totalPaid >= totalFees
+    const feeSummary = getFeesSummary(student.Fee);
+    const feeStatus: "PAID" | "UNPAID" = feeSummary.totalAmount === 0 || feeSummary.dueAmount <= 0
       ? "PAID"
       : "UNPAID";
 

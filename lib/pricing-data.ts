@@ -15,8 +15,6 @@ export interface Plan {
   name: string
   badge?: string
   pricePerStudent?: number
-  flatMonthlyPrice?: number
-  customLabel?: string
   description: string
   ctaLabel: string
   ctaVariant: "default" | "outline"
@@ -25,84 +23,77 @@ export interface Plan {
   footnote?: string
 }
 
+const SHARED_FEATURES: PlanFeature[] = [
+  { label: "Fee Management & Online Payments", included: true },
+  { label: "Attendance Management", included: true },
+  { label: "Exam Management & Report Cards", included: true },
+  { label: "Lead Management / CRM", included: true },
+  { label: "Teacher & Staff Management", included: true },
+  { label: "Grade, Class, Batch & Subject Management", included: true },
+  { label: "Communication & Notice Board", included: true },
+  { label: "Notification Engine (SMS, WhatsApp, Email, Push)", included: true },
+  { label: "Anonymous Complaints", included: true },
+  { label: "Certificate Management", included: true },
+  { label: "Digital ID Card System with QR", included: true },
+  { label: "Leave Management", included: true },
+  { label: "Holiday & Academic Calendar", included: true },
+  { label: "Document Management & Verification", included: true },
+  { label: "FeeSense AI Agent", included: true },
+  { label: "Attendance Analyzer AI Agent", included: true },
+  { label: "Reports & Analytics Hub", included: true },
+  { label: "Admin Dashboard", included: true },
+  { label: "Teacher Dashboard", included: true },
+  { label: "Student Portal", included: true },
+  { label: "Parent Portal", included: true },
+  { label: "Integrations & API", included: true },
+  { label: "Settings & Configuration", included: true },
+
+  { label: "Multi-Branch Management", included: true },
+  { label: "ID Card Verification", included: true },
+  { label: "Security & Compliance", included: true },
+  { label: "Custom integrations & API", included: true },
+  { label: "10,000 notifications per month", included: true },
+  { label: "1 GB storage", included: true },
+  { label: "Future core modules — always included", included: true },
+]
+
 export const PLANS: Plan[] = [
-  {
-    id: "free",
-    name: "Launch Offer",
-    badge: "Limited seats",
-    pricePerStudent: 0,
-    description:
-      "Free for 3 months. No card needed. Use real students, real data, and every feature with zero risk.",
-    ctaLabel: "Claim launch offer",
-    ctaVariant: "outline",
-    footnote: "After 3 months, stay at Rs 29/student/month or leave with your data.",
-    features: [
-      { label: "Try with real school data, not dummy screens", included: true },
-      { label: "We help you set up students, classes and fees", included: true },
-      { label: "Start with fees, attendance, notices and admissions", included: true },
-      { label: "Parents and teachers can join without paid seats", included: true },
-      { label: "Leave with your data if it is not a fit", included: true },
-      { label: "Continue on EarlyBird pricing after trial", included: true },
-    ],
-  },
   {
     id: "earlybird",
     name: "EarlyBird",
     badge: "First 50 only",
     pricePerStudent: 29,
     description:
-      "For the first 50 schools that want the lowest lifetime rate before public pricing settles.",
-    ctaLabel: "Claim EarlyBird ->",
+      "Lock the lowest lifetime rate. Only 50 schools at this price. All modules included.",
+    ctaLabel: "Claim EarlyBird",
     ctaVariant: "default",
-    footnote: "No card for 3 months. Locked forever after purchase.",
-    features: [
-      { label: "Best for owners who want to stop fee chasing", included: true },
-      { label: "Receipts, pending fees and reminders in one place", included: true },
-      { label: "Parents can see attendance and fee status themselves", included: true },
-      { label: "Admissions follow-ups are not lost in notebooks", included: true },
-      { label: "Notices, holidays, documents and certificates included", included: true },
-      { label: "Parents, teachers, admins and staff stay free", included: true },
-    ],
+    footnote: "Limited to first 50 schools. ₹29/student/month locked forever.",
+    features: SHARED_FEATURES,
   },
   {
     id: "growth",
     name: "Growth",
     badge: "Most Popular",
-    pricePerStudent: 45,
+    pricePerStudent: 49,
     description:
       "For growing institutions that need automation, analytics, and stronger operations.",
-    ctaLabel: "Start free trial ->",
+    ctaLabel: "Start free trial",
     ctaVariant: "default",
     featured: true,
-    footnote: "Best fit around 500 learners",
-    features: [
-      { label: "Everything in EarlyBird", included: true },
-      { label: "Best for growing schools with more office workload", included: true },
-      { label: "AI summaries show fee and attendance issues early", included: true },
-      { label: "QR certificates, ID cards, hall tickets and verification", included: true },
-      { label: "More room for reminders, reports and daily operations", included: true },
-      { label: "Priority onboarding for office and academic teams", included: true },
-      { label: "Custom integration projects are for Scale", included: false },
-    ],
+    footnote: "Best fit around 500 learners.",
+    features: SHARED_FEATURES,
   },
   {
-    id: "enterprise",
+    id: "scale",
     name: "Scale",
-    pricePerStudent: 35,
+    badge: "Best value",
+    pricePerStudent: 21,
     description:
       "For colleges, trusts, coaching chains, and large multi-branch groups.",
     ctaLabel: "Contact sales",
     ctaVariant: "outline",
-    footnote: "For 1500+ learners. Annual organization plans available.",
-    features: [
-      { label: "Everything in Growth", included: true },
-      { label: "Best for trusts, chains, colleges and large groups", included: true },
-      { label: "Compare branches on fees, attendance and admissions", included: true },
-      { label: "Custom permissions, roles and terminology", included: true },
-      { label: "Custom integrations, imports and workflows", included: true },
-      { label: "Dedicated migration, training and success plan", included: true },
-      { label: "SLA, deployment support and governance reviews", included: true },
-    ],
+    footnote: "For 1500+ learners. Lowest per-student rate.",
+    features: SHARED_FEATURES,
   },
 ]
 
@@ -142,10 +133,9 @@ export type CellValue = boolean | "addon" | "included-plus" | string
 export interface ComparisonRow {
   label: string
   note?: string
-  free: CellValue
-  school: CellValue
-  multi: CellValue
-  enterprise: CellValue
+  earlybird: CellValue
+  growth: CellValue
+  scale: CellValue
 }
 
 export interface ComparisonGroup {
@@ -153,7 +143,7 @@ export interface ComparisonGroup {
   rows: ComparisonRow[]
 }
 
-const included = { free: true, school: true, multi: true, enterprise: true }
+const included = { earlybird: true, growth: true, scale: true }
 
 export const COMPARISON: ComparisonGroup[] = [
   {
@@ -172,10 +162,9 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Automatic reminders reduce awkward fee calls",
         note: "Send reminders on WhatsApp, SMS, email and push. Usage costs stay separate and visible.",
-        free: "Usage based",
-        school: "Usage based",
-        multi: "Usage based",
-        enterprise: "Custom volume",
+        earlybird: "Usage based",
+        growth: "Usage based",
+        scale: "Usage based",
       },
       {
         label: "Cheque, cash and online payments stay in one record",
@@ -183,12 +172,11 @@ export const COMPARISON: ComparisonGroup[] = [
         ...included,
       },
       {
-        label: "Reconciliation is easier for the accounts team",
+        label: "Reconciliation for the accounts team",
         note: "Compare internal fee records with PhonePe settlement reports when closing the month.",
-        free: "Basic",
-        school: "Basic",
-        multi: "Advanced",
-        enterprise: "Custom",
+        earlybird: "Basic",
+        growth: "Basic",
+        scale: "Advanced",
       },
     ],
   },
@@ -218,10 +206,9 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Our team can help with migration and setup",
         note: "The bigger the institution, the more hands-on the onboarding and migration support becomes.",
-        free: "Self-serve",
-        school: "Guided",
-        multi: "Priority",
-        enterprise: "Dedicated",
+        earlybird: "Self-serve",
+        growth: "Guided",
+        scale: "Priority",
       },
     ],
   },
@@ -271,10 +258,7 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Facebook and Instagram leads can enter automatically",
         note: "Useful for schools and coaching centres that run admission campaigns.",
-        free: "Connect",
-        school: "Connect",
-        multi: "Connect",
-        enterprise: "Custom",
+        ...included,
       },
       {
         label: "A converted lead can become a student record",
@@ -294,34 +278,28 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "AI summaries highlight what needs attention",
         note: "Monthly fee, attendance and operations summaries help management act earlier.",
-        free: false,
-        school: "Basic",
-        multi: true,
-        enterprise: "Custom",
+        earlybird: "Basic",
+        growth: true,
+        scale: true,
       },
       {
         label: "Low attendance and fee risk are easier to spot",
         note: "See warning signs before they become dropout, complaint or collection problems.",
-        free: false,
-        school: "Basic",
-        multi: true,
-        enterprise: "Custom",
+        earlybird: "Basic",
+        growth: true,
+        scale: true,
       },
       {
         label: "One login can manage multiple institutions",
         note: "Useful for owners running a school, coaching centre, preschool or multiple branches.",
-        free: true,
-        school: true,
-        multi: true,
-        enterprise: true,
+        ...included,
       },
       {
         label: "Multi-branch reporting for education groups",
         note: "Compare branches on fee collection, attendance and admissions from one command view.",
-        free: false,
-        school: false,
-        multi: "Limited",
-        enterprise: true,
+        earlybird: false,
+        growth: false,
+        scale: true,
       },
     ],
   },
@@ -336,18 +314,12 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Hindi and Marathi certificate support is available",
         note: "Helpful for Indian institutions that need local-language documents.",
-        free: true,
-        school: true,
-        multi: true,
-        enterprise: "Custom templates",
+        ...included,
       },
       {
         label: "Anonymous complaints can be tracked properly",
         note: "Students or parents can raise sensitive issues while admins keep a status trail.",
-        free: true,
-        school: true,
-        multi: true,
-        enterprise: "Policy workflow",
+        ...included,
       },
       {
         label: "Sensitive records stay role-based",

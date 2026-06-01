@@ -243,11 +243,7 @@ const RecordPaymentCard = ({
 }: RecordPaymentCardProps) => {
   const [isPending, startTransition] = useTransition();
 
-  const maxPayableAmount =
-    selectedRecord.fee.pendingAmount ??
-    (selectedRecord
-      ? selectedRecord.fee.totalFee - selectedRecord.fee.paidAmount
-      : 0);
+  const maxPayableAmount = Number(selectedRecord.fee.pendingAmount || 0);
 
   const form = useForm<offlinePaymentFormData>({
     resolver: zodResolver(offlinePaymentSchema),
@@ -520,7 +516,7 @@ function FilterControls({
           parentUserId,
           parentWhatsAppNumber,
           status,
-          amountDue: record.fee.pendingAmount ?? record.fee.totalFee,
+          amountDue: Number(record.fee.pendingAmount || 0),
           dueDate: record.fee.dueDate,
           avatar: record.student.profileImage || undefined,
           organizationName: record.fee.organizationName,
@@ -1169,7 +1165,7 @@ const FeeDetailsContent = ({
                           : 'text-emerald-600'
                       )}
                     >
-                      {formatCurrencyIN(selectedRecord.fee.pendingAmount ?? 0)}
+                      {formatCurrencyIN(Number(selectedRecord.fee.pendingAmount || 0))}
                     </dd>
                     <dt className="font-medium text-muted-foreground">
                       Due Date:
@@ -1219,7 +1215,7 @@ const FeeDetailsContent = ({
                       <GeneratePaymentLink
                         feeId={selectedRecord.fee.id}
                         studentName={`${selectedRecord.student.firstName} ${selectedRecord.student.lastName}`}
-                        amount={selectedRecord.fee.pendingAmount ?? selectedRecord.fee.totalFee}
+                        amount={Number(selectedRecord.fee.pendingAmount || 0)}
                       />
                     </div>
                   )}
@@ -1345,7 +1341,7 @@ const FeeDetailsContent = ({
                     <div className="text-center p-2 rounded-lg bg-amber-50/50 border border-amber-100/50">
                       <div className="text-xl sm:text-2xl font-bold text-amber-700">
                         {formatCurrencyIN(
-                          selectedRecord.fee.pendingAmount ?? 0
+                          Number(selectedRecord.fee.pendingAmount || 0)
                         )}
                       </div>
                       <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">Pending</div>

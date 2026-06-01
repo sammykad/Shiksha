@@ -6,6 +6,7 @@ import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { FeeStatus, PaymentStatus, PaymentMethod } from '@/generated/prisma/enums';
 import { getOrganizationId } from '@/lib/organization';
 import { getCurrentUserId } from '@/lib/user';
+import { getFeeBalance } from './fee-balance';
 
 export type PendingFee = {
   id: string;
@@ -80,10 +81,7 @@ export async function getParentFeesData(): Promise<ChildFeeData | null> {
     select: {
       id: true,
       totalFee: true,
-      paidAmount: true,
-      pendingAmount: true,
       dueDate: true,
-      status: true,
       feeCategory: { select: { name: true } },
       organization: { select: { name: true } },
       payments: {
@@ -128,19 +126,20 @@ export async function getParentFeesData(): Promise<ChildFeeData | null> {
   if (!fees.length) return null;
 
   // Summary totals from ALL fees (including PAID)
-  const totalFees = fees.reduce((sum, f) => sum + f.totalFee, 0);
-  const paidFees = fees.reduce((sum, f) => sum + f.paidAmount, 0);
+  const feesWithBalance = fees.map((fee) => ({ fee, balance: getFeeBalance(fee) }));
+  const totalFees = feesWithBalance.reduce((sum, item) => sum + item.balance.totalAmount, 0);
+  const paidFees = feesWithBalance.reduce((sum, item) => sum + item.balance.paidAmount, 0);
 
-  const pendingFees: PendingFee[] = fees
-    .filter((f) => f.status !== 'PAID')
-    .map((f) => ({
-      id: f.id,
-      feeCategoryName: f.feeCategory.name,
-      dueDate: f.dueDate,
-      totalFee: f.totalFee,
-      paidAmount: f.paidAmount,
-      pendingAmount: f.pendingAmount ?? Math.max(0, f.totalFee - f.paidAmount),
-      status: f.status as 'UNPAID' | 'OVERDUE',
+  const pendingFees: PendingFee[] = feesWithBalance
+    .filter(({ balance }) => balance.status !== FeeStatus.PAID)
+    .map(({ fee, balance }) => ({
+      id: fee.id,
+      feeCategoryName: fee.feeCategory.name,
+      dueDate: fee.dueDate,
+      totalFee: balance.totalAmount,
+      paidAmount: balance.paidAmount,
+      pendingAmount: balance.dueAmount,
+      status: balance.status,
     }))
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 

@@ -5,6 +5,7 @@ import prisma from '@/lib/db';
 import { FeeRecord } from '@/types';
 import { FeeStatus, PaymentStatus } from '@/generated/prisma/enums';
 import { getOrganizationId } from '@/lib/organization';
+import { getFeeBalance } from './fee-balance';
 
 export async function getAssignedStudentsFees(
   teacherId: string
@@ -126,14 +127,17 @@ export async function getAssignedStudentsFees(
     orderBy: { dueDate: 'asc' },
   });
 
-  const feeRecords: FeeRecord[] = fees.map((fee) => ({
-    fee: {
+  const feeRecords: FeeRecord[] = fees.map((fee) => {
+    const balance = getFeeBalance(fee);
+
+    return {
+      fee: {
       id: fee.id,
       totalFee: fee.totalFee,
-      paidAmount: fee.paidAmount,
-      pendingAmount: fee.pendingAmount ?? fee.totalFee - fee.paidAmount,
+      paidAmount: balance.paidAmount,
+      pendingAmount: balance.dueAmount,
       dueDate: fee.dueDate,
-      status: fee.status as FeeStatus,
+      status: balance.status as FeeStatus,
       studentId: fee.studentId,
       feeCategoryId: fee.feeCategoryId,
       organizationId: fee.organizationId,
@@ -186,7 +190,8 @@ export async function getAssignedStudentsFees(
         email: payment.payer.email,
       },
     })),
-  }));
+    };
+  });
 
   return feeRecords;
 }

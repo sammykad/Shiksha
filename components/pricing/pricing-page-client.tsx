@@ -52,7 +52,7 @@ import {
 } from "@/lib/pricing-data"
 import { cn } from "@/lib/utils"
 
-const PLAN_HEADERS = ["Free Trial", "EarlyBird", "Growth", "Scale"] as const
+const PLAN_HEADERS = ["EarlyBird", "Growth", "Scale"] as const
 
 const addonMeta = {
   notifications: {
@@ -136,6 +136,21 @@ function PlansGrid() {
 
   return (
     <section className="space-y-10">
+      <div className="flex flex-col items-center gap-6">
+        <BillingToggle value={billing} onChange={setBilling} />
+        <StudentSlider value={studentCount} onChange={setStudentCount} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {PLANS.map((plan) => (
+          <PlanCard
+            key={plan.id}
+            plan={plan}
+            billing={billing}
+            studentCount={studentCount}
+          />
+        ))}
+      </div>
       <div className="mx-auto grid max-w-5xl gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3 sm:grid-cols-3">
         <ValueNote
           icon={Sparkles}
@@ -152,22 +167,6 @@ function PlansGrid() {
           title="Built to replace many tools"
           description="One operating layer for daily institution work, not a tiny feature bundle."
         />
-      </div>
-
-      <div className="flex flex-col items-center gap-6">
-        <BillingToggle value={billing} onChange={setBilling} />
-        <StudentSlider value={studentCount} onChange={setStudentCount} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {PLANS.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            billing={billing}
-            studentCount={studentCount}
-          />
-        ))}
       </div>
     </section>
   )
@@ -356,11 +355,7 @@ function PlanCard({
         </p>
 
         <div className="flex items-end gap-1.5 leading-none">
-          {plan.customLabel ? (
-            <span className="text-4xl font-semibold tracking-tight">
-              {plan.customLabel}
-            </span>
-          ) : effectivePrice === 0 ? (
+          {effectivePrice === 0 ? (
             <span className="text-4xl font-semibold tracking-tight">Free</span>
           ) : (
             <>
@@ -405,7 +400,7 @@ function PlanCard({
           )}
           asChild
         >
-          <a href={plan.id === "enterprise" ? "/contact" : "/sign-up"}>
+          <a href={plan.id === "scale" ? "/contact" : "/sign-up"}>
             {plan.ctaLabel}
           </a>
         </Button>
@@ -578,7 +573,7 @@ function FeatureTable() {
                 <Fragment key={group}>
                   <tr className="border-y border-border bg-muted/20">
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70"
                     >
                       {group}
@@ -601,16 +596,13 @@ function FeatureTable() {
                         )}
                       </td>
                       <td className="px-3 py-3 text-center">
-                        <Cell value={row.free} />
+                        <Cell value={row.earlybird} />
                       </td>
                       <td className="px-3 py-3 text-center">
-                        <Cell value={row.school} />
+                        <Cell value={row.growth} />
                       </td>
                       <td className="px-3 py-3 text-center">
-                        <Cell value={row.multi} />
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <Cell value={row.enterprise} />
+                        <Cell value={row.scale} />
                       </td>
                     </tr>
                   ))}

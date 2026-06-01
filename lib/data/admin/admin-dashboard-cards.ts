@@ -1,6 +1,7 @@
 'use server';
 
 import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { getOrganizationFeeSummary } from '@/lib/data/fee/fee-balance';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { toISTDate } from '@/lib/utils';
@@ -143,40 +144,8 @@ export async function getRevenueStats() {
   currentMonth.setDate(1);
   currentMonth.setHours(0, 0, 0, 0);
 
-  const [
-    totalRevenue,
-    collectedRevenue,
-    overdueFeesCount,
-    thisMonthCollection,
-  ] = await Promise.all([
-    prisma.fee.aggregate({
-      where: {
-        academicYearId,
-        organizationId,
-      },
-      _sum: { totalFee: true },
-    }),
-
-    prisma.feePayment.aggregate({
-      where: {
-        organizationId,
-        status: 'COMPLETED',
-        fee: {
-          academicYearId,
-        },
-      },
-      _sum: { amount: true },
-    }),
-
-    prisma.fee.count({
-      where: {
-        organizationId,
-        academicYearId,
-        status: 'OVERDUE',
-        dueDate: { lt: new Date() },
-      },
-    }),
-
+  const [summary, thisMonthCollection] = await Promise.all([
+    getOrganizationFeeSummary(organizationId, academicYearId),
     prisma.feePayment.aggregate({
       where: {
         organizationId,
@@ -190,20 +159,12 @@ export async function getRevenueStats() {
     }),
   ]);
 
-  const totalRevenueAmount = totalRevenue._sum.totalFee || 0;
-  const collectedRevenueAmount = collectedRevenue._sum.amount || 0;
-  const pendingRevenue = totalRevenueAmount - collectedRevenueAmount;
-  const revenuePercentage =
-    totalRevenueAmount > 0
-      ? Math.round((collectedRevenueAmount / totalRevenueAmount) * 100)
-      : 0;
-
   return {
-    totalRevenue: totalRevenueAmount,
-    collectedRevenue: collectedRevenueAmount,
-    pendingRevenue,
-    revenuePercentage,
-    overdueFeesCount,
+    totalRevenue: summary.totalAmount,
+    collectedRevenue: summary.paidAmount,
+    pendingRevenue: summary.dueAmount,
+    revenuePercentage: summary.collectionPercent,
+    overdueFeesCount: summary.overdueFeesCount,
     thisMonthCollection: thisMonthCollection._sum.amount || 0,
   };
 }

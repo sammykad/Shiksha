@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { getOrganizationId } from "@/lib/organization";
 import { getCurrentUserId } from "@/lib/user";
 import { toISTDate } from "@/lib/utils";
+import { getFeesSummary } from "@/lib/data/fee/fee-balance";
 
 export const getParentNotices = async () => {
     const [organizationId, userId, academicYearId] = await Promise.all([getOrganizationId(), getCurrentUserId(), getActiveAcademicYearId()])
@@ -48,7 +49,11 @@ export const getMyChildrenOverview = async () => {
             },
             Fee: {
                 where: { organizationId, academicYearId },
-                select: { pendingAmount: true },
+                select: {
+                    totalFee: true,
+                    dueDate: true,
+                    payments: { select: { amount: true, status: true } },
+                },
             },
         },
     });
@@ -56,7 +61,7 @@ export const getMyChildrenOverview = async () => {
     return childrenOverview.map((child) => ({
         ...child,
         todayAttendance: (child.StudentAttendance[0]?.status as string) ?? "NOT_MARKED",
-        pendingFees: child.Fee.reduce((sum, fee) => sum + (fee.pendingAmount ?? 0), 0),
+        pendingFees: getFeesSummary(child.Fee).dueAmount,
     }));
 };
 

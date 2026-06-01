@@ -70,6 +70,7 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from '@/lib/user';
 import { notify } from '@/lib/notifications/notify';
 import { preparePaymentReceipt } from './preparePaymentReceipt';
+import { getFeeBalance, syncFeeBalance } from './fee-balance';
 import type { FeeRecord } from '@/types';
 
 function generateSha256(data: string): string {
@@ -107,24 +108,30 @@ export const phonePayInitPayment = async (
     }
   }
 
-  const fee = await prisma.fee.findUnique({
-    where: { id: feeId },
+  const fee = await prisma.fee.findFirst({
+    where: { id: feeId, organizationId },
     select: {
       id: true,
       status: true,
       feeCategory: { select: { name: true } },
       studentId: true,
-      pendingAmount: true,
       totalFee: true,
-      paidAmount: true,
-      student: { select: { firstName: true, lastName: true } }
+      dueDate: true,
+      student: { select: { firstName: true, lastName: true } },
+      payments: {
+        select: {
+          amount: true,
+          status: true,
+        },
+      },
     }
   });
 
   if (!fee) throw new Error('Fee not found');
-  if (fee.status === FeeStatus.PAID) throw new Error('Fee already paid');
+  const currentBalance = getFeeBalance(fee);
+  if (currentBalance.status === FeeStatus.PAID) throw new Error('Fee already paid');
 
-  const pendingAmount = fee.pendingAmount ?? fee.totalFee - fee.paidAmount;
+  const pendingAmount = currentBalance.dueAmount;
 
   if (pendingAmount <= 0) {
     throw new Error('No outstanding amount to pay');
@@ -323,15 +330,20 @@ export const getOnlinePaymentReceiptRecord = async (
   if (!payment) return null;
 
   const fee = payment.fee;
+  const balance = getFeeBalance({
+    totalFee: fee.totalFee,
+    dueDate: fee.dueDate,
+    payments: fee.payments.map((p) => ({ amount: p.amount, status: p.status })),
+  });
 
   return {
     fee: {
       id: fee.id,
       totalFee: fee.totalFee,
-      paidAmount: fee.paidAmount,
-      pendingAmount: fee.pendingAmount ?? Math.max(fee.totalFee - fee.paidAmount, 0),
+      paidAmount: balance.paidAmount,
+      pendingAmount: balance.dueAmount,
       dueDate: fee.dueDate,
-      status: fee.status,
+      status: balance.status,
       academicYearName: fee.academicYear.name,
       studentId: fee.studentId,
       feeCategoryId: fee.feeCategoryId,
@@ -560,33 +572,8 @@ export const verifyPhonePePayment = async (
       });
 
       // Atomically increment paidAmount — prevents lost updates from concurrent payments
-      await tx.fee.update({
-        where: { id: payment.feeId },
-        data: { paidAmount: { increment: payment.amount } },
-      });
-
-      // Read back post-increment values for status computation
-      const updated = await tx.fee.findUniqueOrThrow({
-        where: { id: payment.feeId },
-        select: { paidAmount: true, totalFee: true },
-      });
-
-      paidAmount = updated.paidAmount;
-
-      const pendingAmount = Math.max(updated.totalFee - paidAmount, 0);
-
-      const newStatus: FeeStatus =
-        pendingAmount === 0
-          ? FeeStatus.PAID
-          : new Date(payment.fee.dueDate) < new Date()
-            ? FeeStatus.OVERDUE
-            : FeeStatus.UNPAID;
-
-      // Update secondary computed fields only (paidAmount already set via increment)
-      await tx.fee.update({
-        where: { id: payment.feeId },
-        data: { pendingAmount, status: newStatus },
-      });
+      const balance = await syncFeeBalance(payment.feeId, tx);
+      paidAmount = balance.paidAmount;
     });
 
     // If a concurrent callback already completed this — skip side-effects
@@ -661,25 +648,7 @@ export const verifyPhonePePayment = async (
     // Recalculate fee status from remaining COMPLETED payments
     // (A prior partial payment may have moved the fee to PARTIAL/UNPAID already —
     //  re-derive from source-of-truth rather than assuming UNPAID.)
-    const completedPayments = await prisma.feePayment.findMany({
-      where: { feeId: payment.feeId, status: PaymentStatus.COMPLETED },
-      select: { amount: true },
-    });
-
-    const paidAmount = completedPayments.reduce((sum, p) => sum + p.amount, 0);
-    const pendingAmount = Math.max(payment.fee.totalFee - paidAmount, 0);
-
-    const newStatus: FeeStatus =
-      pendingAmount === 0
-        ? FeeStatus.PAID
-        : new Date(payment.fee.dueDate) < new Date()
-          ? FeeStatus.OVERDUE
-          : FeeStatus.UNPAID;
-
-    await prisma.fee.update({
-      where: { id: payment.feeId },
-      data: { paidAmount, pendingAmount, status: newStatus },
-    });
+    await syncFeeBalance(payment.feeId);
 
     notify.fee.paymentFailed({
       feeId: payment.feeId,

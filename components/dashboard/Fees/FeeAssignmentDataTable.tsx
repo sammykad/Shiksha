@@ -52,7 +52,11 @@ import {
   IndianRupee,
   Info,
   Plus,
+  Users,
+  Search,
+  GraduationCap,
 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Popover,
   PopoverContent,
@@ -103,6 +107,7 @@ type StudentFeeRow = {
     id: string;
     totalFee: number;
     paidAmount: number;
+    pendingAmount: number;
     dueDate: Date;
     status: FeeStatus;
     feeCategory: FeeCategory;
@@ -256,7 +261,7 @@ const FeeAssignmentRow = memo(function FeeAssignmentRow({
                             Balance
                           </div>
                           <div className="text-sm font-medium text-right text-red-600">
-                            Rs. {formatCurrencyIN(fee.totalFee - fee.paidAmount)}
+                            Rs. {formatCurrencyIN(fee.pendingAmount)}
                           </div>
                         </div>
                       )}
@@ -374,9 +379,7 @@ const FeeAssignmentRow = memo(function FeeAssignmentRow({
                                     Balance
                                   </div>
                                   <div className="text-sm font-medium text-right text-red-600">
-                                    Rs. {formatCurrencyIN(
-                                      fee.totalFee - fee.paidAmount
-                                    )}
+                                    Rs. {formatCurrencyIN(fee.pendingAmount)}
                                   </div>
                                 </div>
                               )}
@@ -638,43 +641,48 @@ const FeeAssignmentDataTable = ({
         </Dialog>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  onCheckedChange={handleSelectAll}
-                  checked={
-                    students.length > 0 &&
-                    selectedStudents.length === students.length
-                  }
-                />
-              </TableHead>
-              <TableHead>Student</TableHead>
-              <TableHead>{terms.grade}</TableHead>
-              <TableHead>{terms.section}</TableHead>
-              <TableHead>Fee Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.length === 0 ? (
+        {students.length === 0 ? (
+          <div className="flex justify-center py-4">
+            <EmptyState
+              title="No Students Found"
+              description="No students match your current search or filter criteria. Try adjusting the search term or changing the grade/section filter."
+              icons={[Users, Search, GraduationCap]}
+              image="/EmptyState.png"
+              hint="Students need to be registered first before assigning fees."
+              compact
+            />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  No students found
-                </TableCell>
+                <TableHead className="w-12">
+                  <Checkbox
+                    onCheckedChange={handleSelectAll}
+                    checked={
+                      students.length > 0 &&
+                      selectedStudents.length === students.length
+                    }
+                  />
+                </TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>{terms.grade}</TableHead>
+                <TableHead>{terms.section}</TableHead>
+                <TableHead>Fee Status</TableHead>
               </TableRow>
-            ) : (
-              students.map((student) => (
+            </TableHeader>
+            <TableBody>
+              {students.map((student) => (
                 <FeeAssignmentRow
                   key={student.id}
                   student={student}
                   isSelected={selectedStudentIds.has(student.id)}
                   onSelectionChange={handleStudentSelectionChange}
                 />
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between">
         <div className="text-sm text-muted-foreground">

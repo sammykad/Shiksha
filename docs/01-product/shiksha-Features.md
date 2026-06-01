@@ -315,7 +315,26 @@ Pending > All Below
 - Year Switching
 - Year-Wise Data Segregation
 
+
 ================================================================
+
+
+Core Feature
+Radio Button : School , Colleges & Universities , Institute , University, Goverment, Non-Profit, Education Chain
+Student / User 
+
+
+Model : 
+
+Students Count : 
+Max Student Count
+Pricing 
+
+
+# Pricing Rules : 
+
+
+
 
 # Pricing Slabs
 

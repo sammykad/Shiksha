@@ -1,4 +1,6 @@
 import prisma from '@/lib/db';
+import { PaymentStatus } from '@/generated/prisma/enums';
+import { getFeeBalance } from '@/lib/data/fee/fee-balance';
 
 export async function getTeacherFeeSummary(teacherId: string) {
   // Step 1: Find teacher
@@ -46,10 +48,12 @@ export async function getTeacherFeeSummary(teacherId: string) {
     where: { studentId: { in: studentIds } },
     select: {
       totalFee: true,
-      paidAmount: true,
-      pendingAmount: true,
-      status: true,
+      dueDate: true,
       studentId: true,
+      payments: {
+        where: { status: PaymentStatus.COMPLETED },
+        select: { amount: true, status: true },
+      },
     },
   });
 
@@ -61,14 +65,14 @@ export async function getTeacherFeeSummary(teacherId: string) {
   const overdueStudentSet = new Set<string>();
 
   for (const fee of fees) {
-    const pending = fee.pendingAmount ?? fee.totalFee - fee.paidAmount;
+    const balance = getFeeBalance(fee);
 
-    paidFees += fee.paidAmount;
-    unpaidFees += pending;
+    paidFees += balance.paidAmount;
+    unpaidFees += balance.dueAmount;
 
-    if (pending > 0) unpaidStudentSet.add(fee.studentId);
-    if (fee.status === 'OVERDUE' && pending > 0) {
-      overdueFees += pending;
+    if (balance.dueAmount > 0) unpaidStudentSet.add(fee.studentId);
+    if (balance.status === 'OVERDUE' && balance.dueAmount > 0) {
+      overdueFees += balance.dueAmount;
       overdueStudentSet.add(fee.studentId);
     }
   }

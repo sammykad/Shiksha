@@ -10,6 +10,9 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
+    "test:fee-balance": "tsx tools/fee/test-fee-balance.ts",
+    "check:fee-balance": "tsx tools/fee/check-fee-balance-usage.ts",
+    "repair:fee-payments": "tsx tools/fee/repair-fee-payments.ts",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:prod": "prisma migrate deploy"

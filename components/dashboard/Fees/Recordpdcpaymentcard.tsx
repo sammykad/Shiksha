@@ -82,9 +82,7 @@ export function RecordPdcPaymentCard({ selectedRecord, onSuccess }: RecordPdcPay
 
     const allChecked = Object.values(checklist).every(Boolean);
 
-    const pending =
-        selectedRecord.fee.pendingAmount ??
-        selectedRecord.fee.totalFee - selectedRecord.fee.paidAmount;
+    const pending = Number(selectedRecord.fee.pendingAmount || 0);
 
     const totalInFlightPdc = selectedRecord.payments
         ? selectedRecord.payments

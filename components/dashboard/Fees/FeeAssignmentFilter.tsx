@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { sortByNaturalText } from '@/lib/utils';
 
 type GradeAndSection = {
   id: string;
@@ -74,7 +75,15 @@ const FeeAssignmentFilter = ({ organizationId }: AttendanceFiltersProps) => {
   useEffect(() => {
     async function loadGrades() {
       const data = await fetchGradesAndSections(organizationId);
-      setGrades(data || []);
+      setGrades(
+        sortByNaturalText(data || [], (grade) => grade.name).map((grade) => ({
+          ...grade,
+          sections: sortByNaturalText(
+            grade.sections,
+            (section) => section.name
+          ),
+        }))
+      );
       // console.log('data', data);
       // console.log('grades', grades);
     }

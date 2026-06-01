@@ -3,6 +3,7 @@ import { PaymentStatus } from '@/generated/prisma/enums';
 import { generateReceiptBuffer } from '@/lib/pdf-generator/generateReceiptBuffer';
 import { FeeRecord } from '@/types';
 import { randomUUID } from 'crypto';
+import { getFeeBalance } from './fee-balance';
 
 interface InFlightPayment {
   id?: string;
@@ -187,15 +188,21 @@ export async function preparePaymentReceipt(
     ];
 
   // ── 5. Build FeeRecord ─────────────────────────────────────────────────────
+  const balance = getFeeBalance({
+    totalFee: fee.totalFee,
+    dueDate: fee.dueDate,
+    payments: allPayments.map((p) => ({ amount: p.amount, status: p.status })),
+  });
+
   const feeRecord: FeeRecord = {
     fee: {
       id: fee.id,
       totalFee: fee.totalFee,
       academicYearName: fee.academicYear.name,
-      paidAmount: fee.paidAmount,
-      pendingAmount: fee.pendingAmount ?? Math.max(fee.totalFee - fee.paidAmount, 0),
+      paidAmount: balance.paidAmount,
+      pendingAmount: balance.dueAmount,
       dueDate: fee.dueDate,
-      status: fee.status as FeeRecord['fee']['status'],
+      status: balance.status as FeeRecord['fee']['status'],
       studentId: fee.studentId,
       feeCategoryId: fee.feeCategoryId,
       organizationId,

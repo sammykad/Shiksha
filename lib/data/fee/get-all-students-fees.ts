@@ -3,6 +3,7 @@ import { FeeRecord } from '@/types';
 import { FeeStatus, PaymentStatus } from '@/generated/prisma/enums';
 import { getOrganizationId } from '@/lib/organization';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { getFeeBalance } from './fee-balance';
 
 export async function getFeeRecords(count: number = 50): Promise<FeeRecord[]> {
   try {
@@ -116,14 +117,17 @@ export async function getFeeRecords(count: number = 50): Promise<FeeRecord[]> {
     });
 
     // Map the Prisma data to the FeeRecord type
-    const feeRecords: FeeRecord[] = fees.map((fee) => ({
-      fee: {
+    const feeRecords: FeeRecord[] = fees.map((fee) => {
+      const balance = getFeeBalance(fee);
+
+      return {
+        fee: {
         id: fee.id,
         totalFee: fee.totalFee,
-        paidAmount: fee.paidAmount,
-        pendingAmount: fee.pendingAmount ?? fee.totalFee - fee.paidAmount,
+        paidAmount: balance.paidAmount,
+        pendingAmount: balance.dueAmount,
         dueDate: fee.dueDate,
-        status: fee.status as FeeStatus,
+        status: balance.status as FeeStatus,
         academicYearName: fee.academicYear.name,
         studentId: fee.studentId,
         feeCategoryId: fee.feeCategoryId,
@@ -177,7 +181,8 @@ export async function getFeeRecords(count: number = 50): Promise<FeeRecord[]> {
         },
         chequeDetail: payment.chequeDetail,
       })),
-    }));
+      };
+    });
 
     return feeRecords;
   } catch (error) {

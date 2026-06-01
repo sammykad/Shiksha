@@ -5,6 +5,7 @@ import prisma from "@/lib/db";
 import { getOrganizationId } from "@/lib/organization";
 import { getCurrentAcademicYearId } from "@/lib/academicYear";
 import { Prisma } from "@/generated/prisma/client";
+import { getFeeBalance } from "@/lib/data/fee/fee-balance";
 
 interface GetStudentReportOptions {
   studentId: string;
@@ -354,10 +355,11 @@ export const getStudentReport = async ({
 
   // Calculate fee summary with proper null checks
   const feeSummary = fees.reduce((summary, fee) => {
-    summary.totalFees += fee.totalFee;
-    summary.totalPaid += fee.paidAmount;
-    summary.totalPending += fee.totalFee - fee.paidAmount;
-    summary.totalOverDue += fee.status === 'OVERDUE' ? (fee.pendingAmount ?? 0) : 0;
+    const balance = getFeeBalance(fee);
+    summary.totalFees += balance.totalAmount;
+    summary.totalPaid += balance.paidAmount;
+    summary.totalPending += balance.dueAmount;
+    summary.totalOverDue += balance.status === 'OVERDUE' ? balance.dueAmount : 0;
     return summary;
   }, { totalFees: 0, totalPaid: 0, totalPending: 0, totalOverDue: 0 });
 

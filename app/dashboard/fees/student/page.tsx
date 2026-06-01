@@ -23,6 +23,7 @@ import { getCurrentUserByRole } from '@/lib/auth';
 import { EmptyState } from '@/components/ui/empty-state';
 import PayFeeButton from '@/components/dashboard/Fees/PayFeeButton';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { getFeeBalance, getFeesSummary } from '@/lib/data/fee/fee-balance';
 
 async function getStudentFeesByStudentId(studentId: string) {
   const academicYearId = await getActiveAcademicYearId();
@@ -91,10 +92,12 @@ export default async function StudentFeePage() {
   });
 
   const fees = await getStudentFeesByStudentId(currentUser.studentId);
+  const feesWithBalance = fees.map((fee) => ({ ...fee, balance: getFeeBalance(fee) }));
+  const feeSummary = getFeesSummary(fees);
 
-  const totalFees = fees.reduce((acc, fee) => acc + fee.totalFee, 0);
-  const paidFees = fees.reduce((acc, fee) => acc + fee.paidAmount, 0);
-  const pendingFees = totalFees - paidFees;
+  const totalFees = feeSummary.totalAmount;
+  const paidFees = feeSummary.paidAmount;
+  const pendingFees = feeSummary.dueAmount;
   const admissionDate = student?.createdAt;
   const monthsEnrolled = admissionDate
     ? Math.floor(
@@ -174,7 +177,7 @@ export default async function StudentFeePage() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {fees.filter((fee) => fee.status === 'UNPAID').length} unpaid invoices
+              {feesWithBalance.filter((fee) => fee.balance.status === 'UNPAID').length} unpaid invoices
             </p>
             <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-transparent pointer-events-none" />
           </CardContent>
@@ -223,7 +226,7 @@ export default async function StudentFeePage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {fees.map((fee) => (
+          {feesWithBalance.map((fee) => (
             <Card
               key={fee.id}
               className="overflow-hidden border-border/50 transition-all hover:shadow-sm"
@@ -234,11 +237,11 @@ export default async function StudentFeePage() {
                     <CardTitle className="text-base capitalize">
                       Fee : {fee.feeCategory.name}
                     </CardTitle>
-                    <Badge variant={fee.status} className="font-normal space-x-2 gap-2 flex items-center">
+                    <Badge variant={fee.balance.status} className="font-normal space-x-2 gap-2 flex items-center">
                       <span className='flex items-center space-x-2'>
                         <IndianRupee size={12} />
                         {formatCurrencyIN(fee.totalFee)}</span>
-                      {fee.status}
+                      {fee.balance.status}
                     </Badge>
                   </div>
                   <div className="text-sm font-medium text-muted-foreground">
@@ -278,8 +281,8 @@ export default async function StudentFeePage() {
                       Payment Status
                     </p>
                     <p className="text-sm mt-1">
-                      {fee.status === 'PAID'
-                        ? `Paid ${formatCurrencyIN(fee.paidAmount)}`
+                      {fee.balance.status === 'PAID'
+                        ? `Paid ${formatCurrencyIN(fee.balance.paidAmount)}`
                         : 'Not paid yet'}
                     </p>
                   </div>
@@ -287,18 +290,20 @@ export default async function StudentFeePage() {
               </CardContent>
 
               <CardFooter className="flex justify-end pt-3 pb-4">
-                {fee.status !== 'PAID' ? (
+                {fee.balance.status !== 'PAID' ? (
                   <PayFeeButton 
                     feeId={fee.id} 
                     feeCategoryName={fee.feeCategory.name}
-                    pendingAmount={fee.pendingAmount ?? (fee.totalFee - fee.paidAmount)}
+                    pendingAmount={fee.balance.dueAmount}
                   />
                 ) : (
                   <ReceiptDownloadButton
                     record={{
                       fee: {
                         ...fee,
-                        pendingAmount: fee.pendingAmount ?? 0,
+                        paidAmount: fee.balance.paidAmount,
+                        pendingAmount: fee.balance.dueAmount,
+                        status: fee.balance.status,
                         academicYearName: fee.academicYear.name,
                         organizationName: fee.organization.name || undefined,
                         organizationEmail: fee.organization.contactEmail || undefined,

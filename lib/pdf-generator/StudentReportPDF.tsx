@@ -343,7 +343,7 @@ export function StudentReportPDF({ academicYear, attendance, attendanceSummary, 
                                     <Text style={[styles.tableCell, { flex: 2, textAlign: "left" }]}>{fee.feeCategory.name}</Text>
                                     <Text style={[styles.tableCell, { flex: 1.5 }]}>{formatCurrencyIN(fee.totalFee)}</Text>
                                     <Text style={[styles.tableCell, { flex: 1.5 }]}>{formatCurrencyIN(fee.paidAmount)}</Text>
-                                    <Text style={[styles.tableCell, { flex: 1.5 }]}>{formatCurrencyIN(fee.pendingAmount ?? 0)}</Text>
+                                    <Text style={[styles.tableCell, { flex: 1.5 }]}>{formatCurrencyIN(Number(fee.pendingAmount || 0))}</Text>
                                     <Text style={[styles.tableCell, { flex: 1, color: fee.status === 'PAID' ? "#2e7d32" : "#e65100" }]}>
                                         {fee.status}
                                     </Text>

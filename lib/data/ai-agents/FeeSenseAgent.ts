@@ -7,6 +7,7 @@ import prisma from '@/lib/db';
 import { Experimental_Agent as Agent, stepCountIs, tool } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
+import { getFeeBalance } from '@/lib/data/fee/fee-balance';
 
 const analysisSchema = z.object({
   studentId: z.string(),
@@ -196,8 +197,6 @@ const fetchOverdueFees = tool({
     const fees = await prisma.fee.findMany({
       where: {
         organizationId,
-        status: { in: ['UNPAID', 'OVERDUE'] },
-        pendingAmount: { gt: 0 },
       },
       include: {
         student: {
@@ -214,7 +213,6 @@ const fetchOverdueFees = tool({
         },
         payments: {
           orderBy: { paymentDate: 'desc' },
-          take: 10,
         },
       },
     });
@@ -235,6 +233,9 @@ const fetchOverdueFees = tool({
     const studentFeeData = [];
 
     for (const fee of fees) {
+      const balance = getFeeBalance(fee);
+      if (balance.dueAmount <= 0) continue;
+
       const notifications = await prisma.notificationLog.findMany({
         where: {
           organizationId,
@@ -273,11 +274,11 @@ const fetchOverdueFees = tool({
         parentEmail: primaryParent?.email || '',
         parentPhone: primaryParent?.phoneNumber || '',
         feeId: fee.id,
-        totalFee: fee.totalFee,
-        paidAmount: fee.paidAmount,
-        pendingAmount: fee.pendingAmount || 0,
+        totalFee: balance.totalAmount,
+        paidAmount: balance.paidAmount,
+        pendingAmount: balance.dueAmount,
         dueDate: fee.dueDate.toISOString(),
-        status: fee.status,
+        status: balance.status,
         daysOverdue,
         hoursSinceLastNotification: Math.round(hoursSinceLastNotification),
         paymentHistory: fee.payments.map((p) => ({
@@ -295,6 +296,16 @@ const fetchOverdueFees = tool({
           type: n.notificationType,
         })),
       });
+    }
+
+    if (studentFeeData.length === 0) {
+      return {
+        count: 0,
+        totalOverdue: 0,
+        students: [],
+        message: 'No overdue fees found',
+        shouldContinue: false,
+      };
     }
 
     const result = {

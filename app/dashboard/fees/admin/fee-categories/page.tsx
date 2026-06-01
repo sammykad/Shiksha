@@ -1,19 +1,17 @@
 import { Suspense } from 'react';
+import { Tags } from 'lucide-react';
 import { FeeCategoryForm } from '@/components/dashboard/Fees/FeeCategoryForm';
 import { FeeCategoryList } from '@/components/dashboard/Fees/FeeCategoryList';
-import { Card, CardDescription, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default async function FeeCategoriesPage() {
   return (
     <div className="px-2 space-y-3">
-      <Card className="flex items-center justify-between p-6">
-        <div>
-          <CardTitle>Fee Category Management</CardTitle>
-          <CardDescription>
-            Manage fee categories for your organization
-          </CardDescription>
-        </div>
-      </Card>
+      <PageHeader
+        title="Fee Category Management"
+        description="Manage fee categories for your organization"
+        icon={Tags}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 m-1">
         <div className="lg:col-span-1">

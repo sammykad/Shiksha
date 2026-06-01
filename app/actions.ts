@@ -33,6 +33,7 @@ import {
   sendOrganizationRoleInvitation,
   upsertUserRecord,
 } from '@/lib/data/student/student-helpers';
+import { getOrganizationFeeSummary } from '@/lib/data/fee/fee-balance';
 
 
 // * CLASSES && GRADES
@@ -339,16 +340,11 @@ export async function yearlyStudentAttendance(studentId: string) {
 export async function getDashboardStats(organizationId: string) {
   const academicYearId = await getActiveAcademicYearId();
 
-  const [totalRevenue, totalPending, studentCount, feeCategoryCount] =
+  const [feeSummary, studentCount, feeCategoryCount] =
     await Promise.all([
-      prisma.fee.aggregate({
-        where: { organizationId, academicYearId },
-        _sum: { paidAmount: true },
-      }),
-      prisma.fee.aggregate({
-        where: { organizationId, academicYearId },
-        _sum: { pendingAmount: true },
-      }),
+      academicYearId
+        ? getOrganizationFeeSummary(organizationId, academicYearId)
+        : Promise.resolve({ paidAmount: 0, dueAmount: 0 }),
       prisma.student.count({
         where: { organizationId },
       }),
@@ -358,8 +354,8 @@ export async function getDashboardStats(organizationId: string) {
     ]);
 
   return {
-    totalRevenue: totalRevenue._sum.paidAmount || 0,
-    pendingFees: totalPending._sum.pendingAmount || 0,
+    totalRevenue: feeSummary.paidAmount || 0,
+    pendingFees: feeSummary.dueAmount || 0,
     totalStudents: studentCount,
     feeCategoryCount,
   };

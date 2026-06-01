@@ -1,5 +1,6 @@
 import prisma from '@/lib/db';
-import { FeeStatus } from '@/generated/prisma/enums';
+import { FeeStatus, PaymentStatus } from '@/generated/prisma/enums';
+import { getFeeBalance } from '@/lib/data/fee/fee-balance';
 
 export async function getFeesStatus(studentId: string) {
     try {
@@ -7,7 +8,7 @@ export async function getFeesStatus(studentId: string) {
             where: { studentId },
             include: {
                 payments: {
-                    where: { status: 'COMPLETED' },
+                    where: { status: PaymentStatus.COMPLETED },
                     orderBy: { paymentDate: 'desc' },
                     take: 5,
                 },
@@ -23,16 +24,18 @@ export async function getFeesStatus(studentId: string) {
         const allRecentPayments: any[] = [];
 
         for (const fee of fees) {
-            totalAnnualFee += fee.totalFee;
-            paidAmount += fee.paidAmount;
-            pendingAmount += fee.pendingAmount || 0;
+            const balance = getFeeBalance(fee);
 
-            if (fee.status === 'OVERDUE') {
+            totalAnnualFee += balance.totalAmount;
+            paidAmount += balance.paidAmount;
+            pendingAmount += balance.dueAmount;
+
+            if (balance.status === FeeStatus.OVERDUE) {
                 overdueFees++;
             }
 
             if (
-                (fee.status === 'UNPAID' || fee.status === 'OVERDUE') &&
+                balance.status !== FeeStatus.PAID &&
                 (!nextDueDate || fee.dueDate < nextDueDate)
             ) {
                 nextDueDate = fee.dueDate;

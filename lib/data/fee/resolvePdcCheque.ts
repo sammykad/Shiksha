@@ -1,13 +1,14 @@
 'use server';
 
 import prisma from '@/lib/db';
-import { ChequeStatus, FeeStatus, PaymentMethod, PaymentStatus } from '@/generated/prisma/enums';
+import { ChequeStatus, PaymentMethod, PaymentStatus } from '@/generated/prisma/enums';
 import { getCurrentUserId } from '@/lib/user';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getOrganizationId } from '@/lib/organization';
 import { notify } from '@/lib/notifications/notify';
 import { preparePaymentReceipt } from './preparePaymentReceipt';
+import { syncFeeBalance } from './fee-balance';
 
 const resolveSchema = z.object({
   chequeDetailId: z.string().min(1),
@@ -69,27 +70,7 @@ export const resolvePdcCheque = async (input: ResolvePdcInput) => {
         data: { status: PaymentStatus.COMPLETED },
       });
 
-      // Recalculate from all COMPLETED payments (source of truth)
-      const allCompleted = await tx.feePayment.findMany({
-        where: { feeId: fee.id, status: PaymentStatus.COMPLETED },
-      });
-
-      const totalPaid = allCompleted.reduce((sum, p) => sum + p.amount, 0);
-      const totalPending = Math.max(fee.totalFee - totalPaid, 0);
-
-      let updatedStatus: FeeStatus;
-      if (totalPending === 0) {
-        updatedStatus = FeeStatus.PAID;
-      } else if (new Date(fee.dueDate) < now) {
-        updatedStatus = FeeStatus.OVERDUE;
-      } else {
-        updatedStatus = FeeStatus.UNPAID;
-      }
-
-      await tx.fee.update({
-        where: { id: fee.id },
-        data: { paidAmount: totalPaid, pendingAmount: totalPending, status: updatedStatus },
-      });
+      await syncFeeBalance(fee.id, tx);
     } else if (resolution === 'BOUNCED') {
       if (!bounceReason?.trim()) throw new Error('Bounce reason is required');
 
@@ -107,6 +88,8 @@ export const resolvePdcCheque = async (input: ResolvePdcInput) => {
         where: { id: feePayment.id },
         data: { status: PaymentStatus.FAILED },
       });
+
+      await syncFeeBalance(fee.id, tx);
     } else {
       // CANCELLED
       await tx.chequeDetail.update({
@@ -122,6 +105,8 @@ export const resolvePdcCheque = async (input: ResolvePdcInput) => {
         where: { id: feePayment.id },
         data: { status: PaymentStatus.CANCELLED },
       });
+
+      await syncFeeBalance(fee.id, tx);
     }
   });
 

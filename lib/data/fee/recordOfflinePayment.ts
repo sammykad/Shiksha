@@ -10,6 +10,7 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { notify } from '@/lib/notifications/notify';
 import { preparePaymentReceipt } from './preparePaymentReceipt';
+import { getFeeBalance, syncFeeBalance } from './fee-balance';
 
 export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
   const userId = await getCurrentUserId();
@@ -17,8 +18,8 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
 
   const validatedData = offlinePaymentSchema.parse(data);
 
-  const fee = await prisma.fee.findUnique({
-    where: { id: validatedData.feeId },
+  const fee = await prisma.fee.findFirst({
+    where: { id: validatedData.feeId, organizationId },
     select: {
       id: true,
       status: true,
@@ -28,15 +29,17 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
       dueDate: true,
       studentId: true,
       feeCategoryId: true,
+      payments: { select: { amount: true, status: true } },
       student: { select: { firstName: true, lastName: true } },
       feeCategory: { select: { name: true } },
     },
   });
 
   if (!fee) throw new Error('Fee not found');
-  if (fee.status === FeeStatus.PAID) throw new Error('Fee is already fully paid');
+  const currentBalance = getFeeBalance(fee);
+  if (currentBalance.status === FeeStatus.PAID) throw new Error('Fee is already fully paid');
 
-  const pendingAmount = fee.pendingAmount ?? fee.totalFee - fee.paidAmount;
+  const pendingAmount = currentBalance.dueAmount;
 
   if (pendingAmount <= 0) throw new Error('Fee already paid');
   if (validatedData.amount > pendingAmount) throw new Error('Payment amount exceeds remaining balance');
@@ -73,37 +76,7 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
     });
 
     // Atomically increment paidAmount — prevents lost updates from concurrent payments
-    await tx.fee.update({
-      where: { id: fee.id },
-      data: { paidAmount: { increment: paymentAmount } },
-    });
-
-    // Read back post-increment values for status computation
-    const updated = await tx.fee.findUniqueOrThrow({
-      where: { id: fee.id },
-      select: { paidAmount: true, totalFee: true },
-    });
-
-    const totalPaid = updated.paidAmount;
-    const totalPending = Math.max(updated.totalFee - totalPaid, 0);
-
-    // Determine correct fee status
-    let updatedStatus: FeeStatus;
-    if (totalPending === 0) {
-      updatedStatus = FeeStatus.PAID;
-    } else if (new Date(fee.dueDate) < new Date()) {
-      updatedStatus = FeeStatus.OVERDUE;
-    } else {
-      updatedStatus = FeeStatus.UNPAID;
-    }
-
-    // Persist the secondary computed fields (paidAmount was already set via increment)
-    await tx.fee.update({
-      where: { id: fee.id },
-      data: { pendingAmount: totalPending, status: updatedStatus },
-    });
-
-    return { totalPaid, totalPending, updatedStatus };
+    await syncFeeBalance(fee.id, tx);
   });
 
   // ── 3. Prepare receipt — fetches full data, builds FeeRecord, generates PDF ─

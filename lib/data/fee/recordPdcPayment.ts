@@ -10,6 +10,7 @@ import { formatCurrencyIN } from '@/lib/utils';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { notify } from '@/lib/notifications/notify';
+import { getFeeBalance } from './fee-balance';
 
 export const recordPdcPayment = async (data: PdcPaymentFormData) => {
   const userId = await getCurrentUserId();
@@ -22,8 +23,8 @@ export const recordPdcPayment = async (data: PdcPaymentFormData) => {
     where: { id: validatedData.feeId, organizationId },
     include: {
       payments: {
-        where: { status: PaymentStatus.CHEQUE_PENDING },
-        select: { amount: true },
+        where: { status: { in: [PaymentStatus.COMPLETED, PaymentStatus.CHEQUE_PENDING] } },
+        select: { amount: true, status: true },
       },
       student: { select: { firstName: true, lastName: true } },
       feeCategory: { select: { name: true } },
@@ -31,13 +32,16 @@ export const recordPdcPayment = async (data: PdcPaymentFormData) => {
   });
 
   if (!fee) throw new Error('Fee not found');
-  if (fee.status === FeeStatus.PAID) throw new Error('Fee is already fully paid');
+  const balance = getFeeBalance(fee);
+  if (balance.status === FeeStatus.PAID) throw new Error('Fee is already fully paid');
 
-  const currentPending = fee.pendingAmount ?? fee.totalFee - fee.paidAmount;
+  const currentPending = balance.dueAmount;
   if (currentPending <= 0) throw new Error('Fee already paid');
 
   // Sum of other PDC cheques that are recorded but not yet cleared
-  const totalInFlightPdc = fee.payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalInFlightPdc = fee.payments
+    .filter((payment) => payment.status === PaymentStatus.CHEQUE_PENDING)
+    .reduce((sum, p) => sum + p.amount, 0);
   const maxAllowable = Math.max(currentPending - totalInFlightPdc, 0);
 
   if (maxAllowable <= 0) {
