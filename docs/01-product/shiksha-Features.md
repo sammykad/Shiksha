@@ -379,6 +379,8 @@ IMP : Find Best Sutable / Cheap Domain
 - Fee Management : GST+ ,Strict Sequential Receipt Numbering, Discounts, Waivers, and Scholarships, fine & penalty
 - Holiday : Show the toggle to see dynamic calendar wise  Academic Calendar For all Users 
 - Student Bulk Import should Need Clarity and also responsive on mobile
+- If internet gown show proper message
+- Setup Modal To Track Activity Logs But Very Smartly 
 
 
 

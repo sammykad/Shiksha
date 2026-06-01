@@ -37,12 +37,12 @@ export const PLANS: Plan[] = [
     ctaVariant: "outline",
     footnote: "After 3 months, stay at Rs 29/student/month or leave with your data.",
     features: [
-      { label: "Rs 0 for 3 months", included: true },
-      { label: "No card needed", included: true },
-      { label: "Every feature unlocked", included: true },
-      { label: "Real students and real data", included: true },
-      { label: "Export your data anytime", included: true },
-      { label: "Then Rs 29/student/month", included: true },
+      { label: "Try with real school data, not dummy screens", included: true },
+      { label: "We help you set up students, classes and fees", included: true },
+      { label: "Start with fees, attendance, notices and admissions", included: true },
+      { label: "Parents and teachers can join without paid seats", included: true },
+      { label: "Leave with your data if it is not a fit", included: true },
+      { label: "Continue on EarlyBird pricing after trial", included: true },
     ],
   },
   {
@@ -56,13 +56,12 @@ export const PLANS: Plan[] = [
     ctaVariant: "default",
     footnote: "No card for 3 months. Locked forever after purchase.",
     features: [
-      { label: "Rs 29/student/month locked forever", included: true },
-      { label: "No card required for 3 months", included: true },
-      { label: "All core academic and admin modules", included: true },
-      { label: "Unlimited parents, teachers, and admins", included: true },
-      { label: "Fee collection and receipt workflows", included: true },
-      { label: "Attendance analytics and exports", included: true },
-      { label: "Lead CRM and admission pipeline", included: true },
+      { label: "Best for owners who want to stop fee chasing", included: true },
+      { label: "Receipts, pending fees and reminders in one place", included: true },
+      { label: "Parents can see attendance and fee status themselves", included: true },
+      { label: "Admissions follow-ups are not lost in notebooks", included: true },
+      { label: "Notices, holidays, documents and certificates included", included: true },
+      { label: "Parents, teachers, admins and staff stay free", included: true },
     ],
   },
   {
@@ -78,12 +77,12 @@ export const PLANS: Plan[] = [
     footnote: "Best fit around 500 learners",
     features: [
       { label: "Everything in EarlyBird", included: true },
-      { label: "Higher-volume fee and notification workflows", included: true },
-      { label: "AI monthly reports and agent configuration", included: true },
-      { label: "Document and certificate workflows", included: true },
-      { label: "Recorded sessions and learning support", included: true },
-      { label: "Priority onboarding support", included: true },
-      { label: "Advanced custom integrations", included: false },
+      { label: "Best for growing schools with more office workload", included: true },
+      { label: "AI summaries show fee and attendance issues early", included: true },
+      { label: "QR certificates, ID cards, hall tickets and verification", included: true },
+      { label: "More room for reminders, reports and daily operations", included: true },
+      { label: "Priority onboarding for office and academic teams", included: true },
+      { label: "Custom integration projects are for Scale", included: false },
     ],
   },
   {
@@ -97,12 +96,12 @@ export const PLANS: Plan[] = [
     footnote: "For 1500+ learners. Annual organization plans available.",
     features: [
       { label: "Everything in Growth", included: true },
-      { label: "Multi-branch institution management", included: true },
-      { label: "Cross-branch reporting and analytics", included: true },
-      { label: "Custom roles, permissions, and terminology", included: true },
-      { label: "Custom integrations and data workflows", included: true },
-      { label: "Dedicated success and migration planning", included: true },
-      { label: "Custom SLA and deployment support", included: true },
+      { label: "Best for trusts, chains, colleges and large groups", included: true },
+      { label: "Compare branches on fees, attendance and admissions", included: true },
+      { label: "Custom permissions, roles and terminology", included: true },
+      { label: "Custom integrations, imports and workflows", included: true },
+      { label: "Dedicated migration, training and success plan", included: true },
+      { label: "SLA, deployment support and governance reviews", included: true },
     ],
   },
 ]
@@ -142,6 +141,7 @@ export type CellValue = boolean | "addon" | "included-plus" | string
 
 export interface ComparisonRow {
   label: string
+  note?: string
   free: CellValue
   school: CellValue
   multi: CellValue
@@ -157,113 +157,208 @@ const included = { free: true, school: true, multi: true, enterprise: true }
 
 export const COMPARISON: ComparisonGroup[] = [
   {
-    group: "Student, Learner & Academic Records",
+    group: "Collect Fees Without Daily Chasing",
     rows: [
-      { label: "Student or learner profiles", ...included },
-      { label: "Bulk student import", ...included },
-      { label: "Document upload and verification", ...included },
-      { label: "Academic performance dashboards", ...included },
-      { label: "Self-service student profile editing", ...included },
-      { label: "Digital ID card generation", free: "Planned", school: "Planned", multi: "Planned", enterprise: "Custom" },
+      {
+        label: "Parents can pay online and get receipts instantly",
+        note: "PhonePe payments, UPI/cards/net banking, and branded PDF receipts reduce office counter pressure.",
+        ...included,
+      },
+      {
+        label: "Pending fees are visible before they become a headache",
+        note: "See collected, pending, overdue and student-wise balances without opening Excel every day.",
+        ...included,
+      },
+      {
+        label: "Automatic reminders reduce awkward fee calls",
+        note: "Send reminders on WhatsApp, SMS, email and push. Usage costs stay separate and visible.",
+        free: "Usage based",
+        school: "Usage based",
+        multi: "Usage based",
+        enterprise: "Custom volume",
+      },
+      {
+        label: "Cheque, cash and online payments stay in one record",
+        note: "Record cash, cheque, DD, UPI and online payments together so accounts do not split across notebooks.",
+        ...included,
+      },
+      {
+        label: "Reconciliation is easier for the accounts team",
+        note: "Compare internal fee records with PhonePe settlement reports when closing the month.",
+        free: "Basic",
+        school: "Basic",
+        multi: "Advanced",
+        enterprise: "Custom",
+      },
     ],
   },
   {
-    group: "Fees, Payments & Finance",
+    group: "Reduce Office Work",
     rows: [
-      { label: "Fee categories and assignments", ...included },
-      { label: "Online payments through UPI, cards, net banking, and wallets", ...included },
-      { label: "Offline payment recording", ...included },
-      { label: "PDF fee receipts", ...included },
-      { label: "Manual and automated fee reminders", ...included },
-      { label: "PDC cheque tracking", free: false, school: true, multi: true, enterprise: true },
-      { label: "Fee reconciliation", free: "Basic", school: "Basic", multi: "Advanced", enterprise: "Custom" },
-      { label: "Parent, student, and teacher fee views", ...included },
+      {
+        label: "Student records are ready in bulk, not one-by-one",
+        note: "Import students, parents, classes, sections and key details instead of typing everything manually.",
+        ...included,
+      },
+      {
+        label: "Class, section, batch and academic year setup is clean",
+        note: "Works for schools, coaching classes, colleges and academies without forcing one naming style.",
+        ...included,
+      },
+      {
+        label: "Documents can be collected and verified online",
+        note: "Aadhaar, TC, birth certificate, photos and marksheets can move through an admin approval flow.",
+        ...included,
+      },
+      {
+        label: "Teachers and staff are part of the same system",
+        note: "Teacher profiles, subject assignments, class ownership and staff records stay connected.",
+        ...included,
+      },
+      {
+        label: "Our team can help with migration and setup",
+        note: "The bigger the institution, the more hands-on the onboarding and migration support becomes.",
+        free: "Self-serve",
+        school: "Guided",
+        multi: "Priority",
+        enterprise: "Dedicated",
+      },
     ],
   },
   {
-    group: "Attendance & Leave",
+    group: "Keep Parents Informed",
     rows: [
-      { label: "Daily attendance marking", ...included },
-      { label: "Section-wise attendance summaries", ...included },
-      { label: "Attendance calendar, table, filters, and exports", ...included },
-      { label: "Ring chart, heatmap, skyline, and analytics views", ...included },
-      { label: "Parent child-attendance monitoring", ...included },
-      { label: "Attendance completion tracking", ...included },
-      { label: "QR or face attendance workflows", free: "Planned", school: "Planned", multi: "Planned", enterprise: "Custom" },
-      { label: "Leave application and approval workflow", ...included },
+      {
+        label: "Parents can see fees, receipts, notices and attendance",
+        note: "Less front-office calling because parents get the information directly in their portal.",
+        ...included,
+      },
+      {
+        label: "Attendance updates can reach parents quickly",
+        note: "Absent and late alerts can go through the notification channels your institution enables.",
+        ...included,
+      },
+      {
+        label: "Notices reach the right class, role or section",
+        note: "Send a holiday, exam notice or deadline to only the people who need it.",
+        ...included,
+      },
+      {
+        label: "Emergency holiday alerts are not manual chaos",
+        note: "Declare urgent holidays and push high-priority communication from one place.",
+        ...included,
+      },
+      {
+        label: "Parents and students get role-specific views",
+        note: "Admin, teacher, parent and student portals all pull from the same organization data.",
+        ...included,
+      },
     ],
   },
   {
-    group: "Academic Setup, Teachers & Subjects",
+    group: "Improve Admissions",
     rows: [
-      { label: "Grades, sections, batches, and class groups", ...included },
-      { label: "Subject management with codes and electives", ...included },
-      { label: "Teacher profiles and staff listings", ...included },
-      { label: "Teaching assignments by subject, grade, section, or batch", ...included },
-      { label: "Academic year setup and switching", ...included },
-      { label: "Terminology customization for schools, colleges, coaching, and batches", ...included },
+      {
+        label: "Every enquiry has an owner and next follow-up",
+        note: "Admissions teams can track calls, visits, WhatsApp notes, priority and follow-up dates.",
+        ...included,
+      },
+      {
+        label: "You can see where enquiries are getting stuck",
+        note: "The funnel view shows movement from new enquiry to contacted, qualified and converted.",
+        ...included,
+      },
+      {
+        label: "Facebook and Instagram leads can enter automatically",
+        note: "Useful for schools and coaching centres that run admission campaigns.",
+        free: "Connect",
+        school: "Connect",
+        multi: "Connect",
+        enterprise: "Custom",
+      },
+      {
+        label: "A converted lead can become a student record",
+        note: "Admissions work connects to student management instead of being lost after enrolment.",
+        ...included,
+      },
     ],
   },
   {
-    group: "Exams, Certificates & Learning Support",
+    group: "Give Owners Control",
     rows: [
-      { label: "Exam sessions and exam setup", ...included },
-      { label: "Hall ticket generation with QR code", free: "META", school: "META", multi: "META", enterprise: "Custom" },
-      { label: "Results entry and publication", free: "META", school: "META", multi: "META", enterprise: "Custom" },
-      { label: "Grading scale configuration", free: "META", school: "META", multi: "META", enterprise: "Custom" },
-      { label: "Report cards and exam analytics", free: "Planned", school: "Planned", multi: "Planned", enterprise: "Custom" },
-      { label: "Certificate generation and public verification", ...included },
-      { label: "Recorded session links", ...included },
-      { label: "Assignment/LMS workflows", free: "Planned", school: "Planned", multi: "Planned", enterprise: "Custom" },
+      {
+        label: "Fee, attendance, admission and exam reports stay together",
+        note: "Owners can review the institution without asking every department for a separate sheet.",
+        ...included,
+      },
+      {
+        label: "AI summaries highlight what needs attention",
+        note: "Monthly fee, attendance and operations summaries help management act earlier.",
+        free: false,
+        school: "Basic",
+        multi: true,
+        enterprise: "Custom",
+      },
+      {
+        label: "Low attendance and fee risk are easier to spot",
+        note: "See warning signs before they become dropout, complaint or collection problems.",
+        free: false,
+        school: "Basic",
+        multi: true,
+        enterprise: "Custom",
+      },
+      {
+        label: "One login can manage multiple institutions",
+        note: "Useful for owners running a school, coaching centre, preschool or multiple branches.",
+        free: true,
+        school: true,
+        multi: true,
+        enterprise: true,
+      },
+      {
+        label: "Multi-branch reporting for education groups",
+        note: "Compare branches on fee collection, attendance and admissions from one command view.",
+        free: false,
+        school: false,
+        multi: "Limited",
+        enterprise: true,
+      },
     ],
   },
   {
-    group: "Admissions, CRM & Growth",
+    group: "Build Trust & Compliance",
     rows: [
-      { label: "Lead capture and enquiry management", ...included },
-      { label: "Lead status pipeline and priority tracking", ...included },
-      { label: "Activity timeline and follow-up management", ...included },
-      { label: "Lead assignment to staff", ...included },
-      { label: "Convert lead to student", ...included },
-      { label: "Meta/Facebook lead integration", free: "META", school: "META", multi: "META", enterprise: "Custom" },
-      { label: "Cross-branch lead analytics", free: false, school: false, multi: true, enterprise: true },
-    ],
-  },
-  {
-    group: "Communication, Notifications & Safety",
-    rows: [
-      { label: "Notice board with audience targeting", ...included },
-      { label: "Email, SMS, WhatsApp, push, and in-app notifications", ...included },
-      { label: "Notification templates and delivery logs", ...included },
-      { label: "Notification settings, cooldowns, and cost tracking", ...included },
-      { label: "Anonymous complaint submission and tracking", ...included },
-      { label: "Complaint investigation workflow and analytics", ...included },
-      { label: "Voice call reminders", free: "Planned", school: "Planned", multi: "Planned", enterprise: "Custom" },
-    ],
-  },
-  {
-    group: "Reports, AI & Automation",
-    rows: [
-      { label: "Reports hub for fees, attendance, exams, reconciliation, and staff", ...included },
-      { label: "PDF and CSV report downloads", ...included },
-      { label: "AI monthly reports", free: false, school: true, multi: true, enterprise: true },
-      { label: "FeeSense AI agent", free: false, school: true, multi: true, enterprise: true },
-      { label: "Attendance AI agent", free: false, school: true, multi: true, enterprise: true },
-      { label: "Scheduled agent runs and background jobs", free: false, school: "Basic", multi: true, enterprise: true },
-      { label: "Custom AI and automation workflows", free: false, school: false, multi: false, enterprise: true },
-    ],
-  },
-  {
-    group: "Portals, Integrations & Scale",
-    rows: [
-      { label: "Admin, teacher, student, and parent portals", ...included },
-      { label: "Role-based permissions", ...included },
-      { label: "PhonePe payment gateway", ...included },
-      { label: "Firebase push, Cloudinary/Uploadthing storage, and email delivery", ...included },
-      { label: "Google Sheets and CSV imports", ...included },
-      { label: "Organization setup wizard and staff invitations", ...included },
-      { label: "Multi-branch management", free: false, school: false, multi: "Limited", enterprise: true },
-      { label: "Custom integrations, migration, and SLA", free: false, school: false, multi: false, enterprise: true },
+      {
+        label: "Certificates and ID cards can be verified by QR",
+        note: "Anyone can scan and verify authenticity without needing an app or login.",
+        ...included,
+      },
+      {
+        label: "Hindi and Marathi certificate support is available",
+        note: "Helpful for Indian institutions that need local-language documents.",
+        free: true,
+        school: true,
+        multi: true,
+        enterprise: "Custom templates",
+      },
+      {
+        label: "Anonymous complaints can be tracked properly",
+        note: "Students or parents can raise sensitive issues while admins keep a status trail.",
+        free: true,
+        school: true,
+        multi: true,
+        enterprise: "Policy workflow",
+      },
+      {
+        label: "Sensitive records stay role-based",
+        note: "Admins, teachers, parents and students only see what their role should see.",
+        ...included,
+      },
+      {
+        label: "PhonePe, WhatsApp, email, push and storage are integrated",
+        note: "Core Indian workflows are connected instead of becoming separate vendor work.",
+        ...included,
+      },
     ],
   },
 ]
@@ -365,15 +460,27 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     id: "faq-7",
-    question: "Are all listed modules fully live?",
+    question: "Why does pricing show so many included workflows?",
     answer:
-      "The comparison marks some workflows as META or Planned where the docs show they are still being validated or expanded. Core operations like students, fees, attendance, notices, documents, CRM, portals, and reports are represented as included.",
+      "Because Shiksha.cloud is priced as an institution operating system, not as separate mini-products. Start with the modules you need today, then enable more workflows as your team is ready.",
   },
   {
     id: "faq-8",
     question: "Do you support multi-branch institutions?",
     answer:
       "Yes. Multi-branch management, cross-branch reporting, custom permissions, and migration support are best handled on the Scale plan.",
+  },
+  {
+    id: "faq-9",
+    question: "How is Shiksha.cloud cheaper than buying separate tools?",
+    answer:
+      "Most schools pay for fee software (₹500/mo), attendance (₹300/mo), CRM (₹400/mo), exam management (₹300/mo), and a communication tool (₹400/mo) — totalling ₹2,100+/mo. Shiksha.cloud replaces all of them starting at ₹999/mo. No integration costs, no multiple logins, no separate vendor support.",
+  },
+  {
+    id: "faq-10",
+    question: "What happens if we don't use every module?",
+    answer:
+      "Every module is included in your plan whether you use it today or not. That means you can roll out fee management first, add attendance next term, enable CRM when admissions open — without ever paying more or signing up for another tool. It's designed to grow with your institution without surprise costs.",
   },
 ]
 
@@ -385,6 +492,26 @@ export const TRUSTED_SCHOOLS = [
   "Vocational Institutes",
   "Multi-Branch Education Groups",
 ]
+
+export interface CostComparisonItem {
+  category: string
+  standaloneCost: number
+  description: string
+}
+
+export const COST_COMPARISON_ITEMS: CostComparisonItem[] = [
+  { category: "Fee management", standaloneCost: 500, description: "Fee setup, online payments, receipts, reconciliation, reminders" },
+  { category: "Attendance tracking", standaloneCost: 300, description: "Daily marking, analytics, parent monitoring, exports" },
+  { category: "Lead & admission CRM", standaloneCost: 400, description: "Enquiry capture, pipeline tracking, follow-ups, conversion" },
+  { category: "Exam management", standaloneCost: 300, description: "Scheduling, hall tickets, results, report cards, grading" },
+  { category: "Communication platform", standaloneCost: 400, description: "SMS, WhatsApp, email, push, notice board, reminders" },
+  { category: "Reports & analytics", standaloneCost: 200, description: "Fee, attendance, exam dashboards, AI reports, exports" },
+]
+
+export const TOTAL_STANDALONE_COST = COST_COMPARISON_ITEMS.reduce(
+  (sum, item) => sum + item.standaloneCost,
+  0
+)
 
 export function getEffectivePrice(
   pricePerStudent: number,

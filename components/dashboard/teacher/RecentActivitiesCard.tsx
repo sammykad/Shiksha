@@ -80,7 +80,7 @@ async function RecentActivitiesContent() {
                   attendance, posting notices, or grading assignments.
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
                 <Button
                   asChild
                   variant="outline"
@@ -88,7 +88,7 @@ async function RecentActivitiesContent() {
                   className="text-xs bg-transparent"
                 >
                   <Link href={'dashboard/attendance/mark'}>
-                    <Calendar className="w-3 h-3 mr-1" />
+                    <Calendar className="w-3.5 h-3.5 mr-1.5" />
                     Take Attendance
                   </Link>
                 </Button>
@@ -100,7 +100,7 @@ async function RecentActivitiesContent() {
                   asChild
                 >
                   <Link href={'/dashboard/notices/create'}>
-                    <Bell className="w-3 h-3 mr-1" />
+                    <Bell className="w-3.5 h-3.5 mr-1.5" />
                     Post Notice
                   </Link>
                 </Button>

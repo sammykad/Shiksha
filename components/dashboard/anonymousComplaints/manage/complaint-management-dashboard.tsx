@@ -47,6 +47,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ComplaintStatusUpdate } from '@/components/dashboard/anonymousComplaints/manage/complaint-status-update';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { updateComplaintStatus } from '@/lib/data/complaints/complaint-actions';
@@ -323,51 +324,65 @@ export function ComplaintManagementDashboard({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {data.complaints
-                    .filter(
-                      (c) => c.severity === 'CRITICAL' || c.severity === 'HIGH'
-                    )
-                    .slice(0, 5)
-                    .map((complaint) => (
-                      <div
-                        key={complaint.id}
-                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setSelectedComplaint(complaint);
-                          setShowDetailModal(true);
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-900 truncate">
-                            {complaint.subject}
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            {complaint.trackingId} •{' '}
-                            {formatDateIN(complaint.submittedAt)}
-                          </p>
+                  {data.complaints.filter(
+                    (c) => c.severity === 'CRITICAL' || c.severity === 'HIGH'
+                  ).length > 0 ? (
+                    data.complaints
+                      .filter(
+                        (c) => c.severity === 'CRITICAL' || c.severity === 'HIGH'
+                      )
+                      .slice(0, 5)
+                      .map((complaint) => (
+                        <div
+                          key={complaint.id}
+                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedComplaint(complaint);
+                            setShowDetailModal(true);
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-900 truncate">
+                              {complaint.subject}
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              {complaint.trackingId} •{' '}
+                              {formatDateIN(complaint.submittedAt)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              className={
+                                severityConfig[
+                                  complaint.severity as keyof typeof severityConfig
+                                ].color
+                              }
+                            >
+                              {complaint.severity}
+                            </Badge>
+                            <Badge
+                              className={
+                                statusConfig[
+                                  complaint.currentStatus as keyof typeof statusConfig
+                                ].color
+                              }
+                            >
+                              {complaint.currentStatus.replace('_', ' ')}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            className={
-                              severityConfig[
-                                complaint.severity as keyof typeof severityConfig
-                              ].color
-                            }
-                          >
-                            {complaint.severity}
-                          </Badge>
-                          <Badge
-                            className={
-                              statusConfig[
-                                complaint.currentStatus as keyof typeof statusConfig
-                              ].color
-                            }
-                          >
-                            {complaint.currentStatus.replace('_', ' ')}
-                          </Badge>
-                        </div>
+                      ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-950/50 flex items-center justify-center mb-3">
+                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                       </div>
-                    ))}
+                      <p className="text-sm font-medium text-foreground">All Clear</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        No critical or high-priority complaints
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -385,39 +400,51 @@ export function ComplaintManagementDashboard({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {data.complaints
-                    .sort(
-                      (a, b) =>
-                        new Date(b.updatedAt).getTime() -
-                        new Date(a.updatedAt).getTime()
-                    )
-                    .slice(0, 5)
-                    .map((complaint) => (
-                      <div
-                        key={complaint.id}
-                        className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
-                      >
-                        <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          {React.createElement(
-                            statusConfig[
-                              complaint.currentStatus as keyof typeof statusConfig
-                            ].icon,
-                            {
-                              className: 'h-4 w-4 text-blue-600',
-                            }
-                          )}
+                  {data.complaints.length > 0 ? (
+                    data.complaints
+                      .sort(
+                        (a, b) =>
+                          new Date(b.updatedAt).getTime() -
+                          new Date(a.updatedAt).getTime()
+                      )
+                      .slice(0, 5)
+                      .map((complaint) => (
+                        <div
+                          key={complaint.id}
+                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                        >
+                          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            {React.createElement(
+                              statusConfig[
+                                complaint.currentStatus as keyof typeof statusConfig
+                              ].icon,
+                              {
+                                className: 'h-4 w-4 text-blue-600',
+                              }
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {complaint.subject}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Status: {complaint.currentStatus.replace('_', ' ')}{' '}
+                              • {formatDateIN(complaint.updatedAt)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">
-                            {complaint.subject}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            Status: {complaint.currentStatus.replace('_', ' ')}{' '}
-                            • {formatDateIN(complaint.updatedAt)}
-                          </p>
-                        </div>
+                      ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                        <Clock className="h-6 w-6 text-muted-foreground/50" />
                       </div>
-                    ))}
+                      <p className="text-sm font-medium text-foreground">No Recent Activity</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        No complaints have been submitted yet
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -551,7 +578,18 @@ export function ComplaintManagementDashboard({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data.complaints.map((complaint) => (
+                {data.complaints.length === 0 ? (
+                  <div className="flex justify-center py-8">
+                    <EmptyState
+                      title="No Complaints Found"
+                      description="No complaints match your current filters. Try adjusting the search or filter criteria."
+                      icons={[MessageSquare, FileText, AlertTriangle]}
+                      image="/EmptyState.png"
+                      hint="Complaints will appear here once students or parents submit them."
+                    />
+                  </div>
+                ) : (
+                  data.complaints.map((complaint) => (
                   <div
                     key={complaint.id}
                     className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer bg-white"
@@ -650,7 +688,7 @@ export function ComplaintManagementDashboard({
                       </DropdownMenu>
                     </div>
                   </div>
-                ))}
+                )))}
               </div>
 
               {/* Pagination */}

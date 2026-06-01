@@ -39,6 +39,7 @@ import {
   PLANS,
   STUDENT_STEPS,
   TESTIMONIALS,
+  TOTAL_STANDALONE_COST,
   TRUSTED_SCHOOLS,
   computeMonthlyTotal,
   formatINR,
@@ -271,7 +272,7 @@ function StudentSlider({ value, onChange }: StudentSliderProps) {
     <div className="mx-auto w-full max-w-xl space-y-4">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">How many students?</span>
-        <span className="min-w-24 text-right font-semibold text-primary tabular-nums">
+        <span className="min-w-24 text-right font-normal text-primary tabular-nums">
           {formatStudentLabel(STUDENT_STEPS[draftIndex])}
         </span>
       </div>
@@ -381,7 +382,14 @@ function PlanCard({
         </CardDescription>
 
         {monthlyTotal && (
-          <p className="text-xs font-medium text-primary">{monthlyTotal}</p>
+          <>
+            <p className="text-xs font-medium text-primary">{monthlyTotal}</p>
+            {plan.pricePerStudent && plan.pricePerStudent > 0 && (
+              <p className="text-[10px] text-muted-foreground/50">
+                Comparable standalone tools: ~₹{TOTAL_STANDALONE_COST}/mo
+              </p>
+            )}
+          </>
         )}
         {plan.footnote && !monthlyTotal && (
           <p className="text-xs text-muted-foreground">{plan.footnote}</p>
@@ -536,13 +544,12 @@ function FeatureTable() {
         <SectionLabel>Feature comparison</SectionLabel>
         <div className="rounded-xl border border-border bg-muted/20 p-4">
           <p className="text-sm font-semibold text-foreground">
-            This is the value stack behind the price.
+            What your office, parents, teachers and management actually get.
           </p>
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Most institutions buy separate tools for fees, attendance, CRM,
-            exams, documents, communication, reports and AI. Shiksha.cloud
-            brings them into one product so every plan feels bigger than the
-            monthly number.
+            Read this like an owner, not like a software checklist. The goal is
+            simple: collect fees faster, reduce office work, keep parents
+            informed, improve admissions and see the institution clearly.
           </p>
         </div>
       </div>
@@ -583,8 +590,15 @@ function FeatureTable() {
                       key={row.label}
                       className="border-b border-border/50 transition-colors last:border-0 hover:bg-muted/20"
                     >
-                      <td className="px-4 py-3 text-foreground/80">
-                        {row.label}
+                      <td className="px-4 py-3">
+                        <p className="font-medium leading-snug text-foreground/85">
+                          {row.label}
+                        </p>
+                        {row.note && (
+                          <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
+                            {row.note}
+                          </p>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-center">
                         <Cell value={row.free} />

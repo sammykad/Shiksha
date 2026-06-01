@@ -734,7 +734,7 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
           icons={[GraduationCap, BookOpen, Users]}
           image="/EmptyState.png"
           hint="Tip: Make sure grades and sections are set up before marking attendance."
-          action={{ label: 'Create Grade', href: '/dashboard/classes' }}
+          action={{ label: 'Create Grade', href: '/dashboard/grades' }}
         />
       </main>
     );
@@ -749,7 +749,7 @@ export default function AttendanceMark({ students, grades, sections }: Props) {
           icons={[BookOpen, GraduationCap, Users]}
           image="/EmptyState.png"
           hint="Tip: Add sections to your grades in the Class Management section."
-          action={{ label: 'Add Sections', href: '/dashboard/classes' }}
+          action={{ label: 'Add Sections', href: '/dashboard/grades' }}
         />
       </main>
     );

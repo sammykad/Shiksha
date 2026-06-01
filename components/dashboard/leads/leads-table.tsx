@@ -94,6 +94,8 @@ import { deleteLeads } from '@/lib/data/leads/delete-leads';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { updateLeadStatus as updateLeadStatusAction } from '@/lib/data/leads/update-lead-status';
+import { LeadFunnelDialog } from '@/components/dashboard/leads/lead-funnel-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 
 // Extend TanStack Table meta to include our helpers
 declare module '@tanstack/react-table' {
@@ -496,6 +498,10 @@ export default function LeadTable({ leads }: LeadTableProps) {
     return filterValue ?? [];
   }, [table.getColumn('status')?.getFilterValue()]);
 
+  const hasActiveFilters =
+    Boolean(table.getColumn('studentName')?.getFilterValue()) ||
+    selectedStatuses.length > 0;
+
   const handleStatusChange = (checked: boolean, value: string) => {
     const filterValue = table.getColumn('status')?.getFilterValue() as string[];
     const newFilterValue = filterValue ? [...filterValue] : [];
@@ -642,6 +648,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-3">
+          <LeadFunnelDialog leads={leads} />
           {/* Delete button */}
           {table.getSelectedRowModel().rows.length > 0 && (
             <AlertDialog>
@@ -812,11 +819,42 @@ export default function LeadTable({ leads }: LeadTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No leads found.
+                <TableCell colSpan={columns.length} className="py-10">
+                  <EmptyState
+                    action={
+                      hasActiveFilters
+                        ? {
+                          icon: CircleXIcon,
+                          label: 'Clear filters',
+                          onClick: () => {
+                            table.getColumn('studentName')?.setFilterValue('');
+                            table.getColumn('status')?.setFilterValue(undefined);
+                          },
+                        }
+                        : {
+                          href: '/dashboard/leads/create',
+                          icon: PlusIcon,
+                          label: 'Create Lead',
+                        }
+                    }
+                    className="mx-auto max-w-[520px] p-8"
+                    compact
+                    description={
+                      hasActiveFilters
+                        ? 'Try a different search term or remove the selected status filters.'
+                        : 'Create your first enquiry to start tracking follow-ups, status, and conversions.'
+                    }
+                    icons={
+                      hasActiveFilters
+                        ? [ListFilterIcon, FilterIcon, CircleXIcon]
+                        : [User, PlusIcon, ListFilterIcon]
+                    }
+                    title={
+                      hasActiveFilters
+                        ? 'No leads match your filters'
+                        : 'No leads added yet'
+                    }
+                  />
                 </TableCell>
               </TableRow>
             )}

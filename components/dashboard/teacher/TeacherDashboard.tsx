@@ -1,10 +1,6 @@
-import {
-  Card,
-  CardDescription,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Users } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { Calendar, Users, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import { TeacherStatsCards } from '@/components/dashboard/teacher/TeacherDashboardStatsCard';
 import { RecentActivitiesCard } from '@/components/dashboard/teacher/RecentActivitiesCard';
@@ -22,38 +18,28 @@ export default async function TeacherDashboard() {
     <div className="bg-gradient-to-br from-background via-background to-muted/10">
       <div className="px-2 space-y-3">
         {/* Header */}
-        <Card className="p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 bg-gradient-to-r from-card via-card to-primary/5">
-          <div className="w-full md:w-auto">
-            <CardTitle>Teacher Dashboard</CardTitle>
-            <CardDescription>
-              Manage your classes, students, and teaching activities
-            </CardDescription>
-          </div>
-
-          <div className="flex w-full md:w-auto flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-            <div className="w-full sm:w-auto">
-              <Link
-                href="/dashboard/attendance/mark"
-                className="w-full sm:w-auto"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
+        <PageHeader
+          title="Teacher Dashboard"
+          description="Manage your classes, students, and teaching activities"
+          icon={GraduationCap}
+          className="bg-gradient-to-r from-card via-card to-primary/5"
+          actions={
+            <>
+              <Link href="/dashboard/attendance/mark">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Calendar className="mr-2 h-3.5 w-3.5" />
                   Take Attendance
                 </Button>
               </Link>
-            </div>
-            <Link href="/dashboard/students" className="w-full sm:w-auto">
-              <Button size="sm" className="w-full sm:w-auto">
-                <Users className="w-4 h-4 mr-2" />
-                My Students
-              </Button>
-            </Link>
-          </div>
-        </Card>
+              <Link href="/dashboard/students">
+                <Button size="sm" className="w-full">
+                  <Users className="mr-2 h-3.5 w-3.5" />
+                  My Students
+                </Button>
+              </Link>
+            </>
+          }
+        />
 
         {/* Stats Cards */}
         <TeacherStatsCards />

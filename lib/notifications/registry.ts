@@ -127,18 +127,18 @@ export const NOTIFICATION_REGISTRY: Registry = {
     type: "FEE",
     subKey: "fee_created",
     inboxTitle: "New fee created — {{studentName}}",
-    inboxMessage: "₹{{amount}} due on {{dueDate}}",
+    inboxMessage: "{{amount}} due on {{dueDate}}",
     channels: {
       PUSH: {
         subject: "New Fee",
-        body: "New fee ₹{{amount}} due on {{dueDate}} for {{studentName}}",
+        body: "New fee {{amount}} due on {{dueDate}} for {{studentName}}",
       },
       EMAIL: {
         subject: "New Fee — {{studentName}}",
         Component: FeeCreatedEmail,
       },
       WHATSAPP: {
-        body: "Fee Alert: A new fee of ₹{{amount}} is due on {{dueDate}} for {{studentName}} — {{organizationName}}.",
+        body: "Fee Alert: A new fee of {{amount}} is due on {{dueDate}} for {{studentName}} — {{organizationName}}.",
         template: (v) => ({
           name: "fee_created",
           language: { code: "en" },
@@ -172,18 +172,18 @@ export const NOTIFICATION_REGISTRY: Registry = {
     type: "FEE",
     subKey: "friendly_reminder",
     inboxTitle: "Fee reminder — {{studentName}}",
-    inboxMessage: "₹{{amount}} due on {{dueDate}}",
+    inboxMessage: "{{amount}} due on {{dueDate}}",
     channels: {
       PUSH: {
         subject: "Fee Reminder",
-        body: "Fee ₹{{amount}} due on {{dueDate}} for {{studentName}}",
+        body: "Fee {{amount}} due on {{dueDate}} for {{studentName}}",
       },
       EMAIL: {
         subject: "Fee Reminder — {{studentName}}",
         Component: FeeFriendlyReminderEmail,
       },
       WHATSAPP: {
-        body: "Fee Reminder for {{studentName}}: ₹{{amount}} due on {{dueDate}} — {{organizationName}}.",
+        body: "Fee Reminder for {{studentName}}: {{amount}} due on {{dueDate}} — {{organizationName}}.",
         template: (v) => ({
           name: "fee_friendly_reminder",
           language: { code: "en" },
@@ -216,18 +216,18 @@ export const NOTIFICATION_REGISTRY: Registry = {
     type: "FEE",
     subKey: "payment_due_today",
     inboxTitle: "Fee due today — {{studentName}}",
-    inboxMessage: "₹{{amount}} must be paid today",
+    inboxMessage: "{{amount}} must be paid today",
     channels: {
       PUSH: {
         subject: "Fee Due Today",
-        body: "Fee ₹{{amount}} due today for {{studentName}}",
+        body: "Fee {{amount}} due today for {{studentName}}",
       },
       EMAIL: {
         subject: "Fee Due Today — {{studentName}}",
         Component: FeeDueTodayEmail,
       },
       WHATSAPP: {
-        body: "Urgent Fee Reminder for {{studentName}}: ₹{{amount}} is due today — {{organizationName}}.",
+        body: "Urgent Fee Reminder for {{studentName}}: {{amount}} is due today — {{organizationName}}.",
         template: (v) => ({
           name: "fee_due_today",
           language: { code: "en" },
@@ -259,18 +259,18 @@ export const NOTIFICATION_REGISTRY: Registry = {
     type: "FEE",
     subKey: "overdue_notice",
     inboxTitle: "Fee overdue — {{studentName}}",
-    inboxMessage: "₹{{amount}} is overdue. Please pay immediately.",
+    inboxMessage: "{{amount}} is overdue. Please pay immediately.",
     channels: {
       PUSH: {
         subject: "Fee Overdue",
-        body: "URGENT: Fee ₹{{amount}} overdue for {{studentName}}",
+        body: "URGENT: Fee {{amount}} overdue for {{studentName}}",
       },
       EMAIL: {
         subject: "Overdue Fee — {{studentName}}",
         Component: FeeOverdueEmail,
       },
       WHATSAPP: {
-        body: "Overdue Alert for {{studentName}}: ₹{{amount}} is now overdue — {{organizationName}}.",
+        body: "Overdue Alert for {{studentName}}: {{amount}} is now overdue — {{organizationName}}.",
         template: (v) => ({
           name: "fee_overdue",
           language: { code: "en" },
@@ -302,19 +302,19 @@ export const NOTIFICATION_REGISTRY: Registry = {
   PAYMENT_SUCCESS: {
     type: "FEE",
     subKey: "payment_success",
-    inboxTitle: "Payment received — {{studentName}}",
-    inboxMessage: "₹{{amount}} paid. Receipt: {{receiptNumber}}",
+    inboxTitle: "Fee payment received — {{studentName}}",
+    inboxMessage: "{{amount}} paid. Receipt: {{receiptNumber}}",
     channels: {
       PUSH: {
-        subject: "Payment Received",
-        body: "Payment of ₹{{amount}} received for {{studentName}}",
+        subject: "Fee Payment Received",
+        body: "{{amount}} received for {{studentName}}. Receipt: {{receiptNumber}}",
       },
       EMAIL: {
         subject: "Payment Receipt — {{receiptNumber}}",
         Component: PaymentSuccessEmail,
       },
       WHATSAPP: {
-        body: "Payment of ₹{{amount}} received for {{studentName}}. Receipt: {{receiptNumber}} — {{organizationName}}.",
+        body: "Payment of {{amount}} received for {{studentName}}. Receipt: {{receiptNumber}} — {{organizationName}}.",
         template: (v) => ({
           name: "payment_success",
           language: { code: "en" },
@@ -352,18 +352,18 @@ export const NOTIFICATION_REGISTRY: Registry = {
     type: "FEE",
     subKey: "payment_failed",
     inboxTitle: "Payment failed — {{studentName}}",
-    inboxMessage: "₹{{amount}} payment was not processed. Please retry.",
+    inboxMessage: "{{amount}} payment was not processed. Please retry.",
     channels: {
       PUSH: {
         subject: "Payment Failed",
-        body: "Payment of ₹{{amount}} failed for {{studentName}}. Please retry.",
+        body: "Payment of {{amount}} failed for {{studentName}}. Please retry.",
       },
       EMAIL: {
         subject: "Payment Failed — {{studentName}}",
         Component: PaymentFailedEmail,
       },
       WHATSAPP: {
-        body: "Payment Failed: The ₹{{amount}} payment for {{studentName}} was not successful. Please retry — {{organizationName}}.",
+        body: "Payment Failed: The {{amount}} payment for {{studentName}} was not successful. Please retry — {{organizationName}}.",
         template: (v) => ({
           name: "payment_failed",
           language: { code: "en" },
@@ -855,14 +855,14 @@ export const NOTIFICATION_REGISTRY: Registry = {
     type: "FEE",
     subKey: "pdc_cheque_recorded",
     inboxTitle: "Cheque recorded — {{studentName}}",
-    inboxMessage: "PDC #{{chequeNumber}} for ₹{{amount}} recorded for {{feeName}}",
+    inboxMessage: "PDC #{{chequeNumber}} for {{amount}} recorded for {{feeName}}",
     channels: {
       PUSH: {
         subject: "Cheque Recorded",
-        body: "Cheque #{{chequeNumber}} for ₹{{amount}} received for {{studentName}}",
+        body: "Cheque #{{chequeNumber}} for {{amount}} received for {{studentName}}",
       },
       WHATSAPP: {
-        body: "Cheque Recorded: We received a cheque for {{studentName}}: #{{chequeNumber}} for ₹{{amount}}, dated {{chequeDate}} ({{bankName}}) — System Alert: Shiksha.cloud",
+        body: "Cheque Recorded: We received a cheque for {{studentName}}: #{{chequeNumber}} for {{amount}}, dated {{chequeDate}} ({{bankName}}) — System Alert: Shiksha.cloud",
         template: (v) => ({
           name: "pdc_cheque_recorded",
           language: { code: "en" },
@@ -890,14 +890,14 @@ export const NOTIFICATION_REGISTRY: Registry = {
     type: "FEE",
     subKey: "pdc_cheque_bounced",
     inboxTitle: "Cheque bounced — {{studentName}}",
-    inboxMessage: "Cheque #{{chequeNumber}} for ₹{{amount}} was returned. Reason: {{bounceReason}}",
+    inboxMessage: "Cheque #{{chequeNumber}} for {{amount}} was returned. Reason: {{bounceReason}}",
     channels: {
       PUSH: {
         subject: "Cheque Bounced",
         body: "URGENT: Cheque #{{chequeNumber}} for {{studentName}} bounced",
       },
       WHATSAPP: {
-        body: "Urgent Alert: Cheque bounced for {{studentName}}. Cheque #{{chequeNumber}} (₹{{amount}}) was returned by {{bankName}}. Reason: {{bounceReason}} — System Alert: Shiksha.cloud",
+        body: "Urgent Alert: Cheque bounced for {{studentName}}. Cheque #{{chequeNumber}} ({{amount}}) was returned by {{bankName}}. Reason: {{bounceReason}} — System Alert: Shiksha.cloud",
         template: (v) => ({
           name: "pdc_cheque_bounced",
           language: { code: "en" },

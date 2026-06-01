@@ -95,8 +95,8 @@ export function OrganizationSwitcher({
                             <OrganizationAvatar
                                 name={organization.name}
                                 logo={organization.logo}
-                                size={52}
-                                className="size-[52px] rounded-[8px]"
+                                size={38}
+                                className="size-[38px] rounded-[8px]"
                             />
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-medium leading-6 tracking-[-0.2px]">
@@ -110,7 +110,7 @@ export function OrganizationSwitcher({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="h-9 shrink-0 gap-2 rounded-[10px] border-black/[0.08] bg-white px-3.5 text-base font-normal text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)] hover:bg-white"
+                                className="h-9 shrink-0 gap-2 rounded-md border-black/[0.08] bg-white px-3.5 text-base font-normal text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)] hover:bg-white"
                                 onClick={() => {
                                     setPopoverOpen(false);
                                     setProfileOpen(true);
