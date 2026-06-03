@@ -7,6 +7,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
     CreditCard,
+    Eye,
+    EyeOff,
     Laptop,
     Loader2,
     Menu,
@@ -38,6 +40,7 @@ import {
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { checkUserHasPassword, deactivateAccount, updateAccountPassword } from "@/lib/auth-account-actions";
 import { AuthDialog } from "./_components/auth-dialog";
 import { ShikshaCloudWordmark } from "./_components/brand";
 import { UserAvatar } from "./_components/user-avatar";
@@ -64,12 +67,9 @@ type ActiveSession = {
     userAgent?: string | null;
 };
 
-const currentPasswordFormSchema = z.object({
-    currentPassword: z.string().min(1, "Enter your current password."),
-});
-
-const newPasswordFormSchema = z
+const passwordFormSchema = z
     .object({
+        currentPassword: z.string().optional(),
         newPassword: z
             .string()
             .min(8, "New password must be at least 8 characters.")
@@ -91,8 +91,7 @@ const deleteAccountFormSchema = z.object({
     password: z.string().min(1, "Enter your password to delete the account."),
 });
 
-type CurrentPasswordFormValues = z.infer<typeof currentPasswordFormSchema>;
-type NewPasswordFormValues = z.infer<typeof newPasswordFormSchema>;
+type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 type DeleteAccountFormValues = z.infer<typeof deleteAccountFormSchema>;
 
 type DeviceSessionGroup = {
@@ -345,6 +344,7 @@ function ProfileContent({
 
 function SecurityContent({
     compact = false,
+    hasPassword,
     sessionGroups,
     sessionsPending,
     currentToken,
@@ -354,6 +354,7 @@ function SecurityContent({
     onRevokeSessionGroup,
 }: {
     compact?: boolean;
+    hasPassword: boolean | null;
     sessionGroups: DeviceSessionGroup[];
     sessionsPending: boolean;
     currentToken?: string;
@@ -371,18 +372,22 @@ function SecurityContent({
 
             <DetailRow label={compact ? "Password" : "Profile"}>
                 <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-1.5 text-[#212126]" aria-label="Password is set">
-                        {Array.from({ length: 10 }).map((_, index) => (
-                            <span key={index} className="size-1.5 rounded-full bg-[#212126]" />
-                        ))}
-                    </div>
+                    {hasPassword ? (
+                        <div className="flex items-center gap-1.5 text-[#212126]" aria-label="Password is set">
+                            {Array.from({ length: 10 }).map((_, index) => (
+                                <span key={index} className="size-1.5 rounded-full bg-[#212126]" />
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="text-sm text-[#747686]">Not set</span>
+                    )}
                     <Button
                         type="button"
                         variant="ghost"
                         className="h-8 shrink-0 px-2 text-[12px] font-[510]"
                         onClick={onUpdatePassword}
                     >
-                        {compact ? "Update password" : "Change password"}
+                        {hasPassword ? (compact ? "Update password" : "Change password") : "Set password"}
                     </Button>
                 </div>
             </DetailRow>
@@ -460,13 +465,13 @@ function SecurityContent({
 
             <Separator className="bg-black/[0.06]" />
 
-            <DetailRow label="Account termination">
+            <DetailRow label="Account deactivation">
                 <button
                     type="button"
                     className="text-[13px] font-[510] leading-[18px] text-red-500 hover:text-red-600"
                     onClick={onDeleteAccount}
                 >
-                    Delete account
+                    Deactivate account
                 </button>
             </DetailRow>
         </div>
@@ -506,28 +511,24 @@ export function UserProfile({
     const [passwordOpen, setPasswordOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [profileForm, setProfileForm] = useState(getInitialForm(user));
-    const [verifiedCurrentPassword, setVerifiedCurrentPassword] = useState<string | null>(null);
-    const [verifyingPassword, setVerifyingPassword] = useState(false);
     const [savingProfile, setSavingProfile] = useState(false);
     const [savingPassword, setSavingPassword] = useState(false);
     const [deletingAccount, setDeletingAccount] = useState(false);
     const [sessions, setSessions] = useState<ActiveSession[]>([]);
     const [sessionsPending, setSessionsPending] = useState(false);
     const [revokingToken, setRevokingToken] = useState<string | null>(null);
+    const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const sessionGroups = useMemo(
         () => groupDeviceSessions(sessions, currentToken),
         [currentToken, sessions],
     );
-    const currentPasswordForm = useForm<CurrentPasswordFormValues>({
-        resolver: zodResolver(currentPasswordFormSchema),
+    const passwordForm = useForm<PasswordFormValues>({
+        resolver: zodResolver(passwordFormSchema),
         defaultValues: {
             currentPassword: "",
-        },
-        mode: "onTouched",
-    });
-    const newPasswordForm = useForm<NewPasswordFormValues>({
-        resolver: zodResolver(newPasswordFormSchema),
-        defaultValues: {
             newPassword: "",
             confirmPassword: "",
         },
@@ -547,11 +548,9 @@ export function UserProfile({
 
     useEffect(() => {
         if (!passwordOpen) {
-            currentPasswordForm.reset();
-            newPasswordForm.reset();
-            setVerifiedCurrentPassword(null);
+            passwordForm.reset();
         }
-    }, [currentPasswordForm, newPasswordForm, passwordOpen]);
+    }, [passwordForm, passwordOpen]);
 
     useEffect(() => {
         if (!deleteOpen) deleteAccountForm.reset();
@@ -583,6 +582,11 @@ export function UserProfile({
             cancelled = true;
         };
     }, [open, tab]);
+
+    useEffect(() => {
+        if (!user?.id) return;
+        checkUserHasPassword(user.id).then((res) => setHasPassword(res.hasPassword));
+    }, [user?.id]);
 
     const handleTabChange = (nextTab: UserProfileTab) => {
         setTab(nextTab);
@@ -629,64 +633,26 @@ export function UserProfile({
         }
     };
 
-    const handleVerifyCurrentPassword = async (values: CurrentPasswordFormValues) => {
-        setVerifyingPassword(true);
-        try {
-            const verifyPassword = (authClient as unknown as {
-                verifyPassword: (input: {
-                    password: string;
-                }) => Promise<{ error?: { code?: string; message?: string } | null }>;
-            }).verifyPassword;
-            const { error } = await verifyPassword({ password: values.currentPassword });
-
-            if (error) {
-                currentPasswordForm.setError("currentPassword", { message: error.message });
-                toast.error(error.message);
-                return;
-            }
-
-            setVerifiedCurrentPassword(values.currentPassword);
-            toast.success("Current password verified.");
-        } catch {
-            toast.error("Something went wrong.");
-        } finally {
-            setVerifyingPassword(false);
-        }
-    };
-
-    const handleChangePassword = async (values: NewPasswordFormValues) => {
-        if (!verifiedCurrentPassword) {
-            toast.error("Verify your current password first.");
-            return;
-        }
-        if (values.newPassword === verifiedCurrentPassword) {
-            newPasswordForm.setError("newPassword", {
-                message: "Choose a password different from your current password.",
-            });
-            return;
-        }
-
+    const handleChangePassword = async (values: PasswordFormValues) => {
         setSavingPassword(true);
         try {
-            const { error } = await authClient.changePassword({
-                currentPassword: verifiedCurrentPassword,
-                newPassword: values.newPassword,
-                revokeOtherSessions: true,
-            });
+            const payload = hasPassword
+                ? { currentPassword: values.currentPassword!, newPassword: values.newPassword }
+                : { newPassword: values.newPassword };
+            const { error } = await updateAccountPassword(payload);
 
             if (error) {
+                if (hasPassword) {
+                    passwordForm.setError("currentPassword", { message: error.message });
+                }
                 toast.error(error.message || "Could not update password. Please check your current password and try again.");
-                setVerifiedCurrentPassword(null);
-                currentPasswordForm.setError("currentPassword", { message: error.message });
-                toast.error(error.message);
                 return;
             }
 
-            toast.success("Password updated.");
+            toast.success(hasPassword ? "Password updated." : "Password set.");
             setPasswordOpen(false);
-            currentPasswordForm.reset();
-            newPasswordForm.reset();
-            setVerifiedCurrentPassword(null);
+            passwordForm.reset();
+            setHasPassword(true);
             const { data } = await authClient.listSessions();
             setSessions((data ?? []) as ActiveSession[]);
         } catch {
@@ -727,17 +693,17 @@ export function UserProfile({
         }
     };
 
-    const handleDeleteAccount = async (values: DeleteAccountFormValues) => {
+    const handleDeleteAccount = async (values?: DeleteAccountFormValues) => {
         setDeletingAccount(true);
         try {
-            const { error } = await authClient.deleteUser({ password: values.password });
+            const { error } = await deactivateAccount(values?.password);
             if (error) {
-                deleteAccountForm.setError("password", { message: error.message });
+                if (values) deleteAccountForm.setError("password", { message: error.message });
                 toast.error(error.message);
                 return;
             }
 
-            toast.success("Account deleted.");
+            toast.success("Account deactivated.");
             await authClient.signOut().catch(() => null);
             router.push("/sign-in");
             router.refresh();
@@ -851,6 +817,7 @@ export function UserProfile({
                             <>
                                 <div className="hidden h-full md:block">
                                     <SecurityContent
+                                        hasPassword={hasPassword}
                                         sessionGroups={sessionGroups}
                                         sessionsPending={sessionsPending}
                                         currentToken={currentToken}
@@ -863,6 +830,7 @@ export function UserProfile({
                                 <div className="h-full md:hidden">
                                     <SecurityContent
                                         compact
+                                        hasPassword={hasPassword}
                                         sessionGroups={sessionGroups}
                                         sessionsPending={sessionsPending}
                                         currentToken={currentToken}
@@ -937,157 +905,193 @@ export function UserProfile({
             <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
                 <DialogContent className="rounded-xl border-black/[0.08] sm:max-w-[460px]">
                     <DialogHeader>
-                        <DialogTitle>Change password</DialogTitle>
+                        <DialogTitle>{hasPassword ? "Change password" : "Set password"}</DialogTitle>
                         <DialogDescription>
-                            Enter your current password and choose a new one. Other sessions will be revoked.
+                            {hasPassword
+                                ? "Enter your current password and choose a new one. Other sessions will be revoked."
+                                : "Choose a password for your account. You'll be able to sign in with it next time."}
                         </DialogDescription>
                     </DialogHeader>
-                    {!verifiedCurrentPassword ? (
-                        <Form {...currentPasswordForm}>
-                            <form
-                                className="flex flex-col gap-4 py-2"
-                                onSubmit={currentPasswordForm.handleSubmit(handleVerifyCurrentPassword)}
-                            >
+                    <Form {...passwordForm}>
+                        <form
+                            className="flex flex-col gap-4 py-2"
+                            onSubmit={passwordForm.handleSubmit(handleChangePassword)}
+                        >
+                            {hasPassword ? (
                                 <FormField
-                                    control={currentPasswordForm.control}
+                                    control={passwordForm.control}
                                     name="currentPassword"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Current password</FormLabel>
                                             <FormControl>
-                                                <Input
-                                                    type="password"
-                                                    autoComplete="current-password"
-                                                    aria-invalid={Boolean(currentPasswordForm.formState.errors.currentPassword)}
-                                                    {...field}
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        type={showCurrentPassword ? "text" : "password"}
+                                                        autoComplete="current-password"
+                                                        aria-invalid={Boolean(passwordForm.formState.errors.currentPassword)}
+                                                        className="pr-10"
+                                                        {...field}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+                                                        onClick={() => setShowCurrentPassword((v) => !v)}
+                                                        tabIndex={-1}
+                                                    >
+                                                        {showCurrentPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                                    </Button>
+                                                </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <DialogFooter>
-                                    <Button type="button" variant="outline" onClick={() => setPasswordOpen(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" className="gap-2" disabled={verifyingPassword}>
-                                        {verifyingPassword ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
-                                        Continue
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </Form>
-                    ) : (
-                        <Form {...newPasswordForm}>
-                            <form
-                                className="flex flex-col gap-4 py-2"
-                                onSubmit={newPasswordForm.handleSubmit(handleChangePassword)}
-                            >
-                                <FormField
-                                    control={newPasswordForm.control}
-                                    name="newPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>New password</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    type="password"
-                                                    autoComplete="new-password"
-                                                    aria-invalid={Boolean(newPasswordForm.formState.errors.newPassword)}
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={newPasswordForm.control}
-                                    name="confirmPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Confirm new password</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    type="password"
-                                                    autoComplete="new-password"
-                                                    aria-invalid={Boolean(newPasswordForm.formState.errors.confirmPassword)}
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <DialogFooter>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => {
-                                            setVerifiedCurrentPassword(null);
-                                            newPasswordForm.reset();
-                                        }}
-                                    >
-                                        Back
-                                    </Button>
-                                    <Button type="submit" className="gap-2" disabled={savingPassword}>
-                                        {savingPassword ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
-                                        Update password
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </Form>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-                <DialogContent className="rounded-xl border-black/[0.08] sm:max-w-[460px]">
-                    <DialogHeader>
-                        <DialogTitle>Delete account</DialogTitle>
-                        <DialogDescription>
-                            This permanently deletes your account. Enter your password to confirm.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <Form {...deleteAccountForm}>
-                        <form
-                            className="flex flex-col gap-4 py-2"
-                            onSubmit={deleteAccountForm.handleSubmit(handleDeleteAccount)}
-                        >
+                            ) : null}
                             <FormField
-                                control={deleteAccountForm.control}
-                                name="password"
+                                control={passwordForm.control}
+                                name="newPassword"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Password</FormLabel>
+                                        <FormLabel>New password</FormLabel>
                                         <FormControl>
-                                            <Input
-                                                type="password"
-                                                autoComplete="current-password"
-                                                aria-invalid={Boolean(deleteAccountForm.formState.errors.password)}
-                                                {...field}
-                                            />
+                                            <div className="relative">
+                                                <Input
+                                                    type={showNewPassword ? "text" : "password"}
+                                                    autoComplete="new-password"
+                                                    aria-invalid={Boolean(passwordForm.formState.errors.newPassword)}
+                                                    className="pr-10"
+                                                    {...field}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+                                                    onClick={() => setShowNewPassword((v) => !v)}
+                                                    tabIndex={-1}
+                                                >
+                                                    {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                                </Button>
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={passwordForm.control}
+                                name="confirmPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Confirm new password</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <Input
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    autoComplete="new-password"
+                                                    aria-invalid={Boolean(passwordForm.formState.errors.confirmPassword)}
+                                                    className="pr-10"
+                                                    {...field}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+                                                    onClick={() => setShowConfirmPassword((v) => !v)}
+                                                    tabIndex={-1}
+                                                >
+                                                    {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                                </Button>
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    variant="destructive"
-                                    className="gap-2"
-                                    disabled={deletingAccount}
-                                >
-                                    {deletingAccount ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
-                                    Delete account
+                                <Button type="submit" className="gap-2" disabled={savingPassword}>
+                                    {savingPassword ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
+                                    {hasPassword ? "Update password" : "Set password"}
                                 </Button>
                             </DialogFooter>
                         </form>
                     </Form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <DialogContent className="rounded-xl border-black/[0.08] sm:max-w-[460px]">
+                    <DialogHeader>
+                        <DialogTitle>Deactivate account</DialogTitle>
+                        <DialogDescription>
+                            {hasPassword
+                                ? "This deactivates your account. Enter your password to confirm."
+                                : "This deactivates your account. You won't be able to sign in until an admin reactivates you."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {hasPassword ? (
+                        <Form {...deleteAccountForm}>
+                            <form
+                                className="flex flex-col gap-4 py-2"
+                                onSubmit={deleteAccountForm.handleSubmit(handleDeleteAccount)}
+                            >
+                                <FormField
+                                    control={deleteAccountForm.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Password</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="password"
+                                                    autoComplete="current-password"
+                                                    aria-invalid={Boolean(deleteAccountForm.formState.errors.password)}
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        variant="destructive"
+                                        className="gap-2"
+                                        disabled={deletingAccount}
+                                    >
+                                        {deletingAccount ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
+                                        Deactivate account
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    ) : (
+                        <div className="flex flex-col gap-4 py-2">
+                            <DialogFooter className="pt-2">
+                                <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="gap-2"
+                                    disabled={deletingAccount}
+                                    onClick={() => handleDeleteAccount()}
+                                >
+                                    {deletingAccount ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
+                                    Deactivate account
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </>

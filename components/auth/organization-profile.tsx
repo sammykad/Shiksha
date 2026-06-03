@@ -670,7 +670,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
             </div>
 
             {subTab === "members" && (
-                <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-hidden">
+                <div className="flex min-w-0 flex-1 flex-col gap-5 max-md:overflow-y-auto scrollbar-hide overflow-hidden">
                     {/* Toolbar */}
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="relative w-full min-w-0 sm:max-w-[260px] sm:flex-1">
@@ -699,8 +699,8 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                         ) : null}
                     </div>
 
-                    {/* Table */}
-                    <ScrollArea className="min-w-0 flex-1 rounded-[8px] border border-black/[0.06] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                    {/* Table (desktop only) */}
+                    <ScrollArea className="min-w-0 flex-1 rounded-[8px] border border-black/[0.06] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] max-md:hidden">
                         <Table className="w-full table-fixed">
                             <TableHeader>
                                 <TableRow className="h-[38px] border-black/[0.06] bg-black/[0.01] hover:bg-black/[0.01]">
@@ -748,6 +748,40 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                             </TableBody>
                         </Table>
                     </ScrollArea>
+
+                    {/* Mobile member cards */}
+                    <div className="flex flex-col gap-3 md:hidden">
+                        {isMembersPending ? (
+                            Array.from({ length: 3 }).map((_, index) => (
+                                <div key={index} className="rounded-[8px] border border-black/[0.08] bg-white p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-8 rounded-full bg-black/[0.07]" />
+                                        <div className="flex-1">
+                                            <div className="h-3 w-32 rounded bg-black/[0.07]" />
+                                            <div className="mt-2 h-2.5 w-48 rounded bg-black/[0.05]" />
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 h-3 w-20 rounded bg-black/[0.06]" />
+                                    <div className="mt-3 h-7 w-20 rounded bg-black/[0.05]" />
+                                </div>
+                            ))
+                        ) : pageRows.length === 0 ? (
+                            <div className="rounded-[8px] border border-black/[0.08] bg-white p-5 text-center text-[14px] text-[#212126]">
+                                No members found.
+                            </div>
+                        ) : (
+                            pageRows.map((m) => (
+                                <MemberMobileCard
+                                    key={m.id}
+                                    member={m}
+                                    orgId={org.id}
+                                    currentUserId={session?.user?.id}
+                                    canManageMembers={canManageMembers}
+                                    onMembersChanged={refreshMembers}
+                                />
+                            ))
+                        )}
+                    </div>
 
                     {/* Pagination footer */}
                     <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-black/[0.06] pt-4">
@@ -1102,7 +1136,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                 disabled={revokingInvitationId === invitation.id}
                                                 onClick={() => handleRevokeInvitation(invitation.id)}
                                             >
-{revokingInvitationId === invitation.id ? (
+                                                {revokingInvitationId === invitation.id ? (
                                                     <Loader2 className="animate-spin" />
                                                 ) : null}
                                                 <span>Revoke</span>
@@ -1251,7 +1285,122 @@ function MemberTableRow({
                             Cancel
                         </Button>
                         <Button variant="destructive" onClick={handleRemoveMember} disabled={removing} className="gap-2">
-{removing ? <Loader2 className="animate-spin" /> : null}
+                            {removing ? <Loader2 className="animate-spin" /> : null}
+                            <span>Remove member</span>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
+
+function MemberMobileCard({
+    member,
+    orgId,
+    currentUserId,
+    canManageMembers,
+    onMembersChanged,
+}: {
+    member: MemberRow;
+    orgId: string;
+    currentUserId?: string;
+    canManageMembers: boolean;
+    onMembersChanged: () => Promise<void> | void;
+}) {
+    const isYou = member.userId === currentUserId;
+    const [removeOpen, setRemoveOpen] = useState(false);
+    const [removing, setRemoving] = useState(false);
+    const memberName = member.user.name || member.user.email;
+
+    const handleRemoveMember = async () => {
+        setRemoving(true);
+        try {
+            const { error } = await authClient.organization.removeMember({
+                organizationId: orgId,
+                memberIdOrEmail: member.id,
+            });
+            if (error) {
+                toast.error(error.message ?? "Failed to remove member.");
+                return;
+            }
+            toast.success("Member removed.");
+            setRemoveOpen(false);
+            await onMembersChanged();
+        } catch {
+            toast.error("Something went wrong.");
+        } finally {
+            setRemoving(false);
+        }
+    };
+
+    return (
+        <>
+            <div className="rounded-[8px] border border-black/[0.08] bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <UserAvatar
+                            name={member.user.name ?? member.user.email}
+                            image={member.user.image}
+                            className="size-8 shrink-0 rounded-full border border-black/[0.06]"
+                        />
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                                <span className="truncate text-[14px] font-[560] text-[#212126]">
+                                    {member.user.name || "Unknown"}
+                                </span>
+                                {isYou && (
+                                    <span className="inline-flex shrink-0 items-center rounded-full bg-black/[0.04] px-1.5 py-px text-[10px] font-[560] leading-[14px] text-[#747686]">
+                                        You
+                                    </span>
+                                )}
+                            </div>
+                            <span className="block truncate text-[12px] text-[#747686]">
+                                {member.user.email}
+                            </span>
+                        </div>
+                    </div>
+                    {canManageMembers ? (
+                        <button
+                            type="button"
+                            onClick={() => setRemoveOpen(true)}
+                            className="shrink-0 text-[12px] font-[510] text-red-600 hover:text-red-600"
+                        >
+                            Remove
+                        </button>
+                    ) : null}
+                </div>
+                <div className="mt-2 flex items-center gap-3 text-[12px] text-[#747686]">
+                    <span>Joined {formatDateIN(member.createdAt)}</span>
+                </div>
+                <div className="mt-2">
+                    {canManageMembers ? (
+                        <RoleDropdown
+                            role={member.role}
+                            memberId={member.id}
+                            orgId={orgId}
+                            onRoleChanged={onMembersChanged}
+                        />
+                    ) : (
+                        <RoleBadge role={member.role} />
+                    )}
+                </div>
+            </div>
+
+            <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
+                <DialogContent className="rounded-xl border-black/[0.08] sm:max-w-[460px]">
+                    <DialogHeader>
+                        <DialogTitle>Remove member</DialogTitle>
+                        <DialogDescription>
+                            Remove {memberName} from this organization? They will lose access immediately.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRemoveOpen(false)} disabled={removing}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleRemoveMember} disabled={removing} className="gap-2">
+                            {removing ? <Loader2 className="animate-spin" /> : null}
                             <span>Remove member</span>
                         </Button>
                     </DialogFooter>
@@ -1329,7 +1478,7 @@ export function OrganizationProfile({
                     </div>
                 ) : null}
 
-                <aside className="hidden shrink-0 flex-col justify-between bg-[#f7f7f7] md:flex md:h-full md:w-[240px] md:border-r md:border-black/[0.08]">
+                <aside className="hidden shrink-0 flex-col justify-between bg-[#f7f7f7] md:flex md:h-full md:w-[240px]">
                     <div className="flex flex-col">
                         {/* Title */}
                         <div className="flex flex-col gap-1.5 px-8 py-10">
@@ -1366,14 +1515,12 @@ export function OrganizationProfile({
                 </aside>
 
                 {/* ── Content panel ── */}
-                <section className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-white md:bg-transparent md:p-1">
-                    <div className="flex h-full min-w-0 flex-1 flex-col bg-white md:rounded-[8px] md:border md:border-black/[0.08] md:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                        {tab === "general" ? (
-                            <GeneralContent org={org} onClose={() => onOpenChange(false)} />
-                        ) : (
-                            <MembersContent org={org} />
-                        )}
-                    </div>
+                <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white md:rounded-[8px] md:border md:border-black/[0.08] md:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                    {tab === "general" ? (
+                        <GeneralContent org={org} onClose={() => onOpenChange(false)} />
+                    ) : (
+                        <MembersContent org={org} />
+                    )}
                 </section>
 
                 <footer className="flex shrink-0 flex-col items-center gap-1 border-t border-black/[0.06] bg-[repeating-linear-gradient(135deg,rgba(249,115,22,0.055)_0px,rgba(249,115,22,0.055)_6px,transparent_6px,transparent_13px)] px-5 py-4 md:hidden">

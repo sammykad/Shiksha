@@ -72,17 +72,8 @@ export function BetterAuthSignIn({
       });
 
       if (error) {
-        // Better Auth errors don't have a 'field' property
-        // Handle specific error codes if needed
         const errorMessage = error.message ?? "Invalid email or password";
-        // Set form-level error or field-specific based on error content
-        if (errorMessage.toLowerCase().includes("email")) {
-          form.setError("email", { message: errorMessage });
-        } else if (errorMessage.toLowerCase().includes("password")) {
-          form.setError("password", { message: errorMessage });
-        }
         setError(errorMessage);
-        toast.error(errorMessage);
         return;
       }
 

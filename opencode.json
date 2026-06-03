@@ -6,5 +6,10 @@
       "url": "https://mcp.better-auth.com/mcp",
       "enabled": true
     }
+  },
+  "agent": {
+    "review": {
+      "description": "Reviews code for best practices and potential issues"
+    }
   }
 }

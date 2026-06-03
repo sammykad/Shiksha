@@ -274,9 +274,6 @@ export function BetterAuthSignUp({
 
       if (error) {
         const message = error.message ?? "Invalid email or password";
-        if (message.toLowerCase().includes("email") || message.toLowerCase().includes("password")) {
-          existingAccountForm.setError("password", { message });
-        }
         setError(message);
         toast.error(message);
         return;
@@ -307,11 +304,7 @@ export function BetterAuthSignUp({
 
       if (error) {
         const message = error.message ?? "Could not create account";
-        if (message.toLowerCase().includes("password")) {
-          newAccountForm.setError("password", { message });
-        } else {
-          setError(message);
-        }
+        setError(message);
         toast.error(message);
         return;
       }

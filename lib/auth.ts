@@ -15,8 +15,8 @@ import {
   buildOtpEmail,
   buildResetPasswordEmail,
   OTP_SUBJECTS,
-  sendAuthEmail,
 } from "./auth-email";
+import { sendBrevoEmail } from "./brevo";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ export const betterAuthServer = betterAuth({
     resetPasswordTokenExpiresIn: 60 * 30, // 30 minutes
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      await sendAuthEmail({
+      await sendBrevoEmail({
         to: user.email,
         subject: "Reset your Shiksha Cloud password",
         react: buildResetPasswordEmail({ url }),
@@ -90,7 +90,19 @@ export const betterAuthServer = betterAuth({
 
   // ── User Schema ────────────────────────────────────────────────────────────
   user: {
-    deleteUser: { enabled: true },
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        const membershipCount = await prisma.membership.count({
+          where: { userId: user.id, role: "ADMIN", status: "ACTIVE" },
+        });
+        if (membershipCount > 0) {
+          throw new APIError("BAD_REQUEST", {
+            message: "You are the last admin of an organization. Transfer ownership or add another admin before deleting your account.",
+          });
+        }
+      },
+    },
     fields: { image: "profileImage" },
     additionalFields: {
       firstName: { type: "string", required: false, input: true },
@@ -128,7 +140,7 @@ export const betterAuthServer = betterAuth({
 
       sendInvitationEmail: async (data) => {
         const inviteUrl = `${APP_URL}/accept-invitation/${data.id}`;
-        await sendAuthEmail({
+        await sendBrevoEmail({
           to: data.email,
           subject: `You're invited to join ${data.organization.name} on Shiksha Cloud`,
           react: buildInvitationEmail({
@@ -228,6 +240,8 @@ export const betterAuthServer = betterAuth({
             }
           }
         },
+
+
       },
     }),
 
@@ -241,10 +255,7 @@ export const betterAuthServer = betterAuth({
       overrideDefaultEmailVerification: true,
       rateLimit: { window: 60, max: 3 },
       async sendVerificationOTP({ email, otp, type }) {
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[Auth OTP] ${email}: ${otp}`);
-        }
-        await sendAuthEmail({
+        await sendBrevoEmail({
           to: email,
           subject: OTP_SUBJECTS[type],
           react: buildOtpEmail({ otp, type }),

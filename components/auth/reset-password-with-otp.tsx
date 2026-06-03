@@ -119,9 +119,6 @@ export function ResetPasswordWithOtp({
       const { error } = await emailOtp.requestPasswordReset({ email: nextEmail });
       if (error) {
         const message = error.message ?? "Could not send reset code. Please try again.";
-        if (message.toLowerCase().includes("email")) {
-          emailForm.setError("email", { message });
-        }
         toast.error(message);
         return;
       }

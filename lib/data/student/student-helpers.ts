@@ -3,7 +3,8 @@ import prisma from '@/lib/db';
 import { Role } from '@/generated/prisma/enums';
 import { studentSchema } from '@/lib/schemas';
 import { z } from 'zod';
-import { buildInvitationEmail, sendAuthEmail } from '@/lib/auth-email';
+import { buildInvitationEmail } from '@/lib/auth-email';
+import { sendBrevoEmail } from '@/lib/brevo';
 
 type ValidatedStudent = z.infer<typeof studentSchema>;
 export type ParentInput = NonNullable<ValidatedStudent['parents']>[number];
@@ -274,7 +275,7 @@ export async function sendOrganizationRoleInvitation({
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const inviteUrl = `${appUrl}/accept-invitation/${invitation.id}`;
-    await sendAuthEmail({
+    await sendBrevoEmail({
       to: normalizedEmail,
       subject: `You're invited to join ${organization.name} on Shiksha Cloud`,
       react: buildInvitationEmail({

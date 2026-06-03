@@ -1,7 +1,9 @@
 'use server';
 
 import { createHash, timingSafeEqual } from 'crypto';
+import { headers } from 'next/headers';
 
+import { betterAuthServer } from '@/lib/auth';
 import prisma from '@/lib/db';
 import basePrisma from '@/lib/prisma-base';
 
@@ -115,6 +117,92 @@ export async function markEmailVerifiedWithOwnershipToken(email: string, token: 
 
 function hashValue(value: string) {
   return createHash('sha256').update(value).digest('base64url');
+}
+
+export async function checkUserHasPassword(userId: string) {
+  const account = await prisma.account.findFirst({
+    where: { userId, providerId: "credential" },
+    select: { id: true },
+  });
+  return { hasPassword: !!account };
+}
+
+export async function deactivateAccount(password?: string) {
+  try {
+    const session = await betterAuthServer.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
+    if (!userId) return { error: { message: "No session." } };
+
+    const hasCredential = await prisma.account.findFirst({
+      where: { userId, providerId: "credential" },
+      select: { id: true },
+    });
+
+    if (hasCredential) {
+      if (!password) return { error: { message: "Enter your password to confirm deactivation." } };
+      try {
+        await betterAuthServer.api.verifyPassword({
+          body: { password },
+          headers: await headers(),
+        });
+      } catch {
+        return { error: { message: "Incorrect password." } };
+      }
+    }
+
+    const adminMemberships = await prisma.membership.count({
+      where: { userId, role: "ADMIN", status: "ACTIVE" },
+    });
+    if (adminMemberships > 0) {
+      const orgs = await prisma.membership.findMany({
+        where: { userId, role: "ADMIN", status: "ACTIVE" },
+        include: { organization: { select: { name: true } } },
+      });
+      const names = orgs.map((m) => m.organization.name).join(", ");
+      return {
+        error: {
+          message: `You are the last admin of ${names}. Transfer ownership or add another admin before deactivating your account.`,
+        },
+      };
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isActive: false },
+    });
+
+    return { error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to deactivate account";
+    return { error: { message } };
+  }
+}
+
+export async function updateAccountPassword(input: {
+  newPassword: string;
+  currentPassword?: string;
+}) {
+  try {
+    if (input.currentPassword) {
+      await betterAuthServer.api.changePassword({
+        body: {
+          newPassword: input.newPassword,
+          currentPassword: input.currentPassword,
+          revokeOtherSessions: true,
+        },
+        headers: await headers(),
+      });
+    } else {
+      await betterAuthServer.api.setPassword({
+        body: { newPassword: input.newPassword },
+        headers: await headers(),
+      });
+    }
+    return { error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to update password";
+    return { error: { message } };
+  }
 }
 
 function safeEqual(left: string, right: string) {

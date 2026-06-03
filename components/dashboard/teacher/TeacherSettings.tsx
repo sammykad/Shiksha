@@ -45,6 +45,7 @@ import { getCurrentUserId } from '@/lib/user';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import prismaBase from '@/lib/prisma-base';
 
 export async function getTeacher(userId: string) {
   const teacher = await prisma.teacher.findUnique({
@@ -286,7 +287,7 @@ function PayoutSection() {
   return <TeacherPayoutForm />;
 }
 
-function AccountSection({ teacher }: { teacher: NonNullable<Awaited<ReturnType<typeof getTeacher>>> }) {
+function AccountSection({ teacher, hasPassword }: { teacher: NonNullable<Awaited<ReturnType<typeof getTeacher>>>; hasPassword: boolean }) {
   return (
     <div className="space-y-6">
       <div>
@@ -350,11 +351,13 @@ function AccountSection({ teacher }: { teacher: NonNullable<Awaited<ReturnType<t
             <div>
               <p className="text-sm font-medium">Password</p>
               <p className="text-xs text-muted-foreground">
-                Change your account password
+                {hasPassword ? 'Change your account password' : 'Set a password for your account'}
               </p>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <a href="/dashboard/settings/password">Change Password</a>
+              <a href="/dashboard/settings/password">
+                {hasPassword ? 'Change Password' : 'Set Password'}
+              </a>
             </Button>
           </div>
           <Separator />
@@ -376,6 +379,12 @@ function AccountSection({ teacher }: { teacher: NonNullable<Awaited<ReturnType<t
 const TeacherSettings = async () => {
   const userId = await getCurrentUserId();
   const teacher = await getTeacher(userId);
+
+  const account = await prismaBase.account.findFirst({
+    where: { userId, providerId: 'credential' },
+    select: { id: true },
+  });
+  const hasPassword = !!account;
 
   if (!teacher) {
     return (
@@ -405,7 +414,7 @@ const TeacherSettings = async () => {
         <TeacherSettingsSidebar>
           <ProfileSection teacher={teacher} />
           <PayoutSection />
-          <AccountSection teacher={teacher} />
+          <AccountSection teacher={teacher} hasPassword={hasPassword} />
         </TeacherSettingsSidebar>
       </div>
     </div>
