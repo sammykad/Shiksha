@@ -5,7 +5,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, GraduationCap, Wallet } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { CalendarDays, GraduationCap, Wallet, IndianRupee, Zap } from "lucide-react";
 import BillingSummary, { type BillingSummaryData } from "./BillingSummary";
 import { formatCostINR, formatCurrencyINWithSymbol, formatDateIN } from "@/lib/utils";
 import { toast } from "sonner";
@@ -21,6 +22,15 @@ const formatBillingStatus = (status: string) =>
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
 
+const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+    TRIALING: "default",
+    ACTIVE: "secondary",
+    PAST_DUE: "destructive",
+    PAUSED: "outline",
+    CANCELLED: "outline",
+    EXPIRED: "destructive",
+};
+
 export default function BillingSettings({ billingSummary }: BillingSettingsProps) {
     const walletBalance = billingSummary.walletBalance;
     const lowBalance = walletBalance < 20;
@@ -30,96 +40,130 @@ export default function BillingSettings({ billingSummary }: BillingSettingsProps
     return (
         <div className="space-y-6">
 
-            {/* Header */}
+            {/* Page header */}
             <div>
                 <h2 className="text-lg font-medium">Billing &amp; Usage</h2>
                 <p className="text-sm text-muted-foreground">
-                    Monitor your usage, billing information, and API quotas.
+                    Plan details, wallet balance, and usage breakdown.
                 </p>
             </div>
 
-            {/* Plan information */}
+            {/* ── Plan Section ── */}
             <Card>
-                <CardHeader>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <CardTitle>Subscription</CardTitle>
-                            <CardDescription>Your current plan, offer, and billing cycle</CardDescription>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
+                <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Plan</CardTitle>
                             {subscription ? (
-                                <Badge variant={subscription.status === "TRIALING" ? "default" : "secondary"}>
+                                <>
+                                    <p className="text-xl font-semibold">
+                                        {subscription.planName}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {subscription.billingCycle.toLowerCase() === "monthly"
+                                            ? "Billed monthly"
+                                            : "Billed annually"}
+                                        {subscription.offerName && (
+                                            <> &middot; <span className="font-medium text-primary">{subscription.offerName}</span></>
+                                        )}
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-xl font-semibold text-muted-foreground">
+                                        No plan selected
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Choose a plan to get started.
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                            {subscription ? (
+                                <Badge variant={STATUS_VARIANTS[subscription.status] ?? "secondary"}>
                                     {formatBillingStatus(subscription.status)}
                                 </Badge>
                             ) : (
-                                <Badge variant="secondary">No subscription</Badge>
-                            )}
-                            {subscription?.offerName && (
-                                <Badge variant="outline">{subscription.offerName}</Badge>
+                                <Badge variant="secondary">Inactive</Badge>
                             )}
                         </div>
                     </div>
                 </CardHeader>
+
                 <CardContent>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                        <div>
-                            <p className="text-sm font-medium">Current Plan</p>
-                            <p className="text-sm text-muted-foreground">
-                                {subscription
-                                    ? `${subscription.planName} / ${subscription.billingCycle.toLowerCase()}`
-                                    : "Not selected yet"}
-                            </p>
+                    {subscription ? (
+                        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+                            <div className="space-y-1">
+                                <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                    <GraduationCap className="h-3 w-3" />
+                                    Students
+                                </p>
+                                <p className="text-lg font-semibold tabular-nums">
+                                    {subscription.studentCount.toLocaleString("en-IN")}
+                                    {subscription.studentLimit && (
+                                        <span className="text-sm font-normal text-muted-foreground">
+                                            {" "}/ {subscription.studentLimit.toLocaleString("en-IN")}
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                    <CalendarDays className="h-3 w-3" />
+                                    Next billing
+                                </p>
+                                <p className="text-lg font-semibold tabular-nums">
+                                    {nextBillingDate ? formatDateIN(nextBillingDate) : "—"}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                    <IndianRupee className="h-3 w-3" />
+                                    Next invoice
+                                </p>
+                                <p className="text-lg font-semibold tabular-nums">
+                                    {formatCurrencyINWithSymbol(subscription.nextInvoiceAmount)}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                    <Zap className="h-3 w-3" />
+                                    Usage
+                                </p>
+                                <p className="text-lg font-semibold tabular-nums">
+                                    {formatCostINR(billingSummary.totalCost)}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium">Students</p>
-                            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <GraduationCap className="h-3.5 w-3.5" />
-                                {subscription?.studentCount ?? 0}
-                                {subscription?.studentLimit ? ` / ${subscription.studentLimit}` : ""}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium">Next Billing Date</p>
-                            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <CalendarDays className="h-3.5 w-3.5" />
-                                {nextBillingDate ? formatDateIN(nextBillingDate) : "Not set"}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium">Estimated Invoice</p>
-                            <p className="text-sm text-muted-foreground">
-                                {subscription
-                                    ? formatCurrencyINWithSymbol(subscription.nextInvoiceAmount)
-                                    : "Not generated yet"}
-                            </p>
-                        </div>
-                    </div>
-                    {!subscription && (
-                        <p className="mt-4 rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                    ) : (
+                        <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                             No subscription has been created for this organization yet.
                         </p>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Wallet status */}
+            {/* ── Wallet Section ── */}
             <Card className={lowBalance ? "border-destructive/50" : ""}>
-                <CardHeader>
-                    <CardTitle>Organization Wallet</CardTitle>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Wallet</CardTitle>
                     <CardDescription>
-                        Credits are deducted when notifications are sent. Balance reflects actual remaining funds.
+                        Credits fund notification delivery. Balance refreshes on top-up.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                     <div className="flex items-end justify-between gap-4">
                         <div>
-                            <p className="text-sm text-muted-foreground">Available balance</p>
-                            <p className={`mt-0.5 text-3xl font-semibold tabular-nums ${lowBalance ? "text-destructive" : ""}`}>
+                            <p className={`text-2xl font-semibold tabular-nums ${lowBalance ? "text-destructive" : ""}`}>
                                 {formatCostINR(walletBalance)}
                             </p>
+                            <p className="mt-0.5 text-sm text-muted-foreground">
+                                Available credits
+                            </p>
                             {lowBalance && (
-                                <p className="mt-1 text-sm text-destructive">
-                                    Balance is low — notifications will be blocked when it reaches ₹0.
+                                <p className="mt-1.5 text-sm text-destructive">
+                                    Low balance &mdash; notifications will be blocked at ₹0.
                                 </p>
                             )}
                         </div>
@@ -136,14 +180,22 @@ export default function BillingSettings({ billingSummary }: BillingSettingsProps
                             }}
                         >
                             <Wallet className="mr-2 h-4 w-4" />
-                            Top-up Now
+                            Top-up
                         </Button>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Usage breakdown */}
-            <BillingSummary data={billingSummary} />
+            {/* ── Usage Section ── */}
+            <div className="space-y-3">
+                <div>
+                    <h3 className="font-medium">Usage Breakdown</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Notification volume and storage across channels.
+                    </p>
+                </div>
+                <BillingSummary data={billingSummary} />
+            </div>
 
         </div>
     );
