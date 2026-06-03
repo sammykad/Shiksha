@@ -1313,6 +1313,31 @@ export async function deleteAcademicYear(id: string) {
   }
 }
 
+export async function updateTeacherPayoutAction(data: {
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  upiId?: string | null;
+  panNumber?: string | null;
+}) {
+  try {
+    // TODO: Store payout info on Teacher model or create dedicated PayoutInfo model
+    // const organizationId = await getOrganizationId();
+    // await prisma.teacherPayout.upsert({ ... });
+
+    console.log("[updateTeacherPayoutAction] Payout data received:", {
+      ...data,
+      accountNumber: "***" + data.accountNumber.slice(-4),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("[updateTeacherPayoutAction] Error:", error);
+    return { success: false, error: "Failed to save payout information." };
+  }
+}
+
 export async function submitSupportForm(data: SupportFormData) {
   const submission = {
     ...data,

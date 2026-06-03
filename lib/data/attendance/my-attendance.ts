@@ -35,7 +35,7 @@ export async function getMyAttendance(userId: string): Promise<MyAttendanceData>
     select: { id: true, firstName: true, lastName: true, rollNumber: true },
   });
 
-  if (!student) throw new Error('Student not found for this user.');
+  if (!student) throw new Error('Student not found');
 
   const todayIST = toISTDate();
   const monthStartIST = getStartOfMonthIST();

@@ -263,14 +263,14 @@ async function main() {
   console.log('🏛️ Creating Institution...');
   const institutionId = generateId();
   await pool.query(
-    `INSERT INTO "Institution" (id, name, slug, description, type, "contactEmail", "contactPhone", website, address, city, state, "pinCode", "ownerId", "isPaid", plan, "planStartedAt", "planExpiresAt", "createdAt", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+    `INSERT INTO "Institution" (id, name, slug, description, type, "contactEmail", "contactPhone", website, address, city, state, "pinCode", "ownerId", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
       institutionId, 'Saraswati Vidya Mandir Trust', 'svm-trust',
       'A premier educational trust running quality schools across India since 1985.',
       'TRUST', 'info@svmtrust.edu.in', '+912012345678', 'https://www.svmtrust.edu.in',
       'Plot No. 45, Education Hub, Kothrud', 'Pune', 'Maharashtra', '411038',
-      adminId, true, 'ENTERPRISE', '2025-04-01', '2026-03-31', now, now
+      adminId, now, now
     ]
   );
   console.log(`   ✅ Institution: Saraswati Vidya Mandir Trust`);
@@ -281,12 +281,12 @@ async function main() {
   console.log('🏫 Creating Organization...');
   const orgId = `org_${generateId()}`;
   await pool.query(
-    `INSERT INTO "Organization" (id, name, slug, "institutionId", "contactEmail", "contactPhone", website, "isActive", "isPaid", plan, "planStartedAt", "planExpiresAt", "walletBalance", "organizationType", "establishedYear", "createdBy", "createdAt", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+    `INSERT INTO "Organization" (id, name, slug, "institutionId", "contactEmail", "contactPhone", website, "isActive", "walletBalance", "organizationType", "establishedYear", "createdBy", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       orgId, 'Saraswati Vidya Mandir English Medium School', 'svm-school-pune',
       institutionId, 'admin@svmpune.edu.in', '+912012345679', 'https://www.svmpune.edu.in',
-      true, true, 'PREMIUM', '2025-04-01', '2026-03-31', 500000, 'SCHOOL', 1995,
+      true, 500000, 'SCHOOL', 1995,
       adminId, now, now
     ]
   );

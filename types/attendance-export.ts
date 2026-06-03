@@ -10,7 +10,6 @@ export interface Organization {
     plan?: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE' | null;
     planStartedAt?: Date | null;
     planExpiresAt?: Date | null;
-    maxStudents?: number | null;
     isActive?: boolean | null;
     createdAt?: Date | null;
     updatedAt?: Date | null;

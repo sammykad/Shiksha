@@ -4,20 +4,28 @@ import {
     Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet } from "lucide-react";
-import BillingSummary, { BillingSummaryData } from "./BillingSummary";
-import { formatCostINR } from "@/lib/utils";
-import { Organization } from "@/generated/prisma/client";
+import { Badge } from "@/components/ui/badge";
+import { CalendarDays, GraduationCap, Wallet } from "lucide-react";
+import BillingSummary, { type BillingSummaryData } from "./BillingSummary";
+import { formatCostINR, formatCurrencyINWithSymbol, formatDateIN } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface BillingSettingsProps {
-    organization: Organization;
     billingSummary: BillingSummaryData;
 }
 
-export default function BillingSettings({ organization, billingSummary }: BillingSettingsProps) {
+const formatBillingStatus = (status: string) =>
+    status
+        .toLowerCase()
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+
+export default function BillingSettings({ billingSummary }: BillingSettingsProps) {
     const walletBalance = billingSummary.walletBalance;
     const lowBalance = walletBalance < 20;
+    const subscription = billingSummary.subscription;
+    const nextBillingDate = subscription?.trialEndsAt ?? subscription?.currentPeriodEnd;
 
     return (
         <div className="space-y-6">
@@ -31,38 +39,68 @@ export default function BillingSettings({ organization, billingSummary }: Billin
             </div>
 
             {/* Plan information */}
-            {organization && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Plan Information</CardTitle>
-                        <CardDescription>Your current subscription details</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <p className="text-sm font-medium">Current Plan</p>
-                                <p className="text-sm text-muted-foreground">{organization.plan ?? "Free"}</p>
-                            </div>
-                            {organization.planStartedAt && (
-                                <div>
-                                    <p className="text-sm font-medium">Plan Started</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {new Date(organization.planStartedAt).toLocaleDateString("en-IN")}
-                                    </p>
-                                </div>
+            <Card>
+                <CardHeader>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <CardTitle>Subscription</CardTitle>
+                            <CardDescription>Your current plan, offer, and billing cycle</CardDescription>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {subscription ? (
+                                <Badge variant={subscription.status === "TRIALING" ? "default" : "secondary"}>
+                                    {formatBillingStatus(subscription.status)}
+                                </Badge>
+                            ) : (
+                                <Badge variant="secondary">No subscription</Badge>
                             )}
-                            {organization.planExpiresAt && (
-                                <div>
-                                    <p className="text-sm font-medium">Plan Expires</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {new Date(organization.planExpiresAt).toLocaleDateString("en-IN")}
-                                    </p>
-                                </div>
+                            {subscription?.offerName && (
+                                <Badge variant="outline">{subscription.offerName}</Badge>
                             )}
                         </div>
-                    </CardContent>
-                </Card>
-            )}
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                        <div>
+                            <p className="text-sm font-medium">Current Plan</p>
+                            <p className="text-sm text-muted-foreground">
+                                {subscription
+                                    ? `${subscription.planName} / ${subscription.billingCycle.toLowerCase()}`
+                                    : "Not selected yet"}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Students</p>
+                            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <GraduationCap className="h-3.5 w-3.5" />
+                                {subscription?.studentCount ?? 0}
+                                {subscription?.studentLimit ? ` / ${subscription.studentLimit}` : ""}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Next Billing Date</p>
+                            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                {nextBillingDate ? formatDateIN(nextBillingDate) : "Not set"}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Estimated Invoice</p>
+                            <p className="text-sm text-muted-foreground">
+                                {subscription
+                                    ? formatCurrencyINWithSymbol(subscription.nextInvoiceAmount)
+                                    : "Not generated yet"}
+                            </p>
+                        </div>
+                    </div>
+                    {!subscription && (
+                        <p className="mt-4 rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                            No subscription has been created for this organization yet.
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Wallet status */}
             <Card className={lowBalance ? "border-destructive/50" : ""}>

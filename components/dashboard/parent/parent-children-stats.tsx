@@ -6,26 +6,26 @@ import type { ChildSummary } from '@/lib/data/parent/get-all-children-by-parentI
 import { calcAttendanceRate } from '@/app/dashboard/my-children/page';
 
 interface ChildrenStatsProps {
-  children: ChildSummary[];
+  childSummaries: ChildSummary[];
 }
 
-export function ChildrenStats({ children }: ChildrenStatsProps) {
-  const totalChildren = children.length;
+export function ChildrenStats({ childSummaries }: ChildrenStatsProps) {
+  const totalChildren = childSummaries.length;
 
   const avgAttendance =
     totalChildren > 0
       ? Math.round(
-        children.reduce((acc, c) => acc + calcAttendanceRate(c.attendance), 0) / totalChildren
+        childSummaries.reduce((acc, c) => acc + calcAttendanceRate(c.attendance), 0) / totalChildren
       )
       : 0;
 
-  const totalPending = children.reduce((sum, c) => sum + c.pendingFees, 0);
+  const totalPending = childSummaries.reduce((sum, c) => sum + c.pendingFees, 0);
 
-  const presentCount = children.reduce(
+  const presentCount = childSummaries.reduce(
     (sum, c) => sum + c.attendance.filter((a) => a.status === 'PRESENT' || a.status === 'LATE').length,
     0
   );
-  const totalAttendanceRecords = children.reduce((sum, c) => sum + c.attendance.length, 0);
+  const totalAttendanceRecords = childSummaries.reduce((sum, c) => sum + c.attendance.length, 0);
 
   const completionPercentage = totalChildren > 0 ? Math.round((presentCount / Math.max(totalAttendanceRecords, 1)) * 100) : 0;
 

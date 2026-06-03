@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { ShikshaCloudWordmark } from "./_components/brand";
 import { OrganizationAvatar } from "./_components/organization-avatar";
 import { UserAvatar } from "./_components/user-avatar";
 import type { OrganizationLike } from "./types";

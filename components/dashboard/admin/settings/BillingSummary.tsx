@@ -18,6 +18,42 @@ export type BillingSummaryData = {
   totalStorageMB: number | string;
   totalCost: number;
   walletBalance: number;
+  subscription: {
+    id: string;
+    status: string;
+    planName: string;
+    planCode: string;
+    offerName: string | null;
+    billingCycle: string;
+    billingMetric: string;
+    studentCount: number;
+    studentLimit: number | null;
+    price: number | null;
+    trialEndsAt: string | null;
+    currentPeriodEnd: string | null;
+    nextInvoiceAmount: number;
+  } | null;
+  recentInvoices: Array<{
+    id: string;
+    status: string;
+    total: number;
+    periodStart: string;
+    periodEnd: string;
+    paidAt: string | null;
+  }>;
+  recentPayments: Array<{
+    id: string;
+    provider: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+  }>;
+  billingEvents: Array<{
+    id: string;
+    type: string;
+    message: string | null;
+    createdAt: string;
+  }>;
 };
 
 export type BillingSummaryProps = {

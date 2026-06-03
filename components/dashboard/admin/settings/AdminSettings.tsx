@@ -7,10 +7,9 @@ import { GradingSettings } from "@/components/dashboard/admin/settings/GradingSe
 import { NotificationSettings } from "@/components/dashboard/admin/settings/NotificationSettings"
 import RolePermissions from "@/components/dashboard/admin/settings/RolePermissions"
 import { PageHeader } from "@/components/ui/page-header"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Settings2 } from "lucide-react"
-import { getBillingSummary } from "@/lib/billing"
+import { getBillingSummary } from "@/lib/subscription-billing"
 import BillingSettings from "./BillingSettings"
 import { getOrganizationNotificationSettings } from "@/lib/notifications/organization-notification-settings"
 import { getAcademicYears, getCurrentAcademicYearIdSafe } from "@/lib/academicYear"
@@ -69,9 +68,7 @@ export default async function AdminSettingsPage() {
     getStaffMembers(organizationId),
   ])
 
-  const billingSummary = academicYearId
-    ? await getBillingSummary(organizationId, academicYearId)
-    : null
+  const billingSummary = await getBillingSummary(organizationId, academicYearId)
 
   if (!organization) {
     return (
@@ -96,14 +93,9 @@ export default async function AdminSettingsPage() {
           <ConfigSettings academicYears={academicYears} organizationId={organizationId} />
           <GradingSettings organizationType={organization.organizationType ?? undefined} />
           <NotificationSettings notificationSettings={notificationSettings} />
-          {billingSummary ? (
-            <BillingSettings
-              billingSummary={billingSummary}
-              organization={organization}
-            />
-          ) : (
-            <BillingSettingsDisabled />
-          )}
+          <BillingSettings
+            billingSummary={billingSummary}
+          />
           <RolePermissions
             users={staffMembers}
           />
@@ -113,18 +105,5 @@ export default async function AdminSettingsPage() {
   )
 }
 
-
-const BillingSettingsDisabled = () => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Billing Settings</CardTitle>
-        <CardDescription>
-          Billing settings are disabled for this organization. Please setup academic year to enable billing.
-        </CardDescription>
-      </CardHeader>
-    </Card>
-  )
-}
 
 // https://dribbble.com/shots/26544075-Realtor-agent-Permissions-page-for-real-estate-platform

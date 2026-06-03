@@ -47,7 +47,7 @@ export default async function MyChildrenPage() {
         />
       ) : (
         <>
-          <ChildrenStats children={children} />
+          <ChildrenStats childSummaries={children} />
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
             {children.map((child) => (
               <ChildCard key={child.id} child={child} />

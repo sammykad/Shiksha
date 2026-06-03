@@ -946,7 +946,7 @@ const StudentDetailsPage = async ({
                           {student.parents.length === 0 && i === 0 ? 'Add Primary Parent' : 'Add Secondary Parent'}
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[220px] leading-relaxed">
-                          Link a mother, father, or guardian record to this student's profile.
+                          Link a mother, father, or guardian record to this student&apos;s profile.
                         </p>
                       </div>
 

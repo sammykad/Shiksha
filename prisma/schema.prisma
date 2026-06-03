@@ -13,13 +13,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum PlanType {
-  FREE
-  STANDARD
-  PREMIUM
-  ENTERPRISE
-}
-
 enum PlanCode {
   STARTER
   GROWTH
@@ -198,11 +191,6 @@ model Institution {
   ownerId  String
   isActive Boolean @default(true)
 
-  isPaid        Boolean   @default(false)
-  plan          PlanType  @default(STANDARD)
-  planStartedAt DateTime?
-  planExpiresAt DateTime?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -250,13 +238,7 @@ model Organization {
   website      String?
 
   isActive         Boolean           @default(true)
-  isPaid           Boolean           @default(false)
-  plan             PlanType          @default(STANDARD)
-  planStartedAt    DateTime?
-  planExpiresAt    DateTime?
-  walletBalance    Int               @default(10000) // Paise  (100₹)
-  // Limits (can be used to restrict features based on plan)
-  maxStudents      Int? // set limits per plan
+  walletBalance    Int               @default(10000) // Paise  (100?)
   organizationType OrganizationType?
 
   notices              Notice[]

@@ -9,7 +9,6 @@ import {
     CreditCard,
     Laptop,
     Loader2,
-    LockKeyhole,
     Menu,
     ShieldCheck,
     Smartphone,

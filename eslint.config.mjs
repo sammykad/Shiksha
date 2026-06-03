@@ -1,15 +1,7 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { FlatCompat } from '@eslint/eslintrc';
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+import nextTypescript from 'eslint-config-next/typescript';
 import { globalIgnores } from 'eslint/config';
 import unusedImports from 'eslint-plugin-unused-imports';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
 
 const eslintConfig = [
   // 1. Global ignores MUST come first
@@ -23,8 +15,9 @@ const eslintConfig = [
     'public/**/*.min.js',
   ]),
 
-  // 2. Next.js configs via FlatCompat (only way to use legacy configs in flat config)
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  // 2. Next.js flat configs
+  ...nextCoreWebVitals,
+  ...nextTypescript,
 
   // 3. Custom rules
   {

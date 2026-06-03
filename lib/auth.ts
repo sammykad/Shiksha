@@ -1,13 +1,13 @@
 import { APIError, betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { emailOTP, organization } from "better-auth/plugins";
-import { adminAc, memberAc, ownerAc } from "better-auth/plugins/organization/access";
+import { memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { MembershipStatus, PlanCode, PlanType, Role, YearType } from "@/generated/prisma/enums";
+import { MembershipStatus, PlanCode, Role, YearType } from "@/generated/prisma/enums";
 import prisma from "@/lib/prisma-base";
 import { createTrialSubscription, getActiveSubscription } from "@/lib/subscription-billing";
 import {
@@ -147,7 +147,6 @@ export const betterAuthServer = betterAuth({
             slug: normalizeSlug(organization.slug ?? organization.name ?? ""),
             metadata: normalizeMetadata(organization.metadata),
             createdBy: user.id,
-            plan: PlanType.STANDARD,
             walletBalance: 10000,
           },
         }),
@@ -503,21 +502,8 @@ export async function resolveDefaultOrganizationId(
 
 async function getOrganizationAccountLimit(organizationId: string) {
   const subscription = await getActiveSubscription(organizationId);
-  if (subscription?.studentLimit) return subscription.studentLimit * 3;
-
-  const org = await prisma.organization.findUnique({
-    where: { id: organizationId },
-    select: { plan: true, maxStudents: true },
-  });
-
-  return (org?.maxStudents ?? getLegacyStudentLimit(org?.plan)) * 3;
-}
-
-function getLegacyStudentLimit(plan?: PlanType | null) {
-  if (plan === PlanType.ENTERPRISE) return 5000;
-  if (plan === PlanType.PREMIUM) return 1000;
-  if (plan === PlanType.FREE) return 100;
-  return 500;
+  if (subscription?.studentLimit) return subscription.studentLimit;
+  return 100;
 }
 
 async function createDefaultAcademicYear({

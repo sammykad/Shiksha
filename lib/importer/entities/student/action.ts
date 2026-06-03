@@ -12,6 +12,7 @@ import {
 } from "@/lib/data/student/student-helpers"
 import prisma from "@/lib/db"
 import { getOrganizationId } from "@/lib/organization"
+import { checkStudentLimit } from "@/lib/subscription-billing"
 import type {
     ImportContext,
     ImportHandlerResult,
@@ -61,18 +62,11 @@ export async function bulkImportStudents(
         throw new AppError("Unauthorized organization")
     }
 
-    const org = await prisma.organization.findUniqueOrThrow({
-        where: { id: organizationId },
-        select: { maxStudents: true },
-    })
-
-    if (org.maxStudents !== null) {
-        const count = await prisma.student.count({ where: { organizationId } })
-        if (count + rows.length > org.maxStudents) {
-            throw new AppError(
-                `Import would exceed the student limit (${org.maxStudents}). Currently at ${count}.`
-            )
-        }
+    const { allowed, current, limit } = await checkStudentLimit(organizationId, rows.length)
+    if (!allowed) {
+        throw new AppError(
+            `Import would exceed the student limit (${limit}). Currently at ${current}.`
+        )
     }
 
     let imported = 0

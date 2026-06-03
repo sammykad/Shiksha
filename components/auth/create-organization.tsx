@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Building2, Upload, X, Loader2 } from "lucide-react";
+import { Building2, X, Loader2 } from "lucide-react";
 
 import { Role } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";

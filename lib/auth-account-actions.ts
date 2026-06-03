@@ -6,7 +6,7 @@ import prisma from '@/lib/db';
 import basePrisma from '@/lib/prisma-base';
 
 export async function validatePasswordResetEmail(email: string) {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = email?.trim().toLowerCase() ?? '';
   if (!normalizedEmail) {
     return {
       ok: false,

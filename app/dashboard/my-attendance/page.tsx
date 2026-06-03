@@ -16,14 +16,14 @@ import { RecentAttendanceTimelineWidget } from '@/components/dashboard/StudentAt
 import WeeklyAttendanceReportCard from '@/components/dashboard/StudentAttendance/WeeklyAttendanceReportCard';
 import { getWeeklyAttendanceReport } from '@/lib/data/attendance/get-weekly-attendance-report';
 import { getMyAttendance } from '@/lib/data/attendance/my-attendance';
-import { getCurrentUserByRole } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { PageHeader } from '@/components/ui/page-header';
 import { getActiveAcademicYear } from '@/lib/academicYear';
 
 export default async function AttendancePage() {
-  const user = await getCurrentUserByRole();
+  const { orgRole: role, userId } = await auth();
 
-  if (!user || user.role !== 'STUDENT') {
+  if (role !== 'STUDENT') {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
         Student account not found.
@@ -31,19 +31,11 @@ export default async function AttendancePage() {
     );
   }
 
-  const [attendanceResult, weeklyReportData, activeAcademicYear] = await Promise.all([
-    getMyAttendance(user.userId),
-    getWeeklyAttendanceReport(user.studentId),
+  const attendanceResult = await getMyAttendance(userId);
+  const [weeklyReportData, activeAcademicYear] = await Promise.all([
+    getWeeklyAttendanceReport(attendanceResult.student.id),
     getActiveAcademicYear(),
   ]);
-
-  if (!attendanceResult) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">
-        No attendance data available.
-      </div>
-    );
-  }
 
   const {
     attendanceData,
@@ -214,7 +206,7 @@ export default async function AttendancePage() {
                     🎉 Excellent attendance!
                   </p>
                   <p className="text-green-700 dark:text-green-300 mt-0.5 text-xs">
-                    You're doing great — keep this consistency going.
+                    You&apos;re doing great - keep this consistency going.
                   </p>
                 </div>
               ) : monthlyPct >= 75 ? (

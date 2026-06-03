@@ -59,15 +59,15 @@ const SHARED_FEATURES: PlanFeature[] = [
 
 export const PLANS: Plan[] = [
   {
-    id: "earlybird",
-    name: "EarlyBird",
-    badge: "First 50 only",
+    id: "starter",
+    name: "Starter",
+    badge: "EarlyBird eligible",
     pricePerStudent: 29,
     description:
-      "Lock the lowest lifetime rate. Only 50 schools at this price. All modules included.",
-    ctaLabel: "Claim EarlyBird",
+      "Start with every core module included. First 50 eligible institutions can lock the launch offer.",
+    ctaLabel: "Start free trial",
     ctaVariant: "default",
-    footnote: "Limited to first 50 schools. ₹29/student/month locked forever.",
+    footnote: "EarlyBird is an offer, not a separate plan.",
     features: SHARED_FEATURES,
   },
   {
@@ -80,7 +80,7 @@ export const PLANS: Plan[] = [
     ctaLabel: "Start free trial",
     ctaVariant: "default",
     featured: true,
-    footnote: "Best fit around 500 learners.",
+    footnote: "Best fit around 500 students.",
     features: SHARED_FEATURES,
   },
   {
@@ -92,7 +92,7 @@ export const PLANS: Plan[] = [
       "For colleges, trusts, coaching chains, and large multi-branch groups.",
     ctaLabel: "Contact sales",
     ctaVariant: "outline",
-    footnote: "For 1500+ learners. Lowest per-student rate.",
+    footnote: "For 1500+ students. Lowest per-student rate.",
     features: SHARED_FEATURES,
   },
 ]
@@ -133,7 +133,7 @@ export type CellValue = boolean | "addon" | "included-plus" | string
 export interface ComparisonRow {
   label: string
   note?: string
-  earlybird: CellValue
+  starter: CellValue
   growth: CellValue
   scale: CellValue
 }
@@ -143,7 +143,7 @@ export interface ComparisonGroup {
   rows: ComparisonRow[]
 }
 
-const included = { earlybird: true, growth: true, scale: true }
+const included = { starter: true, growth: true, scale: true }
 
 export const COMPARISON: ComparisonGroup[] = [
   {
@@ -162,7 +162,7 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Automatic reminders reduce awkward fee calls",
         note: "Send reminders on WhatsApp, SMS, email and push. Usage costs stay separate and visible.",
-        earlybird: "Usage based",
+        starter: "Usage based",
         growth: "Usage based",
         scale: "Usage based",
       },
@@ -174,7 +174,7 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Reconciliation for the accounts team",
         note: "Compare internal fee records with PhonePe settlement reports when closing the month.",
-        earlybird: "Basic",
+        starter: "Basic",
         growth: "Basic",
         scale: "Advanced",
       },
@@ -206,7 +206,7 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Our team can help with migration and setup",
         note: "The bigger the institution, the more hands-on the onboarding and migration support becomes.",
-        earlybird: "Self-serve",
+        starter: "Self-serve",
         growth: "Guided",
         scale: "Priority",
       },
@@ -278,14 +278,14 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "AI summaries highlight what needs attention",
         note: "Monthly fee, attendance and operations summaries help management act earlier.",
-        earlybird: "Basic",
+        starter: "Basic",
         growth: true,
         scale: true,
       },
       {
         label: "Low attendance and fee risk are easier to spot",
         note: "See warning signs before they become dropout, complaint or collection problems.",
-        earlybird: "Basic",
+        starter: "Basic",
         growth: true,
         scale: true,
       },
@@ -297,7 +297,7 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Multi-branch reporting for education groups",
         note: "Compare branches on fee collection, attendance and admissions from one command view.",
-        earlybird: false,
+        starter: false,
         growth: false,
         scale: true,
       },
@@ -374,7 +374,7 @@ export const TESTIMONIALS: Testimonial[] = [
   {
     id: "t5",
     quote:
-      "Students can raise sensitive concerns anonymously, and the admin team can resolve them with a proper timeline. It gives parents and learners confidence.",
+      "Students can raise sensitive concerns anonymously, and the admin team can resolve them with a proper timeline. It gives parents and students confidence.",
     name: "Priya Iyer",
     role: "Counsellor, St. Xavier's Institute, Chennai",
   },
@@ -404,7 +404,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: "faq-2",
     question: "Do parents, teachers, and admins pay extra?",
     answer:
-      "No. Pricing is based on students or learners. Parents, teachers, admins, and staff accounts are not billed as separate paid users.",
+      "No. Pricing is based on students. Parents, teachers, admins, and staff accounts are not billed as separate paid users.",
   },
   {
     id: "faq-3",
@@ -416,7 +416,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: "faq-4",
     question: "Can the platform use college, coaching, or batch terminology?",
     answer:
-      "Yes. Terminology customization lets institutions adapt labels such as class, grade, section, batch, course, learner, or student to their own workflow.",
+      "Yes. Terminology customization lets institutions adapt labels such as class, grade, section, batch, course, or student to their own workflow.",
   },
   {
     id: "faq-5",
@@ -428,7 +428,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: "faq-6",
     question: "Can we switch plans as we grow?",
     answer:
-      "Yes. You can move from a small learner-based plan to higher-volume or organization-based pricing as your institution grows.",
+      "Yes. You can move from a small student-based plan to higher-volume or organization-based pricing as your institution grows.",
   },
   {
     id: "faq-7",
@@ -503,7 +503,7 @@ export function formatINR(amount: number): string {
 }
 
 export function formatStudentLabel(count: number): string {
-  return count >= 1000 ? `${count / 1000}K learners` : `${count} learners`
+  return count >= 1000 ? `${count / 1000}K students` : `${count} students`
 }
 
 export function computeMonthlyTotal(

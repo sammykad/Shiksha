@@ -1,5 +1,5 @@
 // app/dashboard/exams/[id]/page.tsx
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getOrganizationId } from '@/lib/organization';
 import { getCurrentUserId } from '@/lib/user';
 import { getCurrentUserByRole } from '@/lib/auth';

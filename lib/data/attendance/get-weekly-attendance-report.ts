@@ -20,7 +20,7 @@ export async function getWeeklyAttendanceReport(
     where: { id: studentId },
     include: { grade: true, section: true, organization: true },
   });
-  if (!student) throw new Error('Student not found');
+  if (!student) return null;
 
   // 2. Calculate week range with offset for navigation
   const today = new Date();
