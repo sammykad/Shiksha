@@ -19,6 +19,7 @@ import {
   Plus,
 } from 'lucide-react';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,7 @@ import { StudentDashboardStatsCards } from '@/components/dashboard/Student/Stude
 import { StudentAttendanceCalendar } from '@/components/dashboard/StudentAttendance/attendance-calendar';
 import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import { getOrganizationId } from '@/lib/organization';
+import { getCurrentUserByRole } from '@/lib/auth';
 import { DocumentCard } from '@/components/dashboard/Student/documents/DocumentCard';
 import StudentAcademicPerformance from '@/components/dashboard/Student/StudentAcademicPerformance';
 import { StudentReportDialog } from '@/components/dashboard/Student/student-report-dialog';
@@ -132,6 +134,18 @@ const StudentDetailsPage = async ({
   const { id: studentId } = await params;
   const organizationId = await getOrganizationId();
   const academicYearId = await getCurrentAcademicYearId();
+  const currentUser = await getCurrentUserByRole();
+
+  if (currentUser.role === 'PARENT') {
+    const isLinked = await prisma.parentStudent.findFirst({
+      where: {
+        parentId: currentUser.parentId,
+        studentId,
+        student: { organizationId },
+      },
+    });
+    if (!isLinked) notFound();
+  }
 
   // Optimized parallel fetching for student data and org meta
   const [studentData, orgMeta, performanceData] = await Promise.all([

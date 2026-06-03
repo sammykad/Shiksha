@@ -54,7 +54,7 @@ export async function updateStudent(data: ValidatedUpdate) {
           lastName: input.lastName,
           motherName: input.motherName,
           fullName:
-            input.fullName ??
+            input.fullName ||
             [input.firstName, input.middleName, input.lastName]
               .filter(Boolean)
               .join(' '),

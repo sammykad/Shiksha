@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { getAuthErrorMessage, getSignInErrorMessage } from "@/lib/auth-errors";
 import { AuthDialog } from "./_components/auth-dialog";
 import { ShikshaCloudWordmark } from "./_components/brand";
 import { UserAvatar } from "./_components/user-avatar";
@@ -570,9 +569,7 @@ export function UserProfile({
             if (cancelled) return;
 
             if (error) {
-                toast.error(getAuthErrorMessage(error, {
-                    fallback: "Failed to load active devices.",
-                }));
+                toast.error(error.message || "Failed to load active devices.");
                 setSessions([]);
             } else {
                 setSessions((data ?? []) as ActiveSession[]);
@@ -619,9 +616,7 @@ export function UserProfile({
             });
 
             if (error) {
-                toast.error(getAuthErrorMessage(error, {
-                    fallback: "Failed to update profile.",
-                }));
+                toast.error(error.message || "Failed to update profile.");
                 return;
             }
 
@@ -646,9 +641,8 @@ export function UserProfile({
             const { error } = await verifyPassword({ password: values.currentPassword });
 
             if (error) {
-                const message = getSignInErrorMessage(error);
-                currentPasswordForm.setError("currentPassword", { message });
-                toast.error(message);
+                currentPasswordForm.setError("currentPassword", { message: error.message });
+                toast.error(error.message);
                 return;
             }
 
@@ -682,12 +676,10 @@ export function UserProfile({
             });
 
             if (error) {
-                const message = getAuthErrorMessage(error, {
-                    fallback: "Could not update password. Please check your current password and try again.",
-                });
+                toast.error(error.message || "Could not update password. Please check your current password and try again.");
                 setVerifiedCurrentPassword(null);
-                currentPasswordForm.setError("currentPassword", { message });
-                toast.error(message);
+                currentPasswordForm.setError("currentPassword", { message: error.message });
+                toast.error(error.message);
                 return;
             }
 
@@ -741,9 +733,8 @@ export function UserProfile({
         try {
             const { error } = await authClient.deleteUser({ password: values.password });
             if (error) {
-                const message = getSignInErrorMessage(error);
-                deleteAccountForm.setError("password", { message });
-                toast.error(message);
+                deleteAccountForm.setError("password", { message: error.message });
+                toast.error(error.message);
                 return;
             }
 

@@ -17,17 +17,22 @@ import { cn } from '@/lib/utils';
 export function ChildSwitcher() {
   const { selectedChild, childList, isPending, selectChild } = useSelectedChild();
 
+  // No children — don't show the switcher
+  if (childList.length === 0) {
+    return null;
+  }
+
   // Single child — no switcher needed, just a label
   if (childList.length === 1) {
     return (
       <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/50 text-sm">
-        <Avatar className="h-5 w-5">
-          <AvatarImage src={selectedChild?.profileImage ?? undefined} />
-          <AvatarFallback className="text-[10px]">
-            {selectedChild?.firstName?.[0]}
-          </AvatarFallback>
-        </Avatar>
-        <span className="font-medium">{selectedChild?.firstName}</span>
+          <Avatar className="h-5 w-5">
+            <AvatarImage src={selectedChild?.profileImage ?? undefined} />
+            <AvatarFallback className="text-[10px]">
+              {(selectedChild?.fullName || selectedChild?.firstName)?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          <span className="font-medium">{selectedChild?.fullName || `${selectedChild?.firstName} ${selectedChild?.lastName}`}</span>
         <span className="text-muted-foreground">
           {selectedChild?.grade.grade} {selectedChild?.section.name}
         </span>
@@ -51,11 +56,11 @@ export function ChildSwitcher() {
             <Avatar className="h-5 w-5">
               <AvatarImage src={selectedChild?.profileImage ?? undefined} />
               <AvatarFallback className="text-[10px]">
-                {selectedChild?.firstName?.[0]}
+                {(selectedChild?.fullName || selectedChild?.firstName)?.[0]}
               </AvatarFallback>
             </Avatar>
           )}
-          <span className="font-medium">{selectedChild?.firstName}</span>
+          <span className="font-medium">{selectedChild?.fullName || `${selectedChild?.firstName} ${selectedChild?.lastName}`}</span>
           <span className="text-muted-foreground hidden sm:inline">
             · {selectedChild?.grade.grade} {selectedChild?.section.name}
           </span>
@@ -80,7 +85,7 @@ export function ChildSwitcher() {
             <Avatar className="h-7 w-7">
               <AvatarImage src={child.profileImage ?? undefined} />
               <AvatarFallback className="text-xs">
-                {child.firstName[0]}
+                {(child.fullName || child.firstName)?.[0]}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">

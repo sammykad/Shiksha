@@ -79,29 +79,32 @@ export async function issueHallTicketsForExam(
     // (Optional) Generate PDF or use placeholder
     const pdfUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/halltickets/${exam.id}/${studentId}.pdf`;
 
-    // Create new hall ticket
-    const ticket = await prisma.hallTicket.create({
-      data: {
-        qrCode: qrCodeDataUrl,
-        studentId,
-        examId,
-        examSessionId: exam.examSessionId,
-        organizationId: exam.organizationId,
-        pdfUrl,
-        expiryDate: exam.endDate,
-      },
+    // Create hall ticket + update enrollment atomically
+    const ticket = await prisma.$transaction(async (tx) => {
+      const t = await tx.hallTicket.create({
+        data: {
+          qrCode: qrCodeDataUrl,
+          studentId,
+          examId,
+          examSessionId: exam.examSessionId,
+          organizationId: exam.organizationId,
+          pdfUrl,
+          expiryDate: exam.endDate,
+        },
+      });
+
+      await tx.examEnrollment.update({
+        where: { studentId_examId: { studentId, examId } },
+        data: {
+          hallTicketIssued: true,
+          hallTicketIssuedAt: new Date(),
+        },
+      });
+
+      return t;
     });
 
     hallTicketIds.push(ticket.id);
-
-    // Update enrollment to mark ticket issued
-    await prisma.examEnrollment.update({
-      where: { studentId_examId: { studentId, examId } },
-      data: {
-        hallTicketIssued: true,
-        hallTicketIssuedAt: new Date(),
-      },
-    });
   }
 
   // Refresh UI

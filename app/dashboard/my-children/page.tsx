@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/utils';
 import { getChildrenByParent } from '@/lib/data/parent/get-all-children-by-parentId';
 import { ChildCard } from '@/components/dashboard/parent/child-card';
 import { ChildrenStats } from '@/components/dashboard/parent/parent-children-stats';
@@ -19,25 +20,29 @@ export function calcAttendanceRate(attendanceRecords: { status: string }[]): num
 export default async function MyChildrenPage() {
   const children = await getChildrenByParent();
 
+  const isEmpty = children.length === 0;
+
   return (
-    <main className="px-2 pb-6 space-y-4">
-      <PageHeader
-        title="My Children"
-        description="Academic overview and attendance across all enrolled learners"
-        icon={GraduationCap}
-        actions={
-          <Link href="/dashboard/fees/parent" className="w-full sm:w-auto">
-            <Button size="sm" className="w-full gap-2">
-              <IndianRupeeIcon className="h-4 w-4" />
-              Fee Details
-            </Button>
-          </Link>
-        }
-      />
-      {children.length === 0 ? (
+    <main className={cn("px-2 pb-6", isEmpty ? "flex flex-col items-center justify-center min-h-[60vh]" : "space-y-4")}>
+      {!isEmpty && (
+        <PageHeader
+          title="My Children"
+          description="Academic overview and attendance across all enrolled students"
+          icon={GraduationCap}
+          actions={
+            <Link href="/dashboard/fees/parent" className="w-full sm:w-auto">
+              <Button size="sm" className="w-full gap-2">
+                <IndianRupeeIcon className="h-4 w-4" />
+                Fee Details
+              </Button>
+            </Link>
+          }
+        />
+      )}
+      {isEmpty ? (
         <EmptyState
           title="No Children Linked"
-          description="Contact your institution administrator to link learner profiles to your account."
+          description="Contact your institution administrator to link student profiles to your account."
           icons={[Book, School, Paperclip]}
         />
       ) : (

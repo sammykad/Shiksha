@@ -77,7 +77,7 @@ export async function AssignFeeToStudents(data: z.infer<typeof feeAssignmentSche
         recipients: [{ studentId: student.id }],
         variables: {
           feeCategoryName,
-          studentName: student.fullName ?? `${student.firstName} ${student.lastName}`.trim(),
+          studentName: student.fullName || `${student.firstName} ${student.lastName}`.trim(),
           amount: parsed.data.feeAmount,
           paymentLink: 'fees/pay',
           dueDate,

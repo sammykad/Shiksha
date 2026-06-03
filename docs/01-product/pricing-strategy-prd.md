@@ -47,7 +47,7 @@ The current pricing model creates friction at every stage:
 
 ### Tiers
 
-| Tier | Learner Limit | Monthly | Yearly (17% off) | Effective /student/mo at max |
+| Tier | Student Limit | Monthly | Yearly (17% off) | Effective /student/mo at max |
 |------|-------------|---------|-------------------|---------------------------|
 | **Small** | Up to 100 | ₹999 | ₹9,999 | ₹10/student at 100 |
 | **Medium** | Up to 500 | ₹1,999 | ₹19,999 | ₹4/student at 500 |
@@ -79,11 +79,11 @@ The current pricing model creates friction at every stage:
 
 ### All features, all tiers
 
-Every feature in Shiksha.cloud is included in every plan. There is no feature gating. The `permissions.ts` PLAN_FEATURES should be simplified to remove feature-based plan differentiation. The only difference between tiers is the **learner count limit**.
+Every feature in Shiksha.cloud is included in every plan. There is no feature gating. The `permissions.ts` PLAN_FEATURES should be simplified to remove feature-based plan differentiation. The only difference between tiers is the **student count limit**.
 
 | Feature Group | Included? |
 |--------------|-----------|
-| Student/Learner profiles & management | ✅ All tiers |
+| Student/Student profiles & management | ✅ All tiers |
 | Fees, payments, receipts, reconciliation | ✅ All tiers |
 | Attendance (all modes + analytics) | ✅ All tiers |
 | Exams, hall tickets, results | ✅ All tiers |
@@ -99,13 +99,13 @@ Every feature in Shiksha.cloud is included in every plan. There is no feature ga
 
 ## 5. Exceeding Plan Limits
 
-### Learner Count
+### Student Count
 
-When an institution exceeds their tier's learner limit:
+When an institution exceeds their tier's student limit:
 
 1. **30-day grace period** — no interruption, notification sent to admin
 2. **Auto-suggest upgrade** — upgrade to next tier with 1 click
-3. **Overage billing available** — if they don't want to upgrade, charge per additional learner (e.g., ₹5/extra learner/month)
+3. **Overage billing available** — if they don't want to upgrade, charge per additional student (e.g., ₹5/extra student/month)
 
 ### Notifications
 
@@ -176,7 +176,7 @@ Since EarlyBird promises "₹29/student/month locked forever," we must honor thi
 |------|--------|
 | `lib/pricing-data.ts` | Replace per-student PLANS with new tier structure. Remove pricePerStudent from Plan type. Update computeMonthlyTotal, getEffectivePrice, etc. |
 | `lib/permissions.ts` | Simplify PLAN_FEATURES — remove feature differentiation between plans. All features available at all tiers. Keep plan hierarchy but make all Feature[] identical. |
-| `app/(website)/pricing/page.tsx` | Redesign pricing page to show 3 tiers with learner limits instead of per-student rates |
+| `app/(website)/pricing/page.tsx` | Redesign pricing page to show 3 tiers with student limits instead of per-student rates |
 | `components/pricing/*` | Update all pricing components (plan-card, plans-grid, feature-table, student-slider, billing-toggle, addon-cards) |
 | `components/changeable-pricing-section.tsx` | Update to match new model |
 | Backend/subscription system | Implement fair-use tracking and overage billing |
@@ -186,7 +186,7 @@ Since EarlyBird promises "₹29/student/month locked forever," we must honor thi
 1. **Notification overage pricing**: What's the exact per-unit cost for SMS and WhatsApp? Need to compute from provider rates.
 2. **Storage overage pricing**: ₹X/GB/month? Need to check Cloudinary/Uploadthing pricing.
 3. **EarlyBird commitment**: Exact grandfather/conversion mechanics need product and CEO sign-off.
-4. **Overage billing for extra learners**: Should we allow per-learner overage or force upgrade? Recommend force upgrade for simplicity.
+4. **Overage billing for extra students**: Should we allow per-student overage or force upgrade? Recommend force upgrade for simplicity.
 5. **Grace period duration**: 30 days? 15 days? 7 days?
 6. **Payment gateway markup**: Should we add any margin on gateway charges? Recommend 0% — build margin into subscription price.
 

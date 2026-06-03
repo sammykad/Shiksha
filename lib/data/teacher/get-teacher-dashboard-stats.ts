@@ -12,9 +12,10 @@ export async function getTeacherDashboardStats() {
   const organizationId = await getOrganizationId();
 
   const userId = await getCurrentUserId();
-  const teacher = await prisma.teacher.findUnique({
+  const teacher = await prisma.teacher.findFirst({
     where: {
       userId,
+      organizationId,
     },
     include: {
       teachingAssignment: true,

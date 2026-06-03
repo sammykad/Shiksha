@@ -35,6 +35,7 @@ function getAttendanceConfig(rate: number) {
 }
 
 export function ChildCard({ child }: { child: ChildSummary }) {
+
   const attendanceRate = calcAttendanceRate(child.attendance);
   const config = getAttendanceConfig(attendanceRate);
   const isExcellent = attendanceRate >= 90;
@@ -64,10 +65,10 @@ export function ChildCard({ child }: { child: ChildSummary }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
-            {child.fullName ?? `${child.firstName} ${child.lastName}`}
+          <h3 className="font-semibold text-base sm:text-lg text-slate-900 dark:text-slate-100 truncate">
+            {child.fullName || `${child.firstName} ${child.lastName}`}
           </h3>
-          <div className="flex items-center gap-1 mt-1 flex-wrap">
+          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
             {child.grade?.grade && (
               <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
                 <GraduationCap className="h-3 w-3" />
@@ -171,7 +172,7 @@ export function ChildCard({ child }: { child: ChildSummary }) {
             Pay
           </Link>
         ) : (
-          <span className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium text-slate-300 dark:text-slate-600 cursor-not-allowed select-none">
+          <span className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 cursor-not-allowed select-none">
             <IndianRupee className="h-3.5 w-3.5" />
             Pay
           </span>

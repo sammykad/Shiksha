@@ -52,8 +52,8 @@ This keeps the buyer story simple and keeps the code maintainable.
 2. **Charge by institution size, not by role count.** Parents, teachers, admins, and staff stay free.
 3. **Make variable costs visible.** Notifications, payment gateway fees, and storage overage are usage costs, not hidden add-ons.
 4. **Keep plan names stable.** Temporary market offers should not become permanent plan names.
-5. **Dashboard billing must match the invoice.** Admins should see the same plan, offer, learner count, usage, and renewal dates that billing uses.
-6. **Do not build feature gating in V1.** The commercial differentiator is learner limit, support level, and contract terms.
+5. **Dashboard billing must match the invoice.** Admins should see the same plan, offer, student count, usage, and renewal dates that billing uses.
+6. **Do not build feature gating in V1.** The commercial differentiator is student limit, support level, and contract terms.
 
 ---
 
@@ -63,8 +63,8 @@ This keeps the buyer story simple and keeps the code maintainable.
 
 | Plan | Best For | Billing | Public CTA |
 |------|----------|---------|------------|
-| Starter | Small schools, coaching classes, academies | Flat plan or learner band | Start trial |
-| Growth | Growing institutions with more operational volume | Flat plan or learner band | Start trial |
+| Starter | Small schools, coaching classes, academies | Flat plan or student band | Start trial |
+| Growth | Growing institutions with more operational volume | Flat plan or student band | Start trial |
 | Scale | Colleges, trusts, multi-branch groups | Sales-assisted annual contract | Contact sales |
 
 ### Offers
@@ -144,7 +144,7 @@ Needs to apply offers, extend trials, activate paid subscriptions, record manual
 |--------|--------|
 | Pricing to signup handoff | Selected plan and offer are preserved through signup |
 | Trial creation | New organization gets a trial subscription without manual setup |
-| Billing clarity | Admin billing page shows plan, offer, trial/renewal date, learner count, usage, and invoices |
+| Billing clarity | Admin billing page shows plan, offer, trial/renewal date, student count, usage, and invoices |
 | Data consistency | No new billing code depends on `Organization.plan` alone |
 | EarlyBird integrity | Offer cannot exceed max redemption count |
 | Support load | Fewer questions about "what am I paying for?" |
@@ -160,7 +160,7 @@ Use these names in code, docs, UI, and support language.
 | Sellable package | `Plan` | tier, package, pricing card |
 | Discount/campaign | `Offer` | promotion, coupon, discount plan |
 | Organization purchase | `Subscription` | organization plan, paid flag |
-| Billable participant | `Learner` | seat, user |
+| Billable participant | `Student` | seat, user |
 | Free account roles | `Free Role` | free seat |
 | Period bill | `Invoice` | bill |
 | Subscription payment | `SubscriptionPayment` | payment, fee payment |
@@ -236,9 +236,9 @@ model Plan {
   name             String
   description      String?
   billingMetric    BillingMetric
-  monthlyPricePaise Int?
-  annualPricePaise  Int?
-  learnerLimit      Int?
+  monthlyPrice Int?
+  annualPrice  Int?
+  studentLimit      Int?
   isPublic          Boolean      @default(true)
   isActive          Boolean      @default(true)
   sortOrder         Int          @default(0)
@@ -255,7 +255,7 @@ model Offer {
   type            OfferType
   description     String?
   discountPercent Int?
-  fixedPricePaise Int?
+  fixedPrice Int?
   trialDays       Int?
   maxRedemptions  Int?
   redeemedCount   Int         @default(0)
@@ -280,9 +280,9 @@ model Subscription {
   status              SubscriptionStatus @default(TRIALING)
   billingCycle        BillingCycle       @default(MONTHLY)
   billingMetric       BillingMetric
-  pricePaise          Int?
-  learnerLimit        Int?
-  learnerCount        Int                @default(0)
+  price          Int?
+  studentLimit        Int?
+  studentCount        Int                @default(0)
 
   trialStartedAt      DateTime?
   trialEndsAt         DateTime?
@@ -311,11 +311,11 @@ model Invoice {
 
   periodStart    DateTime
   periodEnd      DateTime
-  learnerCount   Int
-  subtotalPaise  Int
-  discountPaise  Int           @default(0)
-  usagePaise     Int           @default(0)
-  totalPaise     Int
+  studentCount   Int
+  subtotal  Int
+  discount  Int           @default(0)
+  usageAmount     Int           @default(0)
+  total     Int
   status         InvoiceStatus @default(OPEN)
   dueAt          DateTime?
   paidAt         DateTime?
@@ -338,7 +338,7 @@ model SubscriptionPayment {
   provider          String
   providerOrderId   String?
   providerPaymentId String?
-  amountPaise       Int
+  amount       Int
   status            SubscriptionPaymentStatus @default(PENDING)
   rawPayload         Json?
   createdAt         DateTime                  @default(now())
@@ -412,7 +412,7 @@ syncOrganizationPlanMirror(organizationId)
 ### Pricing and Invoices
 
 ```txt
-countBillableLearners(organizationId)
+countBillableStudents(organizationId)
 calculateSubscriptionAmount(input)
 createInvoice(input)
 markInvoicePaid(invoiceId)
@@ -455,13 +455,13 @@ getBillingEvents(subscriptionId)
 1. Admin opens dashboard billing.
 2. Server loads `getActiveSubscription(organizationId)`.
 3. Server loads wallet and usage summary.
-4. UI shows plan, offer, status, learner count, renewal/trial date, invoices, and wallet.
+4. UI shows plan, offer, status, student count, renewal/trial date, invoices, and wallet.
 5. UI does not depend on `Organization.plan` except as fallback during migration.
 
 ### Flow C: Activate Paid Subscription
 
 1. Admin chooses plan and billing cycle.
-2. Server counts billable learners.
+2. Server counts billable students.
 3. Server calculates amount.
 4. Server creates invoice.
 5. Server creates subscription payment.
@@ -475,7 +475,7 @@ getBillingEvents(subscriptionId)
 
 1. Sales reviews institution size and support needs.
 2. Sales creates or selects Scale subscription terms.
-3. Admin records annual amount, learner limit, offer if any, and renewal date.
+3. Admin records annual amount, student limit, offer if any, and renewal date.
 4. Billing page shows contract terms clearly.
 5. Billing event records who changed the subscription.
 
@@ -490,8 +490,8 @@ Billing page must show:
 - Subscription status.
 - Trial end date or renewal date.
 - Billing cycle.
-- Billable learner count.
-- Plan learner limit.
+- Billable student count.
+- Plan student limit.
 - Effective subscription price.
 - Estimated next invoice.
 - Wallet balance.
@@ -554,7 +554,7 @@ Important: billing should not be disabled just because no academic year exists. 
 - Dashboard billing reads `Subscription`.
 - EarlyBird redemptions cannot exceed its limit.
 - Subscription payment records are separate from student fee payments.
-- Subscription invoices are reproducible from stored learner count, plan price, offer, usage, and period.
+- Subscription invoices are reproducible from stored student count, plan price, offer, usage, and period.
 - Billing page works even before academic year setup.
 - Usage wallet remains separate from subscription.
 - `Organization.plan` is no longer the source of truth for new billing code.
@@ -563,12 +563,12 @@ Important: billing should not be disabled just because no academic year exists. 
 
 ## 15. Open Questions For Sign-Off
 
-1. Should V1 use flat learner bands or per-learner pricing?
-   - Recommendation: flat learner bands for clearer sales conversations.
+1. Should V1 use flat student bands or per-student pricing?
+   - Recommendation: flat student bands for clearer sales conversations.
 2. Should EarlyBird apply to Starter only, Growth only, or any eligible paid plan?
    - Recommendation: Starter and Growth only; Scale should be sales-led.
-3. What is the exact billable learner definition?
-   - Recommendation: active students/learners, excluding alumni, transferred, dropped, and inactive records.
+3. What is the exact billable student definition?
+   - Recommendation: active students/students, excluding alumni, transferred, dropped, and inactive records.
 4. Should Scale be self-serve?
    - Recommendation: no for V1; route Scale to sales.
 5. Should no-card trial remain forever?

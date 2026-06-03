@@ -37,6 +37,14 @@ export default async function AttendancePage() {
     getActiveAcademicYear(),
   ]);
 
+  if (!attendanceResult) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">
+        No attendance data available.
+      </div>
+    );
+  }
+
   const {
     attendanceData,
     holidayData,
@@ -64,7 +72,7 @@ export default async function AttendancePage() {
     <div className="px-2 space-y-4">
 
       <PageHeader title='My Attendance' description='Track your attendance and reports' actions={<>
-        <WeeklyAttendanceReportCard data={weeklyReportData} />
+        {weeklyReportData && <WeeklyAttendanceReportCard data={weeklyReportData} />}
         <Link href="/dashboard" className="max-sm:hidden">
           <Button variant="outline" size="sm">
             <ChevronLeft className="w-4 h-4" />

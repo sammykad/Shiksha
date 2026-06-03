@@ -84,7 +84,7 @@ export async function createStudent(data: ValidatedStudent, leadId?: string) {
           lastName: input.lastName,
           motherName: input.motherName,
           fullName:
-            input.fullName ??
+            input.fullName ||
             [input.firstName, input.middleName, input.lastName]
               .filter(Boolean)
               .join(' '),

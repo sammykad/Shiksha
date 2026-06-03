@@ -145,7 +145,12 @@ export async function upsertParentRecord(
       lastName: parent.lastName,
       ...shared,
     },
-    update: { ...shared, updatedAt: new Date() },
+    update: {
+      firstName: parent.firstName,
+      lastName: parent.lastName,
+      ...shared,
+      updatedAt: new Date(),
+    },
   });
 }
 
@@ -241,27 +246,29 @@ export async function sendOrganizationRoleInvitation({
     return { sent: false, skipped: true, reason: 'already-pending' as const };
   }
 
-  await prisma.invitation.updateMany({
-    where: {
-      organizationId,
-      email: normalizedEmail,
-      status: 'pending',
-    },
-    data: {
-      status: 'canceled',
-      updatedAt: new Date(),
-    },
-  });
+  const invitation = await prisma.$transaction(async (tx) => {
+    await tx.invitation.updateMany({
+      where: {
+        organizationId,
+        email: normalizedEmail,
+        status: 'pending',
+      },
+      data: {
+        status: 'canceled',
+        updatedAt: new Date(),
+      },
+    });
 
-  const invitation = await prisma.invitation.create({
-    data: {
-      organizationId,
-      email: normalizedEmail,
-      role,
-      inviterId: inviterUserId,
-      status: 'pending',
-      expiresAt: new Date(Date.now() + INVITATION_EXPIRES_IN_DAYS * 24 * 60 * 60 * 1000),
-    },
+    return tx.invitation.create({
+      data: {
+        organizationId,
+        email: normalizedEmail,
+        role,
+        inviterId: inviterUserId,
+        status: 'pending',
+        expiresAt: new Date(Date.now() + INVITATION_EXPIRES_IN_DAYS * 24 * 60 * 60 * 1000),
+      },
+    });
   });
 
   try {

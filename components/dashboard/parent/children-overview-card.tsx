@@ -2,13 +2,27 @@ import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, GraduationCap, ChevronRight } from 'lucide-react';
+import { Users, GraduationCap, ChevronRight, Book, School, Paperclip } from 'lucide-react';
 import { formatCurrencyIN } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 import Link from 'next/link';
 import { getMyChildrenOverview } from '@/lib/data/parent/parent-dashboard';
 
 async function ChildrenOverviewContent() {
   const children = await getMyChildrenOverview();
+
+  if (children.length === 0) {
+    return (
+      <CardContent className="p-6">
+        <EmptyState
+          compact
+          title="No Children Linked"
+          description="Contact your institution administrator to link student profiles."
+          icons={[Book, School, Paperclip]}
+        />
+      </CardContent>
+    );
+  }
 
   return (
     <CardContent className="p-0">
@@ -39,7 +53,7 @@ async function ChildrenOverviewContent() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium truncate">{child.fullName}</p>
+                  <p className="text-sm font-medium truncate">{child.fullName || `${child.firstName} ${child.lastName}`}</p>
                   <Badge
                     variant={child.todayAttendance === 'NOT_MARKED' ? 'outline' : child.todayAttendance as 'PRESENT' | 'ABSENT' | 'LATE'}
                     className="text-xs px-1.5 h-5"

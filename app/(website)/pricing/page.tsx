@@ -16,7 +16,7 @@ import { PricingPageClient } from "@/components/pricing/pricing-page-client"
 export const metadata: Metadata = {
   title: "Pricing - Shiksha.cloud",
   description:
-    "Pricing for schools, coaching classes, colleges, academies, and multi-branch institutions. Pay for students or learners while parents, teachers, and admins stay free.",
+    "Pricing for schools, coaching classes, colleges, academies, and multi-branch institutions. Pay for students while parents, teachers, and admins stay free.",
   openGraph: {
     title: "Pricing - Shiksha.cloud",
     description:

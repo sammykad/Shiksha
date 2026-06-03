@@ -337,6 +337,10 @@ Pricing
 
 
 # Pricing Slabs
+<!-- Institution Type : Classes / School / College / University  -->
+Students Count : 
+
+
 
 Create
 All Core Feature + Future Features
@@ -350,10 +354,13 @@ Only Pay >
 =======================================
 
 Student Based Plans
+Our Max Price 79 INR and Min Price 21 INR
 
-- 100 Students : 55 INR - Per Student / Month
-- 500 Students : 45 INR - Per Student / Month
-- 1500 Students : 35 INR - Per Student / Month
+- 0-50 Students : 54 INR - Per Student / Month
+- 51-300 Students : 49 INR - Per Student / Month
+- 301-500 Students : 44 INR - Per Student / Month
+- 501-1000 Students : 33 INR - Per Student / Month
+- 1001-2000 Students : 24 INR - Per Student / Month
 
 =======================================
 

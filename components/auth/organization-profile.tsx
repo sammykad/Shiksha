@@ -15,6 +15,8 @@ import { useRouter } from "next/navigation";
 import {
     Building2,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Loader2,
     Mail,
     Menu,
@@ -27,9 +29,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { cn } from "@/lib/utils";
+import { cn, formatDateIN } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { getAuthErrorMessage as getBetterAuthErrorMessage } from "@/lib/auth-errors";
+import { getUserOrganizationMembershipRole } from "@/lib/data/organization/get-memberships";
 
 // ─── Shared primitives (from organization-switcher) ───────────────────────────
 import { ShikshaCloudWordmark } from "./_components/brand";
@@ -75,6 +77,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "../ui/page-header";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 // ─── Local types ──────────────────────────────────────────────────────────────
@@ -105,34 +108,6 @@ type InvitationRow = {
 
 // ─── Small shared atoms ───────────────────────────────────────────────────────
 
-/** Dark filled button used for primary actions (e.g. "Invite") */
-function DarkButton({
-    children,
-    onClick,
-    disabled,
-    type = "button",
-}: {
-    children: ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    type?: "button" | "submit";
-}) {
-    return (
-        <Button
-            type={type}
-            disabled={disabled}
-            onClick={onClick}
-            className={cn(
-                "inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] bg-[#212126] px-4 text-[13px] font-[510] leading-[18px] text-white [&_svg]:size-3.5",
-                "shadow-[0_1px_2px_rgba(0,0,0,0.16),0_0_0_1px_#212126]",
-                "hover:bg-[#212126]/90 active:scale-[0.98] disabled:opacity-50",
-            )}
-        >
-            {children}
-        </Button>
-    );
-}
-
 /** Role pill with chevron, used in the members table */
 function RoleDropdown({
     role,
@@ -157,7 +132,7 @@ function RoleDropdown({
                         "h-7 gap-1 rounded-[6px] border-black/[0.1] bg-white px-2.5",
                         "text-[12px] font-[510] leading-4 text-[#212126]",
                         "shadow-[0_1px_2px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)]",
-                        "hover:bg-white",
+                        "transition-transform duration-150 ease-out hover:bg-white active:scale-[0.96]",
                     )}
                 >
                     {label}
@@ -176,7 +151,7 @@ function RoleDropdown({
                                 role: r,
                             });
                             if (error) {
-                                toast.error(getAuthErrorMessage(error, "Failed to update role."));
+                                toast.error(error.message ?? "Failed to update role.");
                             } else {
                                 toast.success(`Role updated to ${r}.`);
                                 await onRoleChanged();
@@ -209,7 +184,7 @@ function SidebarNavItem({
             type="button"
             onClick={onClick}
             className={cn(
-                "flex h-8 w-full items-center gap-3 rounded-[6px] px-3 text-[13px] font-[510] transition-all",
+                "flex h-8 w-full items-center gap-3 rounded-[6px] px-3 text-[13px] font-[510] transition-colors duration-150",
                 active
                     ? "bg-white text-[#212126] shadow-[0_1px_2px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)]"
                     : "text-[#747686] hover:text-[#212126]",
@@ -233,25 +208,15 @@ function GeneralContent({
     const router = useRouter();
     const [leaveOpen, setLeaveOpen] = useState(false);
     const [leaving, setLeaving] = useState(false);
+    const currentMemberRole = useCurrentOrganizationRole(org.id);
 
     const handleLeaveOrganization = async () => {
         setLeaving(true);
         try {
-            const organizationApi = authClient.organization as unknown as {
-                leaveOrganization?: (input: { organizationId: string }) => Promise<{ error?: { message?: string } | null }>;
-                leave?: (input: { organizationId: string }) => Promise<{ error?: { message?: string } | null }>;
-            };
-            const leaveOrganization = organizationApi.leaveOrganization ?? organizationApi.leave;
-
-            if (!leaveOrganization) {
-                toast.error("Leave organization is not available in the auth client.");
-                return;
-            }
-
-            const { error } = await leaveOrganization({ organizationId: org.id });
+            const { error } = await authClient.organization.leave({ organizationId: org.id });
 
             if (error) {
-                toast.error(getAuthErrorMessage(error, "Failed to leave organization."));
+                toast.error(error.message ?? "Failed to leave organization.");
                 return;
             }
 
@@ -292,17 +257,19 @@ function GeneralContent({
                                 )}
                             </div>
                         </div>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            className="h-8 shrink-0 px-2 text-[12px] font-[510] text-[#212126] hover:bg-black/[0.04]"
-                            onClick={() => {
-                                onClose();
-                                router.push("/dashboard/settings");
-                            }}
-                        >
-                            Manage
-                        </Button>
+                        {canManageOrganizationSettings(currentMemberRole) ? (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-8 shrink-0 px-2 text-[12px] font-[510] text-[#212126] transition-transform duration-150 ease-out hover:bg-black/[0.04] active:scale-[0.96]"
+                                onClick={() => {
+                                    onClose();
+                                    router.push("/dashboard/settings");
+                                }}
+                            >
+                                Manage
+                            </Button>
+                        ) : null}
                     </div>
                 </ProfileRow>
 
@@ -312,7 +279,7 @@ function GeneralContent({
                 <ProfileRow label="Danger zone">
                     <button
                         type="button"
-                        className="text-[13px] font-[510] text-[#ef4444] hover:opacity-80"
+                        className="text-[13px] font-[510] text-[#ef4444] transition-opacity duration-150 ease-out hover:opacity-80"
                         onClick={() => setLeaveOpen(true)}
                     >
                         Leave organization
@@ -333,7 +300,7 @@ function GeneralContent({
                             Cancel
                         </Button>
                         <Button variant="destructive" onClick={handleLeaveOrganization} disabled={leaving} className="gap-2">
-                            {leaving ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
+                            {leaving ? <Loader2 className="animate-spin" /> : null}
                             Leave organization
                         </Button>
                     </DialogFooter>
@@ -369,6 +336,7 @@ function ProfileRow({
 // ─── Members tab ──────────────────────────────────────────────────────────────
 
 const PAGE_SIZES = [10, 25, 50] as const;
+const ADMIN_ROLE = "ADMIN";
 const INVITABLE_ROLES = ["ADMIN", "TEACHER", "STUDENT", "PARENT"] as const;
 
 function parseInviteEmails(value: string) {
@@ -384,6 +352,41 @@ function getInvalidInviteEmails(emails: string[]) {
 
 function normalizeEmail(email: string) {
     return email.trim().toLowerCase();
+}
+
+function canManageOrganizationSettings(role?: string | null) {
+    return role?.toUpperCase() === ADMIN_ROLE;
+}
+
+function useCurrentOrganizationRole(organizationId: string) {
+    const { data: session } = authClient.useSession();
+    const [currentMemberRole, setCurrentMemberRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        async function loadCurrentMemberRole() {
+            if (!session?.user?.id) {
+                setCurrentMemberRole(null);
+                return;
+            }
+
+            try {
+                const role = await getUserOrganizationMembershipRole(organizationId);
+                if (!isCancelled) setCurrentMemberRole(role);
+            } catch {
+                if (!isCancelled) setCurrentMemberRole(null);
+            }
+        }
+
+        loadCurrentMemberRole();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [organizationId, session?.user?.id]);
+
+    return currentMemberRole;
 }
 
 function isPendingInvitation(invitation: InvitationRow) {
@@ -413,54 +416,6 @@ function getInvitationStatusClass(invitation: InvitationRow) {
     return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
-function getNestedErrorValue(value: unknown): string | null {
-    if (!value || typeof value !== "object") return null;
-    const record = value as Record<string, unknown>;
-    for (const key of ["message", "error", "detail", "description"]) {
-        const item = record[key];
-        if (typeof item === "string" && item.trim()) return item;
-        const nested = getNestedErrorValue(item);
-        if (nested) return nested;
-    }
-    return null;
-}
-
-function getFriendlyAuthMessage(message: string) {
-    if (message.includes("YOU_CANNOT_LEAVE_THE_ORGANIZATION_AS_THE_ONLY_OWNER")) {
-        return "You cannot leave this organization because you are the only owner. Transfer ownership or add another owner first.";
-    }
-
-    if (message.includes("Cannot remove or demote the last administrator")) {
-        return "You cannot remove or demote the last administrator. Assign another admin first.";
-    }
-
-    return message;
-}
-
-function getAuthErrorMessage(error: unknown, fallback: string) {
-    if (!error || typeof error !== "object") return fallback;
-    const maybeError = error as { message?: unknown; code?: unknown; status?: unknown; statusText?: unknown; body?: unknown; data?: unknown };
-    const nestedMessage = getNestedErrorValue(maybeError.body) ?? getNestedErrorValue(maybeError.data);
-    const parts = [
-        nestedMessage,
-        typeof maybeError.message === "string" ? maybeError.message : null,
-        typeof maybeError.code === "string" ? maybeError.code : null,
-        typeof maybeError.status === "number" ? `HTTP ${maybeError.status}` : null,
-        typeof maybeError.statusText === "string" ? maybeError.statusText : null,
-    ].filter(Boolean);
-
-    return getFriendlyAuthMessage(parts.length > 0 ? parts.join(" - ") : fallback);
-}
-
-function formatShortDate(value?: string | Date | null) {
-    if (!value) return "-";
-    return new Date(value).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    });
-}
-
 function MembersContent({ org }: { org: OrganizationLike }) {
     const [subTab, setSubTab] = useState<MembersSubTab>("members");
     const [search, setSearch] = useState("");
@@ -472,37 +427,37 @@ function MembersContent({ org }: { org: OrganizationLike }) {
     const [showInvite, setShowInvite] = useState(false);
     const [inviteSuccess, setInviteSuccess] = useState(false);
 
-    const { data: session } = authClient.useSession();
-    // Members state
     const [members, setMembers] = useState<MemberRow[]>([]);
+    const [memberCount, setMemberCount] = useState(0);
     const [invitations, setInvitations] = useState<InvitationRow[]>([]);
-    const [isPending, setIsPending] = useState(true);
-    const [invitationsPending, setInvitationsPending] = useState(true);
+    const [isMembersPending, setIsMembersPending] = useState(true);
+    const [isInvitationsPending, setIsInvitationsPending] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [revokingId, setRevokingId] = useState<string | null>(null);
-    const currentMemberRole = members.find((member) => member.userId === session?.user?.id)?.role;
-    const activeRole = (org.role ?? currentMemberRole ?? "").toUpperCase();
-    const canManageMembers = activeRole === "ADMIN" || activeRole === "OWNER";
+    const [revokingInvitationId, setRevokingInvitationId] = useState<string | null>(null);
+
+    const { data: session } = authClient.useSession();
+    const currentMemberRole = useCurrentOrganizationRole(org.id);
+    const canManageMembers = canManageOrganizationSettings(currentMemberRole);
 
     const refreshMembers = async () => {
-        setIsPending(true);
+        setIsMembersPending(true);
         const { data, error } = await authClient.organization.listMembers({
             query: {
                 organizationId: org.id,
-                limit: 100,
-                offset: 0,
+                limit: pageSize,
+                offset: (page - 1) * pageSize,
                 sortBy: "createdAt",
+                sortDirection: "desc",
             },
         });
         if (error) {
-            setError(getBetterAuthErrorMessage(error, {
-                fallback: "Failed to load members.",
-            }));
+            setError(error.message ?? "Failed to load members.");
         } else {
             setMembers((data?.members ?? []) as MemberRow[]);
+            setMemberCount(data?.total ?? 0);
             setError(null);
         }
-        setIsPending(false);
+        setIsMembersPending(false);
     };
 
     useEffect(() => {
@@ -511,7 +466,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
     }, [org.id, page, pageSize]); // Refetch when page/size changes
 
     const refreshInvitations = async (options?: { preserveRevoked?: boolean }) => {
-        setInvitationsPending(true);
+        setIsInvitationsPending(true);
         const { data, error } = await authClient.organization.listInvitations({
             query: {
                 organizationId: org.id,
@@ -519,7 +474,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
         });
 
         if (error) {
-            toast.error(getAuthErrorMessage(error, "Failed to load invitations."));
+            toast.error(error.message ?? "Failed to load invitations.");
         } else {
             const nextInvitations = (data ?? []) as InvitationRow[];
             setInvitations((currentInvitations) => {
@@ -534,7 +489,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
             });
         }
 
-        setInvitationsPending(false);
+        setIsInvitationsPending(false);
     };
 
     useEffect(() => {
@@ -542,9 +497,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [org.id]);
 
-    const allMembers: MemberRow[] = members;
-    // Client-side search filter
-    const filtered = allMembers.filter((m) => {
+    const filtered = members.filter((m) => {
         if (!search) return true;
         const q = search.toLowerCase();
         return (
@@ -552,8 +505,8 @@ function MembersContent({ org }: { org: OrganizationLike }) {
             m.user.email.toLowerCase().includes(q)
         );
     });
-    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-    const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
+    const totalPages = Math.max(1, Math.ceil((search ? filtered.length : memberCount) / pageSize));
+    const pageRows = filtered;
 
     const handleInvite = async () => {
         const emails = Array.from(new Set(parseInviteEmails(inviteEmails)));
@@ -616,7 +569,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                 results.push({
                     email,
                     ok: !error,
-                    message: error ? getAuthErrorMessage(error, "Invitation failed.") : undefined,
+                    message: error ? error.message ?? "Invitation failed." : undefined,
                 });
             }
 
@@ -657,13 +610,13 @@ function MembersContent({ org }: { org: OrganizationLike }) {
             return;
         }
 
-        setRevokingId(invitationId);
+        setRevokingInvitationId(invitationId);
         try {
             const { error } = await authClient.organization.cancelInvitation({
                 invitationId,
             });
             if (error) {
-                toast.error(getAuthErrorMessage(error, "Failed to revoke invitation."));
+                toast.error(error.message ?? "Failed to revoke invitation.");
                 return;
             }
 
@@ -679,18 +632,18 @@ function MembersContent({ org }: { org: OrganizationLike }) {
         } catch {
             toast.error("Something went wrong.");
         } finally {
-            setRevokingId(null);
+            setRevokingInvitationId(null);
         }
     };
 
     const subTabCounts: Record<MembersSubTab, number> = {
-        members: allMembers.length,
+        members: memberCount,
         invitations: invitations.length,
         requests: 0,
     };
 
     return (
-        <div className="flex h-full min-w-0 flex-col overflow-hidden px-5 py-6 md:px-8 md:py-10 lg:px-10">
+        <div className="flex h-full min-w-0 flex-col px-5 py-6 md:px-8 md:py-10 lg:px-10">
             {/* Heading */}
             <h2 className="mb-5 text-[17px] font-bold tracking-[-0.17px] text-[#212126]">
                 Members
@@ -704,7 +657,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                         type="button"
                         onClick={() => { setSubTab(t); setPage(1); }}
                         className={cn(
-                            "flex items-center gap-1.5 pb-3 text-[13px] font-[510] transition-colors",
+                            "flex cursor-pointer items-center gap-1.5 pb-3 text-[13px] font-[510] transition-colors duration-150",
                             subTab === t
                                 ? "border-b-[1.5px] border-[#212126] text-[#212126]"
                                 : "text-[#747686] hover:text-[#212126]",
@@ -731,7 +684,10 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                         </div>
 
                         {canManageMembers ? (
-                            <DarkButton
+                            <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
                                 onClick={() => {
                                     setSubTab("invitations");
                                     setShowInvite(true);
@@ -739,12 +695,12 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                 }}
                             >
                                 Invite
-                            </DarkButton>
+                            </Button>
                         ) : null}
                     </div>
 
                     {/* Table */}
-                    <div className="min-w-0 flex-1 overflow-hidden rounded-[8px] border border-black/[0.06] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                    <ScrollArea className="min-w-0 flex-1 rounded-[8px] border border-black/[0.06] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                         <Table className="w-full table-fixed">
                             <TableHeader>
                                 <TableRow className="h-[38px] border-black/[0.06] bg-black/[0.01] hover:bg-black/[0.01]">
@@ -765,7 +721,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isPending ? (
+                                {isMembersPending ? (
                                     <TableRow>
                                         <TableCell colSpan={canManageMembers ? 4 : 3} className="h-24 text-center text-[13px] text-[#9ca3af]">
                                             <Loader2 className="mx-auto size-4 animate-spin" />
@@ -791,61 +747,90 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                 )}
                             </TableBody>
                         </Table>
-                    </div>
+                    </ScrollArea>
 
                     {/* Pagination footer */}
-                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        {/* Results per page */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-[12px] text-[#747686]">Results per page</span>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 gap-1 rounded-[6px] border-black/[0.1] bg-white px-2.5 text-[12px] font-[510] text-[#212126] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                                    >
-                                        {pageSize}
-                                        <ChevronDown className="size-3 opacity-60" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-16 rounded-[8px] p-1">
-                                    {PAGE_SIZES.map((s) => (
-                                        <DropdownMenuItem
-                                            key={s}
-                                            className="rounded-[6px] text-[13px]"
-                                            onClick={() => { setPageSize(s); setPage(1); }}
-                                        >
-                                            {s}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                    <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-black/[0.06] pt-4">
+                        {/* Left: info + page size */}
+                        <div className="flex items-center gap-3">
+                            <span className="whitespace-nowrap text-[12px] text-[#747686]">
+                                {memberCount > 0
+                                    ? `Showing ${Math.min((page - 1) * pageSize + 1, memberCount)}–${Math.min(page * pageSize, memberCount)} of ${memberCount}`
+                                    : "No results"}
+                            </span>
+                            <span className="hidden h-3 w-px bg-black/[0.08] sm:block" />
+                            <div className="hidden items-center gap-1.5 sm:flex">
+                                <span className="text-[12px] text-[#747686]">Per page</span>
+                                <Select
+                                    value={String(pageSize)}
+                                    onValueChange={(value) => { setPageSize(Number(value)); setPage(1); }}
+                                >
+                                    <SelectTrigger className="h-7 w-14 rounded-[6px] border-black/[0.10] bg-white px-1.5 text-[12px] font-[510] text-[#212126] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent align="start">
+                                        {PAGE_SIZES.map((s) => (
+                                            <SelectItem key={s} value={String(s)} className="text-[13px]">
+                                                {s}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
-                        {/* Page arrows */}
-                        <div className="flex shrink-0 items-center gap-1">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                disabled={page <= 1}
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] disabled:opacity-40"
-                            >
-                                <ChevronDown className="size-3.5 rotate-90" />
-                            </Button>
-                            <span className="flex size-7 items-center justify-center text-[12px] font-[510] text-[#212126]">
-                                {page}
+                        {/* Right: page nav */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] text-[#747686]">
+                                Page {page} of {totalPages}
                             </span>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                disabled={page >= totalPages}
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] disabled:opacity-40"
-                            >
-                                <ChevronDown className="size-3.5 -rotate-90" />
-                            </Button>
+                            <div className="flex items-center gap-0.5">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={page <= 1}
+                                    onClick={() => setPage(1)}
+                                    className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.92] disabled:opacity-30"
+                                    aria-label="First page"
+                                >
+                                    <ChevronLeft className="size-3.5" />
+                                    <ChevronLeft className="-ml-2 size-3.5" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={page <= 1}
+                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.92] disabled:opacity-30"
+                                    aria-label="Previous page"
+                                >
+                                    <ChevronLeft className="size-3.5" />
+                                </Button>
+                                <span className="flex size-7 items-center justify-center rounded-[6px] bg-black/[0.04] text-[12px] font-[600] text-[#212126]">
+                                    {page}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={page >= totalPages}
+                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.92] disabled:opacity-30"
+                                    aria-label="Next page"
+                                >
+                                    <ChevronRight className="size-3.5" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={page >= totalPages}
+                                    onClick={() => setPage(totalPages)}
+                                    className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.92] disabled:opacity-30"
+                                    aria-label="Last page"
+                                >
+                                    <ChevronRight className="size-3.5" />
+                                    <ChevronRight className="-ml-2 size-3.5" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -862,21 +847,24 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                     </h3>
                                     <div className="flex flex-1 flex-col items-center justify-center gap-4">
                                         <div className="flex size-[72px] items-center justify-center rounded-full bg-black/[0.04] text-[#372f35]">
-                                            <Mail data-icon="inline-start" />
+                                            <Mail className="size-5" />
                                         </div>
                                         <p className="text-[14px] leading-5 text-[#212126]">
                                             Invitations successfully sent
                                         </p>
                                     </div>
                                     <div className="flex justify-end">
-                                        <DarkButton
+                                        <Button
+                                            type="button"
+                                            variant="default"
+                                            size="sm"
                                             onClick={() => {
                                                 setInviteSuccess(false);
                                                 setShowInvite(false);
                                             }}
                                         >
                                             Finish
-                                        </DarkButton>
+                                        </Button>
                                     </div>
                                 </div>
                             ) : (
@@ -930,7 +918,10 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                             >
                                                 Cancel
                                             </Button>
-                                            <DarkButton
+                                            <Button
+                                                type="button"
+                                                variant="default"
+                                                size="sm"
                                                 onClick={handleInvite}
                                                 disabled={
                                                     inviting ||
@@ -939,10 +930,10 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                 }
                                             >
                                                 {inviting ? (
-                                                    <Loader2 data-icon="inline-start" className="animate-spin" />
+                                                    <Loader2 className="animate-spin" />
                                                 ) : null}
-                                                Send invitations
-                                            </DarkButton>
+                                                <span>Send invitations</span>
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -982,7 +973,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {invitationsPending ? (
+                                {isInvitationsPending ? (
                                     Array.from({ length: 3 }).map((_, index) => (
                                         <TableRow key={index} className="h-[50px] border-black/[0.06]">
                                             <TableCell className="px-6">
@@ -1024,7 +1015,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-3 text-[13px] text-[#212126]">
-                                                {formatShortDate(invitation.createdAt ?? invitation.expiresAt)}
+                                                {formatDateIN(invitation.createdAt ?? invitation.expiresAt)}
                                             </TableCell>
                                             <TableCell className="px-3 text-[13px] text-[#212126]">
                                                 {invitation.role}
@@ -1038,10 +1029,10 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                                     type="button"
                                                                     variant="outline"
                                                                     size="icon"
-                                                                    disabled={revokingId === invitation.id}
+                                                                    disabled={revokingInvitationId === invitation.id}
                                                                     className="size-8 rounded-[8px] border-black/[0.08] text-[#747686]"
                                                                 >
-                                                                    {revokingId === invitation.id ? (
+                                                                    {revokingInvitationId === invitation.id ? (
                                                                         <Loader2 className="animate-spin" />
                                                                     ) : (
                                                                         <MoreHorizontal />
@@ -1050,7 +1041,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end" className="w-40 rounded-[8px] p-1">
                                                                 <DropdownMenuItem
-                                                                    disabled={revokingId === invitation.id}
+                                                                    disabled={revokingInvitationId === invitation.id}
                                                                     className="rounded-[6px] text-[13px] text-red-600 focus:text-red-600"
                                                                     onClick={() => handleRevokeInvitation(invitation.id)}
                                                                 >
@@ -1073,7 +1064,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                     </div>
 
                     <div className="flex flex-col gap-3 md:hidden">
-                        {invitationsPending ? (
+                        {isInvitationsPending ? (
                             Array.from({ length: 3 }).map((_, index) => (
                                 <div key={index} className="rounded-[8px] border border-black/[0.08] bg-white p-4">
                                     <div className="h-4 w-48 rounded bg-black/[0.07]" />
@@ -1094,7 +1085,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                 {invitation.email}
                                             </p>
                                             <p className="mt-1 text-[12px] text-[#747686]">
-                                                Invited {formatShortDate(invitation.createdAt ?? invitation.expiresAt)} · {invitation.role}
+                                                Invited {formatDateIN(invitation.createdAt ?? invitation.expiresAt)} · {invitation.role}
                                             </p>
                                             <span className={cn(
                                                 "mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-[560] leading-4",
@@ -1108,13 +1099,13 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                                 type="button"
                                                 variant="ghost"
                                                 className="h-8 shrink-0 px-2 text-[12px] font-[510] text-red-600 hover:text-red-600"
-                                                disabled={revokingId === invitation.id}
+                                                disabled={revokingInvitationId === invitation.id}
                                                 onClick={() => handleRevokeInvitation(invitation.id)}
                                             >
-                                                {revokingId === invitation.id ? (
-                                                    <Loader2 data-icon="inline-start" className="animate-spin" />
+{revokingInvitationId === invitation.id ? (
+                                                    <Loader2 className="animate-spin" />
                                                 ) : null}
-                                                Revoke
+                                                <span>Revoke</span>
                                             </Button>
                                         ) : null}
                                     </div>
@@ -1148,93 +1139,125 @@ function MemberTableRow({
     onMembersChanged: () => Promise<void> | void;
 }) {
     const isYou = member.userId === currentUserId;
+    const [removeOpen, setRemoveOpen] = useState(false);
+    const [removing, setRemoving] = useState(false);
+    const memberName = member.user.name || member.user.email;
+
+    const handleRemoveMember = async () => {
+        setRemoving(true);
+        try {
+            const { error } = await authClient.organization.removeMember({
+                organizationId: orgId,
+                memberIdOrEmail: member.id,
+            });
+            if (error) {
+                toast.error(error.message ?? "Failed to remove member.");
+                return;
+            }
+
+            toast.success("Member removed.");
+            setRemoveOpen(false);
+            await onMembersChanged();
+        } catch {
+            toast.error("Something went wrong.");
+        } finally {
+            setRemoving(false);
+        }
+    };
 
     return (
-        <TableRow className="h-[60px] border-black/[0.06]">
-            {/* User */}
-            <TableCell className="px-4 py-2">
-                <div className="flex items-center gap-3">
-                    <UserAvatar
-                        name={member.user.name ?? member.user.email}
-                        image={member.user.image}
-                        className="rounded-full border border-black/[0.06]"
-                    />
-                    <div className="flex min-w-0 flex-col">
-                        <div className="flex items-center gap-1.5">
-                            <span className="truncate text-[13px] font-[560] text-[#212126]">
-                                {member.user.name || "Unknown"}
-                            </span>
-                            {isYou && (
-                                <span className="inline-flex shrink-0 items-center rounded-full bg-black/[0.04] px-1.5 py-px text-[10px] font-[560] leading-[14px] text-[#747686]">
-                                    You
+        <>
+            <TableRow className="h-[60px] border-black/[0.06]">
+                {/* User */}
+                <TableCell className="px-4 py-2">
+                    <div className="flex items-center gap-3">
+                        <UserAvatar
+                            name={member.user.name ?? member.user.email}
+                            image={member.user.image}
+                            className="rounded-full border border-black/[0.06]"
+                        />
+                        <div className="flex min-w-0 flex-col">
+                            <div className="flex items-center gap-1.5">
+                                <span className="truncate text-[13px] font-[560] text-[#212126]">
+                                    {member.user.name || "Unknown"}
                                 </span>
-                            )}
+                                {isYou && (
+                                    <span className="inline-flex shrink-0 items-center rounded-full bg-black/[0.04] px-1.5 py-px text-[10px] font-[560] leading-[14px] text-[#747686]">
+                                        You
+                                    </span>
+                                )}
+                            </div>
+                            <span className="truncate text-[12px] text-[#747686]">
+                                {member.user.email}
+                            </span>
                         </div>
-                        <span className="truncate text-[12px] text-[#747686]">
-                            {member.user.email}
-                        </span>
                     </div>
-                </div>
-            </TableCell>
-
-            {/* Joined */}
-            <TableCell className="px-3 py-2 text-[13px] text-[#212126]">
-                {new Date(member.createdAt).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                })}
-            </TableCell>
-
-            {/* Role */}
-            <TableCell className="px-3 py-2">
-                {canManageMembers ? (
-                    <RoleDropdown
-                        role={member.role}
-                        memberId={member.id}
-                        orgId={orgId}
-                        onRoleChanged={onMembersChanged}
-                    />
-                ) : (
-                    <RoleBadge role={member.role} />
-                )}
-            </TableCell>
-
-            {canManageMembers ? (
-                <TableCell className="px-3 py-2 text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 rounded-[6px] text-[#747686] hover:bg-black/[0.04]"
-                            >
-                                <MoreHorizontal className="size-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 rounded-[8px] p-1 text-[13px]">
-                            <DropdownMenuItem
-                                className="rounded-[6px] text-[13px] text-[#ef4444] focus:text-[#ef4444]"
-                                onClick={async () => {
-                                    const { error } = await authClient.organization.removeMember({
-                                        organizationId: orgId,
-                                        memberIdOrEmail: member.id,
-                                    });
-                                    if (error) {
-                                        toast.error(getAuthErrorMessage(error, "Failed to remove member."));
-                                    } else {
-                                        toast.success("Member removed.");
-                                        await onMembersChanged();
-                                    }
-                                }}
-                            >
-                                Remove member
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                 </TableCell>
-            ) : null}
-        </TableRow>
+
+                {/* Joined */}
+                <TableCell className="px-3 py-2 text-[13px] text-[#212126]">
+                    {formatDateIN(member.createdAt)}
+                </TableCell>
+
+                {/* Role */}
+                <TableCell className="px-3 py-2">
+                    {canManageMembers ? (
+                        <RoleDropdown
+                            role={member.role}
+                            memberId={member.id}
+                            orgId={orgId}
+                            onRoleChanged={onMembersChanged}
+                        />
+                    ) : (
+                        <RoleBadge role={member.role} />
+                    )}
+                </TableCell>
+
+                {canManageMembers ? (
+                    <TableCell className="px-3 py-2 text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8 rounded-[6px] text-[#747686] transition-[color,background-color,transform] duration-150 ease-out hover:bg-black/[0.04] active:scale-[0.92]"
+                                >
+                                    <MoreHorizontal className="size-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-[8px] p-1 text-[13px]">
+                                <DropdownMenuItem
+                                    className="rounded-[6px] text-[13px] text-[#ef4444] focus:text-[#ef4444]"
+                                    onSelect={() => setRemoveOpen(true)}
+                                >
+                                    Remove member
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                ) : null}
+            </TableRow>
+
+            <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
+                <DialogContent className="rounded-xl border-black/[0.08] sm:max-w-[460px]">
+                    <DialogHeader>
+                        <DialogTitle>Remove member</DialogTitle>
+                        <DialogDescription>
+                            Remove {memberName} from this organization? They will lose access immediately.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRemoveOpen(false)} disabled={removing}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleRemoveMember} disabled={removing} className="gap-2">
+{removing ? <Loader2 className="animate-spin" /> : null}
+                            <span>Remove member</span>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 
@@ -1270,7 +1293,7 @@ export function OrganizationProfile({
                     type="button"
                     aria-label="Close organization settings"
                     onClick={() => onOpenChange(false)}
-                    className="absolute right-5 top-5 z-10 flex size-8 items-center justify-center rounded-md text-[#747686] transition-colors hover:bg-black/[0.04] hover:text-[#212126]"
+                    className="absolute right-5 top-5 z-10 flex size-8 items-center justify-center rounded-md text-[#747686] transition-[color,background-color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#212126] active:scale-[0.92]"
                 >
                     <X className="size-4" />
                 </button>
@@ -1280,7 +1303,7 @@ export function OrganizationProfile({
                         type="button"
                         aria-label="Open organization navigation"
                         onClick={() => setMobileNavOpen((value) => !value)}
-                        className="flex size-8 items-center justify-center rounded-md text-[#212126] transition-colors hover:bg-black/[0.04]"
+                        className="flex size-8 items-center justify-center rounded-md text-[#212126] transition-[color,background-color,transform] duration-150 ease-out hover:bg-black/[0.04] active:scale-[0.92]"
                     >
                         <Menu className="size-4" />
                     </button>
@@ -1344,7 +1367,7 @@ export function OrganizationProfile({
 
                 {/* ── Content panel ── */}
                 <section className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-white md:bg-transparent md:p-1">
-                    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-white md:rounded-[8px] md:border md:border-black/[0.08] md:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                    <div className="flex h-full min-w-0 flex-1 flex-col bg-white md:rounded-[8px] md:border md:border-black/[0.08] md:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                         {tab === "general" ? (
                             <GeneralContent org={org} onClose={() => onOpenChange(false)} />
                         ) : (

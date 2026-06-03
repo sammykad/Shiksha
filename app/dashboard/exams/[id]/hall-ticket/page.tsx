@@ -1,7 +1,7 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getOrganizationId } from '@/lib/organization';
 import { HallTicketPDF } from '@/lib/pdf-generator/HallTicketPDF';
-import { getCurrentUserId } from '@/lib/user';
+import { getCurrentUserByRole } from '@/lib/auth';
 import { getHallTicketForStudentExam } from '@/lib/data/hall-ticket/get-hall-ticket-data';
 import prisma from '@/lib/db';
 
@@ -12,12 +12,16 @@ export default async function HallTicketPage({
 }) {
   const { id: examId } = await params;
   const organizationId = await getOrganizationId();
-  const currentUserId = await getCurrentUserId();
+  const currentUser = await getCurrentUserByRole();
+
+  if (currentUser.role === 'PARENT') {
+    redirect('/dashboard/exams');
+  }
 
   // First, get the student record for the current user
   const student = await prisma.student.findFirst({
     where: {
-      userId: currentUserId,
+      userId: currentUser.userId,
       organizationId,
     },
     select: {

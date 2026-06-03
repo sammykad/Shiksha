@@ -7,30 +7,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
-
-import { getAuthErrorField, getOAuthErrorMessage, getSignInErrorMessage } from "@/lib/auth-errors";
 import { signIn } from "@/lib/auth-client";
-import { appendAuthCallbackUrl, getAbsoluteAuthCallbackUrl } from "@/lib/auth-navigation";
 import { cn } from "@/lib/utils";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Form, FormField } from "@/components/ui/form";
+import { Google } from "../website/Icons";
 
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A11.96 11.96 0 0 0 0 12c0 1.94.46 3.77 1.28 5.4l3.56-2.77.01-.54z" fill="#FBBC05" />
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-    </svg>
-  );
-}
 
 export interface SignInProps {
   className?: string;
-  callbackUrl?: string;
+  aftersignin?: string;
   signUpUrl?: string;
   resetPasswordUrl?: string;
   initialError?: string | null;
@@ -45,7 +33,7 @@ type SignInValues = z.infer<typeof signInSchema>;
 
 export function BetterAuthSignIn({
   className,
-  callbackUrl = "/dashboard",
+  aftersignin,
   signUpUrl = "/sign-up",
   resetPasswordUrl = "/reset-password",
   initialError = null,
@@ -67,6 +55,7 @@ export function BetterAuthSignIn({
 
   const isAuthBusy = isEmailSubmitting || isGoogleSubmitting;
   const canSubmit = !isAuthBusy;
+  const afterSignInUrl = aftersignin ?? "/dashboard";
 
   const handleEmailSignIn = useCallback(async (values: SignInValues) => {
     if (!canSubmit) return;
@@ -76,32 +65,34 @@ export function BetterAuthSignIn({
     setIsEmailSubmitting(true);
 
     try {
-      const { error: signInError } = await signIn.email({
+      const { error } = await signIn.email({
         email: values.email.trim().toLowerCase(),
         password: values.password,
-        callbackURL: getAbsoluteAuthCallbackUrl(callbackUrl),
+        callbackURL: afterSignInUrl,
       });
 
-      if (signInError) {
-        const message = getSignInErrorMessage(signInError);
-        const field = getAuthErrorField(signInError);
-
-        if (field === "email" || field === "password") {
-          form.setError(field, { message });
+      if (error) {
+        // Better Auth errors don't have a 'field' property
+        // Handle specific error codes if needed
+        const errorMessage = error.message ?? "Invalid email or password";
+        // Set form-level error or field-specific based on error content
+        if (errorMessage.toLowerCase().includes("email")) {
+          form.setError("email", { message: errorMessage });
+        } else if (errorMessage.toLowerCase().includes("password")) {
+          form.setError("password", { message: errorMessage });
         }
-
-        setError(message);
-        toast.error(message);
+        setError(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
       toast.success("Signed in successfully.");
-      router.push(callbackUrl);
+      router.push(afterSignInUrl);
       router.refresh();
     } finally {
       setIsEmailSubmitting(false);
     }
-  }, [callbackUrl, canSubmit, form, router]);
+  }, [afterSignInUrl, canSubmit, form, router]);
 
   const handleGoogleSignIn = useCallback(async () => {
     if (isAuthBusy) return;
@@ -109,21 +100,21 @@ export function BetterAuthSignIn({
     setError(null);
     setIsGoogleSubmitting(true);
     try {
-      const { error: googleError } = await signIn.social({
+      const { error } = await signIn.social({
         provider: "google",
-        callbackURL: getAbsoluteAuthCallbackUrl(callbackUrl),
-        errorCallbackURL: appendAuthCallbackUrl("/sign-in", callbackUrl),
+        callbackURL: afterSignInUrl,
+        errorCallbackURL: "/sign-in",
       });
 
-      if (googleError) {
-        const message = getOAuthErrorMessage(googleError);
-        setError(message);
-        toast.error(message);
+      if (error) {
+        const errorMessage = error.message ?? "Failed to sign in with Google";
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     } finally {
       setIsGoogleSubmitting(false);
     }
-  }, [callbackUrl, isAuthBusy]);
+  }, [afterSignInUrl, isAuthBusy]);
 
   return (
     <AuthCard data-slot="sign-in" className={className}>
@@ -141,7 +132,7 @@ export function BetterAuthSignIn({
             className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-[0.8125rem] font-medium text-neutral-800 transition-all hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isGoogleSubmitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
-            <GoogleIcon />
+            <Google width={16} height={16} />
             Google
           </button>
 
@@ -224,7 +215,9 @@ export function BetterAuthSignIn({
                   type="button"
                   onClick={() => {
                     const email = form.getValues("email").trim();
-                    router.push(appendAuthCallbackUrl(resetPasswordUrl, callbackUrl, { email }));
+                    const params = new URLSearchParams();
+                    if (email) params.set("email", email);
+                    router.push(params.size > 0 ? `${resetPasswordUrl}?${params.toString()}` : resetPasswordUrl);
                   }}
                   className="self-end text-[0.75rem] font-medium text-violet-600 underline-offset-4 hover:underline"
                 >
@@ -254,7 +247,7 @@ export function BetterAuthSignIn({
             New to Shiksha Cloud?{" "}
             <button
               type="button"
-              onClick={() => router.push(appendAuthCallbackUrl(signUpUrl, callbackUrl))}
+              onClick={() => router.push(signUpUrl)}
               className="font-medium text-violet-600 underline-offset-4 hover:underline"
             >
               Create account

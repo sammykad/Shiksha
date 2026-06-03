@@ -52,7 +52,7 @@ import {
 } from "@/lib/pricing-data"
 import { cn } from "@/lib/utils"
 
-const PLAN_HEADERS = ["EarlyBird", "Growth", "Scale"] as const
+const PLAN_HEADERS = ["Starter", "Growth", "Scale"] as const
 
 const addonMeta = {
   notifications: {
@@ -122,7 +122,7 @@ function PricingHero() {
       </h1>
 
       <p className="mx-auto max-w-md text-lg leading-relaxed text-muted-foreground">
-        Pay only for students or learners. Parents, teachers, and admins are always{" "}
+        Pay only for students. Parents, teachers, and admins are always{" "}
         <span className="font-medium text-foreground">free</span>. No setup
         fees.
       </p>
@@ -312,7 +312,7 @@ function PlanCard({
   studentCount,
   className,
 }: PlanCardProps) {
-  const isLimitedOffer = plan.id === "free" || plan.id === "earlybird"
+  const isLimitedOffer = plan.id === "free" || plan.id === "starter"
   const effectivePrice =
     plan.pricePerStudent !== undefined
       ? getEffectivePrice(plan.pricePerStudent, billing)
@@ -400,7 +400,7 @@ function PlanCard({
           )}
           asChild
         >
-          <a href={plan.id === "scale" ? "/contact" : "/sign-up"}>
+          <a href={plan.id === "scale" ? "/contact" : `/sign-up?plan=${plan.id}`}>
             {plan.ctaLabel}
           </a>
         </Button>
@@ -596,7 +596,7 @@ function FeatureTable() {
                         )}
                       </td>
                       <td className="px-3 py-3 text-center">
-                        <Cell value={row.earlybird} />
+                        <Cell value={row.starter} />
                       </td>
                       <td className="px-3 py-3 text-center">
                         <Cell value={row.growth} />

@@ -23,7 +23,6 @@ import { Building2, Upload, X, Loader2 } from "lucide-react";
 import { Role } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { getAuthErrorMessage as getBetterAuthErrorMessage } from "@/lib/auth-errors";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
@@ -65,19 +64,6 @@ function parseEmails(raw: string): string[] {
         .split(/[\s,;]+/)
         .map((e) => e.trim().toLowerCase())
         .filter(Boolean);
-}
-
-function getAuthErrorMessage(error: unknown, fallback: string) {
-    if (!error || typeof error !== "object") return fallback;
-    const maybeError = error as { message?: unknown; code?: unknown; status?: unknown; statusText?: unknown };
-    const parts = [
-        typeof maybeError.message === "string" ? maybeError.message : null,
-        typeof maybeError.code === "string" ? maybeError.code : null,
-        typeof maybeError.status === "number" ? `HTTP ${maybeError.status}` : null,
-        typeof maybeError.statusText === "string" ? maybeError.statusText : null,
-    ].filter(Boolean);
-
-    return parts.length > 0 ? parts.join(" - ") : fallback;
 }
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -176,7 +162,7 @@ const fieldCls = (hasError?: boolean) =>
 
 interface Step1Props {
     onCreated: (org: { id: string; name: string; slug: string }) => void;
-    onCancel?: () => void;
+    onCancel: () => void;
 }
 
 function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
@@ -246,7 +232,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
 
     const handleCancel = () => {
         clearLogo();
-        onCancel?.();
+        onCancel();
     };
 
     const handleDrop = useCallback(
@@ -263,18 +249,16 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
 
     const onSubmit = async (values: OrgValues) => {
         let logoUrl: string | undefined;
+
         if (logo) {
             try {
                 const res = await onUpload([logo]);
-                if (res && res[0]) {
-                    logoUrl = res[0].url;
-                } else {
-                    toast.error("Failed to upload logo. Please try again.");
-                    return;
+                logoUrl = res?.[0]?.url;
+                if (!logoUrl) {
+                    toast.warning("Could not upload logo, proceeding without it.");
                 }
             } catch {
-                toast.error("Failed to upload logo. Please try again.");
-                return;
+                toast.warning("Could not upload logo, proceeding without it.");
             }
         }
 
@@ -286,15 +270,14 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
             });
 
             if (error) {
-                const rawMessage = error.message ?? "";
-                const message = getBetterAuthErrorMessage(error, {
-                    fallback: "Failed to create organization. Please check the details and try again.",
-                });
-                if (rawMessage.toLowerCase().includes("slug")) {
+                const message = error.message ?? "Failed to create organization. Please check the details and try again.";
+                const lowerMessage = message.toLowerCase();
+
+                if (lowerMessage.includes("slug")) {
                     form.setError("slug", {
                         message: "This slug is already taken. Please choose another.",
                     });
-                } else if (rawMessage.toLowerCase().includes("name")) {
+                } else if (lowerMessage.includes("name")) {
                     form.setError("name", { message });
                 } else {
                     toast.error(message);
@@ -620,7 +603,7 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                         ? firstFailure.reason instanceof Error
                             ? firstFailure.reason.message
                             : "Invitation request failed."
-                        : `${firstFailure.value.email}: ${getAuthErrorMessage(firstFailure.value.error, "Invitation failed.")}`;
+                        : `${firstFailure.value.email}: ${firstFailure.value.error?.message ?? "Invitation failed."}`;
                 toast.error(message);
                 return;
             } else {
@@ -630,7 +613,7 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                         ? firstFailure.reason instanceof Error
                             ? firstFailure.reason.message
                             : "Invitation request failed."
-                        : `${firstFailure.value.email}: ${getAuthErrorMessage(firstFailure.value.error, "Invitation failed.")}`;
+                        : `${firstFailure.value.email}: ${firstFailure.value.error?.message ?? "Invitation failed."}`;
                 toast.error(message);
                 toast.warning(
                     `Sent ${succeeded.length} invitation${succeeded.length !== 1 ? "s" : ""}. ${failed.length} failed — please retry those addresses.`
@@ -788,10 +771,24 @@ export function CreateOrganization({
         }
     };
 
+    const handleCancel = () => {
+        if (onCancel) {
+            onCancel();
+            return;
+        }
+
+        if (window.history.length > 1) {
+            router.back();
+            return;
+        }
+
+        router.push("/sign-in");
+    };
+
     return (
         <Card>
             {step === "create" && (
-                <StepCreateOrg onCreated={handleCreated} onCancel={onCancel} />
+                <StepCreateOrg onCreated={handleCreated} onCancel={handleCancel} />
             )}
             {step === "invite" && createdOrg && (
                 <StepInviteMembers org={createdOrg} onDone={handleDone} />

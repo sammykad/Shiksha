@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
+import { Role } from "@/generated/prisma/enums";
 import { authClient } from "@/lib/auth-client";
+import {
+    getUserOrganizationInvitations,
+    getUserOrganizationMemberships,
+} from "@/lib/data/organization/get-memberships";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import { BrandAuthHeader } from "./_components/brand";
@@ -38,6 +43,8 @@ interface OrganizationListProps {
     afterSelectOrganizationUrl?: string;
     /** Called when the create organization row is clicked. */
     onCreateOrganization?: () => void;
+    /** Called when manage is clicked on the active organization row. */
+    onManageOrganization?: () => void;
     /** Kept for API compatibility with the old component. */
     applicationName?: string;
 }
@@ -53,6 +60,7 @@ export function OrganizationList({
     afterSelectPersonalUrl,
     afterSelectOrganizationUrl,
     onCreateOrganization,
+    onManageOrganization,
 }: OrganizationListProps) {
     const router = useRouter();
     const { data: session } = authClient.useSession();
@@ -60,6 +68,7 @@ export function OrganizationList({
     const { data: orgs } = authClient.useListOrganizations();
 
     const [loadingId, setLoadingId] = useState<string | null>(null);
+    const [orgRoles, setOrgRoles] = useState<Record<string, string>>({});
 
     const user = session?.user;
     const orgList = ((orgs as OrganizationLike[] | undefined) ?? []).filter((org) => {
@@ -77,37 +86,14 @@ export function OrganizationList({
                 return;
             }
 
-            const { data, error } = await authClient.organization.listUserInvitations();
-            if (cancelled) return;
-
-            if (error) {
+            try {
+                const userInvitations = await getUserOrganizationInvitations();
+                if (cancelled) return;
+                setInvitations(userInvitations);
+            } catch {
+                if (cancelled) return;
                 setInvitations([]);
-                return;
             }
-
-            setInvitations(
-                ((data ?? []) as Array<{
-                    id: string;
-                    organizationId?: string | null;
-                    email?: string | null;
-                    role?: string | null;
-                    status?: string | null;
-                    organization?: {
-                        id?: string | null;
-                        name?: string | null;
-                        logo?: string | null;
-                    } | null;
-                }>)
-                    .filter((invitation) => invitation.status !== "accepted")
-                    .map((invitation) => ({
-                        id: invitation.id,
-                        organizationId: invitation.organizationId ?? invitation.organization?.id ?? "",
-                        organizationName: invitation.organization?.name ?? "Organization invitation",
-                        organizationLogo: invitation.organization?.logo,
-                        role: invitation.role ?? "MEMBER",
-                        status: invitation.status ?? "pending",
-                    })),
-            );
         }
 
         loadInvitations();
@@ -116,6 +102,23 @@ export function OrganizationList({
             cancelled = true;
         };
     }, [user?.id]);
+
+    const fetchMemberships = useCallback(async () => {
+        try {
+            const memberships = await getUserOrganizationMemberships();
+            const map: Record<string, string> = {};
+            for (const m of memberships) {
+                map[m.organizationId] = m.role;
+            }
+            setOrgRoles(map);
+        } catch {
+            // Server action may fail if auth context is not ready
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchMemberships();
+    }, [fetchMemberships]);
 
     const handleSelectOrg = async (orgId: string) => {
         if (loadingId) return;
@@ -128,6 +131,7 @@ export function OrganizationList({
                 toast.error("Failed to switch organization.");
                 return;
             }
+            fetchMemberships();
             if (afterSelectOrganizationUrl) {
                 router.push(afterSelectOrganizationUrl);
                 router.refresh();
@@ -197,7 +201,19 @@ export function OrganizationList({
 
             {orgList.map((org) => {
                 const isActive = org.id === activeOrg?.id;
-                const role = org.role ?? "Admin";
+                const role = orgRoles[org.id] ?? org.role ?? undefined;
+                const activeAction = isActive && onManageOrganization && role?.toUpperCase() === Role.ADMIN ? (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onManageOrganization();
+                        }}
+                        className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground"
+                    >
+                        Manage
+                    </button>
+                ) : undefined;
 
                 return (
                     <OrganizationRow
@@ -216,6 +232,7 @@ export function OrganizationList({
                         active={isActive}
                         hideDefaultAction={!showDefaultActions}
                         spacious={spaciousRows}
+                        action={activeAction}
                         onClick={() => handleSelectOrg(org.id)}
                     />
                 );

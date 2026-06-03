@@ -4,21 +4,39 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Calendar, IndianRupeeIcon, Bell, LayoutDashboard } from 'lucide-react';
+import { Book, School, Paperclip, Users, Calendar, IndianRupeeIcon, Bell, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { AttendanceSummaryCard } from '@/components/dashboard/parent/attendance-summary-card';
 import { FeesSummaryCard } from '@/components/dashboard/parent/fees-summary-card';
 import { ChildrenOverviewCard } from '@/components/dashboard/parent/children-overview-card';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ChildSwitcher } from './child-switcher';
+import { getChildrenByParent } from '@/lib/data/parent/get-all-children-by-parentId';
 import { getParentNotices } from '@/lib/data/parent/parent-dashboard';
 import { TodayTimeline } from './today-timeline';
 import TransportMap from './transport-map';
 import { NoticesWidget } from './notices-widget';
 
 export default async function ParentDashboard() {
-  const notices = await getParentNotices()
+  const [children, notices] = await Promise.all([
+    getChildrenByParent(),
+    getParentNotices(),
+  ]);
+
+  if (children.length === 0) {
+    return (
+      <main className="px-2 flex flex-col items-center justify-center min-h-[60vh]">
+        <EmptyState
+          title="No Children Linked"
+          description="Contact your institution administrator to link student profiles to your account."
+          icons={[Book, School, Paperclip]}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="px-2 space-y-3">
       <PageHeader
@@ -28,16 +46,6 @@ export default async function ParentDashboard() {
         actions={
           <>
             <ChildSwitcher />
-            {/* <Link href="/dashboard/my-children" className="w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                My Children
-              </Button>
-            </Link> */}
             <Link href="/dashboard/fees/parent" className="w-full sm:w-auto">
               <Button size="sm" className="w-full">
                 <IndianRupeeIcon className="w-4 h-4 mr-2" />
@@ -57,10 +65,8 @@ export default async function ParentDashboard() {
             height={500}
             className="w-full rounded-lg border "
             showFullscreen
-            // showRotate 
             showLocate
           />
-
         </div>
 
         {/* Right Column - Sidebar */}

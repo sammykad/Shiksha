@@ -29,19 +29,6 @@ export interface OrgWithMembers {
     members?: OrgMember[];
 }
 
-function getAuthErrorMessage(error: unknown, fallback: string) {
-    if (!error || typeof error !== "object") return fallback;
-    const maybeError = error as { message?: unknown; code?: unknown; status?: unknown; statusText?: unknown };
-    const parts = [
-        typeof maybeError.message === "string" ? maybeError.message : null,
-        typeof maybeError.code === "string" ? maybeError.code : null,
-        typeof maybeError.status === "number" ? `HTTP ${maybeError.status}` : null,
-        typeof maybeError.statusText === "string" ? maybeError.statusText : null,
-    ].filter(Boolean);
-
-    return parts.length > 0 ? parts.join(" - ") : fallback;
-}
-
 export function useOrganizationSwitcher() {
     const { data: session } = authClient.useSession();
     const { data: activeOrg } = authClient.useActiveOrganization();
@@ -140,7 +127,7 @@ export function useOrganizationSwitcher() {
             memberIdOrEmail: memberId,
         });
         if (error) {
-            toast.error(getAuthErrorMessage(error, "Failed to remove member"));
+            toast.error(error.message ?? "Failed to remove member");
         } else {
             toast.success("Member removed");
             setMembers((prev) => prev.filter((m) => m.id !== memberId));

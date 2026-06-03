@@ -20,6 +20,53 @@ enum PlanType {
   ENTERPRISE
 }
 
+enum PlanCode {
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+enum BillingMetric {
+  STUDENT
+  FLAT
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+enum OfferType {
+  EARLY_BIRD
+  TRIAL
+  ANNUAL
+  MANUAL
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+}
+
+enum SubscriptionPaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
 enum MembershipStatus {
   ACTIVE
   INVITED
@@ -253,10 +300,153 @@ model Organization {
 
   gradingScales GradingScale[]
   idCards       IdCard[]
+  subscriptions Subscription[]
 
   @@index([id])
   @@index([slug])
   @@index([institutionId])
+}
+
+model Plan {
+  id            String        @id @default(cuid())
+  code          PlanCode      @unique
+  name          String
+  description   String?
+  billingMetric BillingMetric
+  monthlyPrice  Int?
+  annualPrice   Int?
+  studentLimit  Int?
+  isPublic      Boolean       @default(true)
+  isActive      Boolean       @default(true)
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([isPublic, isActive])
+  @@index([sortOrder])
+}
+
+model Offer {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  type            OfferType
+  description     String?
+  discountPercent Int?
+  fixedPrice      Int?
+  trialDays       Int?
+  maxRedemptions  Int?
+  redeemedCount   Int       @default(0)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([type, isActive])
+  @@index([startsAt, endsAt])
+}
+
+model Subscription {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId         String
+  plan           Plan         @relation(fields: [planId], references: [id])
+  offerId        String?
+  offer          Offer?       @relation(fields: [offerId], references: [id])
+
+  status        SubscriptionStatus @default(TRIALING)
+  billingCycle  BillingCycle       @default(MONTHLY)
+  billingMetric BillingMetric
+  price         Int?
+  studentLimit  Int?
+  studentCount  Int                @default(0)
+
+  trialStartedAt     DateTime?
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelledAt        DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices Invoice[]
+  payments SubscriptionPayment[]
+  events   BillingEvent[]
+
+  @@index([organizationId, status])
+  @@index([planId])
+  @@index([offerId])
+  @@index([currentPeriodEnd])
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  organizationId String
+
+  periodStart  DateTime
+  periodEnd    DateTime
+  studentCount Int
+  subtotal     Int
+  discount     Int           @default(0)
+  usageAmount  Int           @default(0)
+  total        Int
+  status       InvoiceStatus @default(OPEN)
+  dueAt        DateTime?
+  paidAt       DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  payments SubscriptionPayment[]
+
+  @@index([organizationId, status])
+  @@index([subscriptionId])
+  @@index([periodStart, periodEnd])
+}
+
+model SubscriptionPayment {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  invoiceId      String?
+  invoice        Invoice?     @relation(fields: [invoiceId], references: [id])
+
+  provider          String
+  providerOrderId   String?
+  providerPaymentId String?
+  amount            Int
+  status            SubscriptionPaymentStatus @default(PENDING)
+  rawPayload        Json?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  @@index([subscriptionId, status])
+  @@index([invoiceId])
+  @@index([providerOrderId])
+  @@index([providerPaymentId])
+}
+
+model BillingEvent {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  type           String
+  message        String?
+  metadata       Json?
+  createdBy      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([subscriptionId, createdAt])
+  @@index([type])
 }
 
 //////////////////////////////////////////////////////

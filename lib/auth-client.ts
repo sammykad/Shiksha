@@ -23,12 +23,12 @@ export const authClient = createAuthClient({
 });
 
 export const {
-  signIn,
-  signUp,
-  signOut,
   useSession,
   useListOrganizations,
   useActiveOrganization,
+  useActiveMemberRole,
   organization,
-  emailOtp: emailOTP,
+  emailOtp,
+  signIn,
+  signUp,
 } = authClient;

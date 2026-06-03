@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronsUpDown, Settings } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,10 +18,6 @@ import type { OrganizationLike } from "./types";
 import { OrganizationList } from "./organization-list";
 import { OrganizationProfile } from "./organization-profile";
 import { AuthFooter } from "./_components/auth-footer";
-
-function formatRole(role?: string | null) {
-    return (role ?? "ADMIN").toUpperCase();
-}
 
 interface OrganizationSwitcherProps {
     isCollapsed?: boolean;
@@ -40,7 +36,6 @@ export function OrganizationSwitcher({
     const userName = session?.user?.name ?? session?.user?.email ?? "Personal account";
     const organization = activeOrg as OrganizationLike | null | undefined;
     const displayName = organization?.name ?? userName;
-    const role = formatRole(organization?.role);
 
     const triggerAvatar = organization ? (
         <OrganizationAvatar
@@ -90,47 +85,18 @@ export function OrganizationSwitcher({
                     sideOffset={8}
                     className="w-[min(460px,calc(100vw-32px))] gap-0 overflow-hidden rounded-[10px] border border-black/[0.08] bg-[#f7f7f7] p-0 shadow-[0_10px_30px_rgba(0,0,0,0.16),0_0_0_1px_rgba(0,0,0,0.04)]"
                 >
-                    {organization ? (
-                        <div className="flex items-center gap-4 border-b border-black/[0.06] bg-white px-7 py-6">
-                            <OrganizationAvatar
-                                name={organization.name}
-                                logo={organization.logo}
-                                size={38}
-                                className="size-[38px] rounded-[8px]"
-                            />
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium leading-6 tracking-[-0.2px]">
-                                    {organization.name}
-                                </p>
-                                <p className="truncate text-xs font-medium leading-5 text-muted-foreground">
-                                    {role}
-                                </p>
-                            </div>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-9 shrink-0 gap-2 rounded-md border-black/[0.08] bg-white px-3.5 text-base font-normal text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)] hover:bg-white"
-                                onClick={() => {
-                                    setPopoverOpen(false);
-                                    setProfileOpen(true);
-                                }}
-                            >
-                                <Settings data-icon="inline-start" />
-                                Manage
-                            </Button>
-                        </div>
-                    ) : null}
-
-                    <div className="max-h-[408px] overflow-y-auto bg-white">
+                    <div className="max-h-[440px] overflow-y-auto bg-white">
                         <OrganizationList
                             compact
                             hidePersonalAccount
                             hideCreateOrganizationButton
-                            excludeActiveOrganization
                             showOrganizationRole={true}
                             showDefaultActions
                             afterSelectOrganizationUrl={afterSelectOrganizationUrl}
+                            onManageOrganization={() => {
+                                setPopoverOpen(false);
+                                setProfileOpen(true);
+                            }}
                         />
                     </div>
                     <AuthFooter />

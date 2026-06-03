@@ -40,7 +40,7 @@
 **Add:**
 - `monthlyPrice: number` — flat monthly price in INR
 - `yearlyPrice: number` — flat yearly price in INR  
-- `maxStudents?: number` — learner limit for this tier (null = unlimited/unpublished)
+- `maxStudents?: number` — student limit for this tier (null = unlimited/unpublished)
 - `popular?: boolean` — replaces `featured`
 - `savings?: string` — e.g. "Save 17% with annual"
 
@@ -51,7 +51,7 @@ export interface Plan {
   tagline: string           // One line: what this tier means
   monthlyPrice: number      // Flat monthly price
   yearlyPrice: number       // Flat yearly price
-  maxStudents?: number      // Learner limit (null = contact us)
+  maxStudents?: number      // Student limit (null = contact us)
   popular?: boolean
   badge?: string
   description: string
@@ -71,7 +71,7 @@ export interface Plan {
 
 **Replace with:** 3 transparent size-based tiers + 1 free trial.
 
-| Tier | Learner Limit | Monthly | Yearly | Message |
+| Tier | Student Limit | Monthly | Yearly | Message |
 |------|--------------|---------|--------|---------|
 | **Free Trial** | Up to 100 | ₹0 | — | 3 months, no card, every feature |
 | **Small** | Up to 100 | ₹999 | ₹9,999 | For small schools & coaching classes |
@@ -85,7 +85,7 @@ Example:
 {
   id: "small",
   name: "Small",
-  tagline: "For schools and coaching classes with up to 100 learners.",
+  tagline: "For schools and coaching classes with up to 100 students.",
   monthlyPrice: 999,
   yearlyPrice: 9999,
   maxStudents: 100,
@@ -108,7 +108,7 @@ Example:
     { label: "Future core modules free — always", included: true },
     { label: "Multi-branch management", included: true },
     { label: "Super admin: manage all your organizations from one login", included: true },
-    { label: "Up to 100 learners", included: true },
+    { label: "Up to 100 students", included: true },
   ],
   footnote: "Notification overage and payment gateway charges apply at actual cost. Extra storage available."
 }
@@ -116,7 +116,7 @@ Example:
 
 **Key changes:**
 - Every plan has the SAME features (no gating)
-- Differentiator is **learner count limit** only
+- Differentiator is **student count limit** only
 - Parents/teachers/admins always free — stated explicitly
 - Future modules free — stated explicitly
 - All modules listed as included
@@ -167,7 +167,7 @@ export const FAIR_USE: FairUseItem[] = [
 - Remove all "META" statuses — replace with `true` (it works, just needs testing)
 - Remove all "Planned" from public pricing — filter them out or mark as `{ label: "Coming in 2026", included: true, comingSoon: true }`
 - All core features = `true` across all plans
-- Differences only in **learner count** and **fair-use limits**
+- Differences only in **student count** and **fair-use limits**
 - Simplify groups: merge related groups, remove redundant entries
 
 ```typescript
@@ -177,7 +177,7 @@ export const COMPARISON: ComparisonGroup[] = [
     rows: [
       { label: "All 27+ modules included", trial: true, small: true, medium: true, large: true },
       { label: "Unlimited parents, teachers, admins", trial: true, small: true, medium: true, large: true },
-      { label: "Learner limit", trial: "Up to 100", small: "Up to 100", medium: "Up to 500", large: "Up to 3,000" },
+      { label: "Student limit", trial: "Up to 100", small: "Up to 100", medium: "Up to 500", large: "Up to 3,000" },
       { label: "Notifications included/month", trial: "2,000", small: "10,000", medium: "25,000", large: "50,000" },
       { label: "Storage included", trial: "500 MB", small: "1 GB", medium: "2 GB", large: "5 GB" },
       { label: "Future core modules free", trial: true, small: true, medium: true, large: true },
@@ -205,7 +205,7 @@ export const COMPARISON: ComparisonGroup[] = [
 
 **Add:** 
 - Real school/institution names if available
-- Student/learner counts for credibility
+- Student/student counts for credibility
 - A stats bar: "Trusted by 500+ institutions across India"
 
 ---
@@ -218,7 +218,7 @@ export const COMPARISON: ComparisonGroup[] = [
 | "Do parents, teachers, admins pay extra?" | USP #7 — make this prominent |
 | "What's included in the subscription?" | USP #3 — emphasize everything included |
 | "What costs extra?" | Fair-use overage clarity |
-| "What if I exceed my learner limit?" | Upgrade path + grace period |
+| "What if I exceed my student limit?" | Upgrade path + grace period |
 | "What happens when you launch new features?" | USP #10 — future modules free |
 | "Can I manage multiple schools from one account?" | USP #9 — multi-org super admin |
 | "Is this better than a free trial?" | Make the free trial no-brainer |
@@ -233,7 +233,7 @@ export const COMPARISON: ComparisonGroup[] = [
 | Function | Change |
 |----------|--------|
 | `getEffectivePrice()` | Remove per-student logic. Replace with flat price lookup. |
-| `formatStudentLabel()` | Keep but update wording to match "learners" consistently. |
+| `formatStudentLabel()` | Keep but update wording to match "students" consistently. |
 | `computeMonthlyTotal()` | Remove per-student multiplication. Replace with plan-based pricing. |
 | `ANNUAL_DISCOUNT` | Keep at 20%. |
 

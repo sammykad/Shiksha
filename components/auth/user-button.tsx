@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth-client";
-import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { cn } from "@/lib/utils";
 import { ShikshaCloudWordmark } from "./_components/brand";
 import { UserAvatar } from "./_components/user-avatar";
@@ -54,9 +53,7 @@ export function UserButton({
             try {
                 const { error } = await authClient.signOut();
                 if (error) {
-                    toast.error(getAuthErrorMessage(error, {
-                        fallback: "Failed to sign out. Please try again.",
-                    }));
+                    toast.error(error.message ?? "Failed to sign out. Please try again.");
                     return;
                 }
 
@@ -99,18 +96,18 @@ export function UserButton({
                         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                     )}
                 >
-                    <div className="flex items-center gap-4 px-5 py-5 border-b border-muted ">
+                    <div className="flex items-center gap-3 border-b border-muted px-4 py-4">
                         <UserAvatar
                             name={name}
                             image={image}
-                            className="size-12 rounded-full border border-[#d7d9e0]"
+                            className="size-10 rounded-full border border-[#d7d9e0]"
                         />
                         <div className="min-w-0 flex-1">
-                            <p className="truncate text-lg font-semibold leading-[1.2] text-[#111827]">
+                            <p className="truncate text-sm font-semibold leading-[1.2] text-[#111827]">
                                 {name}
                             </p>
                             {email ? (
-                                <p className="mt-1 truncate text-md leading-[1.35] text-[#5f6673]">
+                                <p className="mt-0.5 truncate text-xs leading-[1.35] text-[#5f6673]">
                                     {email}
                                 </p>
                             ) : null}
@@ -123,10 +120,10 @@ export function UserButton({
                                 setPopoverOpen(false);
                                 setProfileOpen(true);
                             }}
-                            className="flex w-full items-center gap-4 px-6 py-5 text-left appearance-none border-0 bg-transparent transition-colors hover:bg-[#f8fafc]"
+                            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#f8fafc]"
                         >
-                            <Settings className="size-5 shrink-0 text-[#626874]" strokeWidth={2.2} />
-                            <span className="text-[16px] font-normal text-[#4b5563]">
+                            <Settings className="size-4 shrink-0 text-[#626874]" strokeWidth={2.2} />
+                            <span className="text-sm font-normal text-[#4b5563]">
                                 Manage account
                             </span>
                         </button>
@@ -137,26 +134,21 @@ export function UserButton({
                             type="button"
                             onClick={handleSignOut}
                             disabled={isSigningOut}
-                            className="flex w-full items-center gap-4 px-6 py-5 text-left appearance-none border-0 bg-transparent transition-colors hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-70"
+                            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                             {isSigningOut ? (
-                                <Loader2 className="size-5 shrink-0 animate-spin text-[#626874]" strokeWidth={2.2} />
+                                <Loader2 className="size-4 shrink-0 animate-spin text-[#626874]" strokeWidth={2.2} />
                             ) : (
-                                <LogOut className="size-5 shrink-0 text-[#626874]" strokeWidth={2.2} />
+                                <LogOut className="size-4 shrink-0 text-[#626874]" strokeWidth={2.2} />
                             )}
-                            <span className="text-[16px] font-normal text-[#4b5563]">
+                            <span className="text-sm font-normal text-[#4b5563]">
                                 {isSigningOut ? "Signing out..." : "Sign out"}
                             </span>
                         </button>
                     </div>
-                    <div
-                        className={cn(
-                            "border-t border-muted px-5 py-5",
-                            "bg-[repeating-linear-gradient(135deg,rgba(249,115,22,0.03)_0px,rgba(249,115,22,0.03)_10px,transparent_10px,transparent_20px)]"
-                        )}
-                    >
+                    <div className="border-t border-muted px-4 py-4">
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="flex items-center gap-2 text-[14px] text-[#6b7280]">
+                            <div className="flex items-center gap-2 text-xs text-[#6b7280]">
                                 <span>Secured by</span>
                                 <ShikshaCloudWordmark />
                             </div>

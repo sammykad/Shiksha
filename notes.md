@@ -7,7 +7,7 @@ For Big Calender: https://big-calendar.vercel.app/month-view
 For student Register Multi Loader: https://inspira-ui.com/docs/components/miscellaneous/multi-step-loader  
 Need To Buy : RFID biometric retina reader
 Alpha shop Pimpri arket
-
+https://www.kibo-ui.com/components/editor : Editor
 <!-- COMPLETED MODULES -->
 
 ## Digital ID Card Module (2026-05-21) ✅ 100%

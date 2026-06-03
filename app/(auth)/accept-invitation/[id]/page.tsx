@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AcceptInvitation } from "@/components/auth/accept-invitation";
+import { AcceptInvitation, SwitchInvitationAccountButton } from "@/components/auth/accept-invitation";
 import { getSessionOrNull } from "@/lib/auth";
-import { getSafeAuthCallbackUrl } from "@/lib/auth-navigation";
 import prisma from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -24,10 +24,9 @@ export default async function AcceptInvitationPage({
 }) {
     const { id } = await params;
     const session = await getSessionOrNull();
-    const callbackUrl = `/accept-invitation/${encodeURIComponent(id)}`;
 
     if (!session) {
-        redirect(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+        redirect("/sign-in");
     }
 
     const invitation = await prisma.invitation.findUnique({
@@ -47,7 +46,7 @@ export default async function AcceptInvitationPage({
     const requestedReturnUrl = Array.isArray(paramsValue.returnUrl)
         ? paramsValue.returnUrl[0]
         : paramsValue.returnUrl;
-    const returnUrl = getSafeAuthCallbackUrl(requestedReturnUrl);
+    const returnUrl = getReturnUrl(requestedReturnUrl);
 
     if (!invitation) {
         return (
@@ -101,9 +100,12 @@ export default async function AcceptInvitationPage({
         return (
             <InvitationMessage
                 title="Wrong account"
-                description={`This invitation was sent to ${invitation.email}. Sign in with that email to accept it.`}
-                actionHref={`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-                actionLabel="Sign in with invited email"
+                description={`This invitation was sent to ${invitation.email}. You are currently signed in with a different account.`}
+                actionSlot={
+                    <SwitchInvitationAccountButton
+                        invitedEmail={invitation.email}
+                    />
+                }
             />
         );
     }
@@ -123,16 +125,23 @@ export default async function AcceptInvitationPage({
     );
 }
 
+function getReturnUrl(returnUrl: string | undefined) {
+    if (returnUrl?.startsWith("/") && !returnUrl.startsWith("//")) return returnUrl;
+    return "/dashboard";
+}
+
 function InvitationMessage({
     title,
     description,
     actionHref,
     actionLabel,
+    actionSlot,
 }: {
     title: string;
     description: string;
     actionHref?: string;
     actionLabel?: string;
+    actionSlot?: ReactNode;
 }) {
     return (
         <main className="flex min-h-screen items-center justify-center bg-slate-50/50 p-4">
@@ -149,6 +158,7 @@ function InvitationMessage({
                         {actionLabel}
                     </Link>
                 ) : null}
+                {actionSlot}
             </div>
         </main>
     );

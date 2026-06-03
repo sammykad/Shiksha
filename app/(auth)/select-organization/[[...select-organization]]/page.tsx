@@ -11,7 +11,6 @@ import { redirect } from 'next/navigation';
 import { getSession, resolveDefaultOrganizationId } from '@/lib/auth';
 import { OrganizationList } from '@/components/auth/organization-list';
 import { CreateOrganization } from '@/components/auth/create-organization';
-import { getSafeAuthCallbackUrl } from '@/lib/auth-navigation';
 import prisma from '@/lib/db';
 
 export const metadata: Metadata = {
@@ -28,14 +27,14 @@ export default async function SelectOrganizationPage({
   try {
     session = await getSession();
   } catch {
-    redirect('/sign-in?callbackUrl=/select-organization');
+    redirect('/sign-in');
   }
 
   const params = await searchParams;
   const requestedReturnUrl = Array.isArray(params.returnUrl)
     ? params.returnUrl[0]
     : params.returnUrl;
-  const returnUrl = getSafeAuthCallbackUrl(requestedReturnUrl);
+  const returnUrl = getReturnUrl(requestedReturnUrl);
   const shouldForcePicker = getBooleanParam(params.switch);
   const activeOrganizationId = (session.session as { activeOrganizationId?: string | null })
     .activeOrganizationId;
@@ -108,7 +107,6 @@ export default async function SelectOrganizationPage({
               ) : (
                 <CreateOrganization afterCreateOrganizationUrl={returnUrl} />
               )}
-
             </div>
             <div className="hidden w-full justify-center lg:flex">
               <Image
@@ -132,3 +130,7 @@ function getBooleanParam(value: string | string[] | undefined) {
   return raw === 'true' || raw === '1' || raw === '';
 }
 
+function getReturnUrl(returnUrl: string | undefined) {
+  if (returnUrl?.startsWith('/') && !returnUrl.startsWith('//')) return returnUrl;
+  return '/dashboard';
+}

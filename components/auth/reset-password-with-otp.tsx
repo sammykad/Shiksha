@@ -20,7 +20,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { getAuthErrorField, getAuthErrorMessage, getOtpErrorMessage } from "@/lib/auth-errors";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
@@ -119,10 +118,8 @@ export function ResetPasswordWithOtp({
 
       const { error } = await emailOtp.requestPasswordReset({ email: nextEmail });
       if (error) {
-        const message = getAuthErrorMessage(error, {
-          fallback: "Could not send reset code. Please try again.",
-        });
-        if (getAuthErrorField(error) === "email") {
+        const message = error.message ?? "Could not send reset code. Please try again.";
+        if (message.toLowerCase().includes("email")) {
           emailForm.setError("email", { message });
         }
         toast.error(message);
@@ -190,7 +187,7 @@ export function ResetPasswordWithOtp({
           otp,
         });
         if (error) {
-          const message = getOtpErrorMessage(error);
+          const message = error.message ?? "The verification code is incorrect or expired.";
           setOtpError(message);
           toast.error(message);
           return;
@@ -216,9 +213,7 @@ export function ResetPasswordWithOtp({
         password: values.password,
       });
       if (error) {
-        const message = getAuthErrorMessage(error, {
-          fallback: "Could not reset password. Please try again.",
-        });
+        const message = error.message ?? "Could not reset password. Please try again.";
         passwordForm.setError("password", { message });
         toast.error(message);
         return;

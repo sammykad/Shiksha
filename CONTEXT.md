@@ -16,9 +16,9 @@ _Avoid_: Promotion, coupon, campaign, discount plan
 The active commercial relationship between one organization and one plan. It records status, billing cycle, offer, trial dates, renewal dates, and price terms.
 _Avoid_: Plan status, organization plan, paid flag
 
-**Learner**:
-The billable education participant counted for subscription sizing. In the current product this maps primarily to active students.
-_Avoid_: Seat, user, account
+**Student**:
+The billable education participant counted for subscription sizing. This maps to active student records.
+_Avoid_: Seat, user, account, learner
 
 **Free Role**:
 A non-billable account role such as parent, teacher, admin, or staff. These roles should never increase subscription price.

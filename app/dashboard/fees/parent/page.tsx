@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation';
 import { ParentFeesStats } from '@/components/dashboard/parent/parent-fee-stats-cards';
 import { PageHeader } from '@/components/ui/page-header';
-import { IndianRupee, IndianRupeeIcon } from 'lucide-react';
+import { IndianRupee, IndianRupeeIcon, Book, School, Paperclip } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ChildSwitcher } from '@/components/dashboard/parent/child-switcher';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,17 @@ import ParentFeesTable from '@/components/dashboard/Fees/ParentFeesTable';
 export default async function ParentFeesDashboard() {
   const data = await getParentFeesData();
 
-  if (!data) redirect('/dashboard');
+  if (!data) {
+    return (
+      <main className="px-2 pb-6 flex flex-col items-center justify-center min-h-[60vh]">
+        <EmptyState
+          title="No Fee Data"
+          description="No student is linked to your account. Contact your institution administrator to link student profiles."
+          icons={[Book, School, Paperclip]}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4">

@@ -8,22 +8,14 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Form, FormField } from "@/components/ui/form";
-import {
-  getAuthErrorField,
-  getOAuthErrorMessage,
-  getOtpErrorMessage,
-  getSignInErrorMessage,
-  getSignUpErrorMessage,
-} from "@/lib/auth-errors";
-import { emailOTP, signIn, signUp } from "@/lib/auth-client";
-import { appendAuthCallbackUrl, getAbsoluteAuthCallbackUrl } from "@/lib/auth-navigation";
+import { emailOtp, signIn, signUp } from "@/lib/auth-client";
 import { markEmailVerifiedWithOwnershipToken } from "@/lib/auth-account-actions";
 import { cn } from "@/lib/utils";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
+import { Google } from "../website/Icons";
 
 type SignUpStep = "email" | "verify" | "existing" | "new";
 type PasswordRequirement = { label: string; met: boolean };
@@ -75,36 +67,6 @@ function getPasswordRequirements(password: string): PasswordRequirement[] {
     { label: "Uppercase letter", met: /[A-Z]/.test(password) },
     { label: "Number", met: /\d/.test(password) },
   ];
-}
-
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-    >
-      <path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        fill="#34A853"
-      />
-      <path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A11.96 11.96 0 0 0 0 12c0 1.94.46 3.77 1.28 5.4l3.56-2.77.01-.54z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-        fill="#EA4335"
-      />
-    </svg>
-  );
 }
 
 export function BetterAuthSignUp({
@@ -176,15 +138,14 @@ export function BetterAuthSignUp({
   }, []);
 
   const sendOwnershipOtp = useCallback(async (email: string) => {
-    const { error: otpError } = await emailOTP.sendVerificationOtp({
+    const { error } = await emailOtp.sendVerificationOtp({
       email,
       type: "sign-in",
     });
 
-    if (otpError) {
-      const message = getOtpErrorMessage(otpError);
-      setError(message);
-      toast.error(message);
+    if (error) {
+      setError(error.message ?? "Failed to send verification code");
+      toast.error(error.message ?? "Failed to send verification code");
       return false;
     }
 
@@ -198,14 +159,14 @@ export function BetterAuthSignUp({
     setIsOAuthSubmitting(true);
 
     try {
-      const { error: oauthError } = await signIn.social({
+      const { error } = await signIn.social({
         provider: "google",
-        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
-        errorCallbackURL: appendAuthCallbackUrl("/sign-up", redirectUrl),
+        callbackURL: redirectUrl,
+        errorCallbackURL: "/sign-up",
       });
 
-      if (oauthError) {
-        const message = getOAuthErrorMessage(oauthError);
+      if (error) {
+        const message = error.message ?? "Failed to sign in with Google";
         setError(message);
         toast.error(message);
       }
@@ -305,25 +266,21 @@ export function BetterAuthSignUp({
     setIsSubmitting(true);
 
     try {
-      const { error: signInError } = await signIn.email({
+      const { error } = await signIn.email({
         email: pendingEmail,
         password: values.password,
-        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
+        callbackURL: redirectUrl,
       });
 
-      if (signInError) {
-        const message = getSignInErrorMessage(signInError);
-        const field = getAuthErrorField(signInError);
-
-        if (field === "email" || field === "password") {
+      if (error) {
+        const message = error.message ?? "Invalid email or password";
+        if (message.toLowerCase().includes("email") || message.toLowerCase().includes("password")) {
           existingAccountForm.setError("password", { message });
         }
-
         setError(message);
         toast.error(message);
         return;
       }
-
       startTransition(() => {
         router.push(redirectUrl);
         router.refresh();
@@ -341,23 +298,20 @@ export function BetterAuthSignUp({
     setIsSubmitting(true);
 
     try {
-      const { error: signUpError } = await signUp.email({
+      const { error } = await signUp.email({
         email: pendingEmail,
         password: values.password,
         name: `${values.firstName} ${values.lastName}`.trim(),
-        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
+        callbackURL: redirectUrl,
       });
 
-      if (signUpError) {
-        const message = getSignUpErrorMessage(signUpError);
-        const field = getAuthErrorField(signUpError);
-
-        if (field === "password") {
+      if (error) {
+        const message = error.message ?? "Could not create account";
+        if (message.toLowerCase().includes("password")) {
           newAccountForm.setError("password", { message });
         } else {
           setError(message);
         }
-
         toast.error(message);
         return;
       }
@@ -374,11 +328,11 @@ export function BetterAuthSignUp({
       const { error: signInError } = await signIn.email({
         email: pendingEmail,
         password: values.password,
-        callbackURL: getAbsoluteAuthCallbackUrl(redirectUrl),
+        callbackURL: redirectUrl,
       });
 
       if (signInError) {
-        const message = `Account created, but sign in failed. ${getSignInErrorMessage(signInError)}`;
+        const message = signInError.message || "Account created, but sign in failed."
         setError(message);
         toast.error(message);
         return;
@@ -489,7 +443,8 @@ export function BetterAuthSignUp({
             onSubmit={handleExistingSignIn}
             onTogglePassword={() => setShowExistingPassword((value) => !value)}
             onResetPassword={() => {
-              router.push(appendAuthCallbackUrl("/reset-password", redirectUrl, { email: pendingEmail }));
+              const params = new URLSearchParams({ email: pendingEmail });
+              router.push(`/reset-password?${params.toString()}`);
             }}
           />
         ) : (
@@ -591,7 +546,7 @@ function EmailStep({
             className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-[0.8125rem] font-medium text-neutral-800 transition-all hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isOAuthSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-            <GoogleIcon />
+            <Google width={16} height={16} />
             Google
           </button>
 

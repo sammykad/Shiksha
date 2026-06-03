@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import { BrandAuthHeader } from "./_components/brand";
@@ -43,9 +42,7 @@ export function AcceptInvitation({
             });
 
             if (error) {
-                toast.error(getAuthErrorMessage(error, {
-                    fallback: "Could not accept invitation. Please check the invite link and try again.",
-                }));
+                toast.error(error.message || "Could not accept invitation. Please check the invite link and try again.");
                 return;
             }
 
@@ -54,9 +51,7 @@ export function AcceptInvitation({
             });
 
             if (activeOrgError) {
-                toast.warning(getAuthErrorMessage(activeOrgError, {
-                    fallback: "Invitation accepted, but we could not switch organizations automatically.",
-                }));
+                toast.warning(activeOrgError.message ?? "Invitation accepted, but we could not switch organizations automatically.");
             } else {
                 toast.success("Invitation accepted.");
             }
@@ -123,5 +118,45 @@ export function AcceptInvitation({
             </AuthCardPanel>
             <AuthFooter />
         </AuthCard>
+    );
+}
+
+export function SwitchInvitationAccountButton({
+    invitedEmail,
+}: {
+    invitedEmail: string;
+}) {
+    const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+
+    const handleSwitchAccount = () => {
+        if (isPending) return;
+
+        startTransition(async () => {
+            try {
+                const { error } = await authClient.signOut();
+
+                if (error) {
+                    toast.error(error.message ?? "Could not sign out. Please try again.");
+                    return;
+                }
+
+                router.push("/sign-in");
+                router.refresh();
+            } catch {
+                toast.error("Could not switch accounts. Please try again.");
+            }
+        });
+    };
+
+    return (
+        <button
+            type="button"
+            disabled={isPending}
+            onClick={handleSwitchAccount}
+            className="mt-6 inline-flex h-9 items-center justify-center rounded-[6px] bg-[#372F35] px-4 text-[13px] font-[510] text-white hover:bg-[#2c252b] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+            {isPending ? "Signing out..." : `Use ${invitedEmail}`}
+        </button>
     );
 }

@@ -2,6 +2,8 @@ import { StudentExamsPage } from '@/components/dashboard/exam/StudentExamsPage';
 import { getCurrentUserByRole } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
+import { Book, School, Paperclip } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { notFound } from 'next/navigation';
 
 import { Suspense } from 'react';
@@ -58,7 +60,17 @@ export default async function ExamsPage() {
         select: { id: true, gradeId: true, sectionId: true },
       });
 
-      if (!children.length) return notFound();
+      if (!children.length) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <EmptyState
+              title="No Children Linked"
+              description="Contact your institution administrator to link student profiles to your account."
+              icons={[Book, School, Paperclip]}
+            />
+          </div>
+        );
+      }
 
       const gradeIds = [...new Set(children.map((c) => c.gradeId))];
       const sectionIds = [...new Set(children.map((c) => c.sectionId))];

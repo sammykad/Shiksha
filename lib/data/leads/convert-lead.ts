@@ -27,32 +27,29 @@ export async function convertLead(leadId: string) {
       };
     }
 
-    // Simply mark the lead as converted and create an activity
-    // The actual student creation will happen in your student form
-    const updatedLead = await prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        status: 'CONVERTED',
-        convertedAt: new Date(),
-        // Note: We're NOT setting convertedToStudentId here
-        // This will be set when the student is actually created
-        nextFollowUpAt: null, // Clear follow-ups
-      },
-    });
-
-    // Create conversion activity
-    await prisma.leadActivity.create({
-      data: {
-        leadId: leadId,
-        type: 'OTHER',
-        title: 'Lead marked for conversion',
-        description:
-          'Lead marked as converted and ready for student enrollment process',
-        outcome: 'CONVERTED',
-        performedById: currentUserId,
-        performedAt: new Date(),
-      },
-    });
+    // Mark lead as converted + create activity atomically
+    const [updatedLead] = await prisma.$transaction([
+      prisma.lead.update({
+        where: { id: leadId },
+        data: {
+          status: 'CONVERTED',
+          convertedAt: new Date(),
+          nextFollowUpAt: null,
+        },
+      }),
+      prisma.leadActivity.create({
+        data: {
+          leadId,
+          type: 'OTHER',
+          title: 'Lead marked for conversion',
+          description:
+            'Lead marked as converted and ready for student enrollment process',
+          outcome: 'CONVERTED',
+          performedById: currentUserId,
+          performedAt: new Date(),
+        },
+      }),
+    ]);
 
     revalidatePath(`/dashboard/leads/${leadId}`);
     revalidatePath('/dashboard/leads');

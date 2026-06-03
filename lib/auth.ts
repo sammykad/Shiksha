@@ -7,8 +7,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { PlanType, Role, YearType } from "@/generated/prisma/enums";
+import { MembershipStatus, PlanCode, PlanType, Role, YearType } from "@/generated/prisma/enums";
 import prisma from "@/lib/prisma-base";
+import { createTrialSubscription, getActiveSubscription } from "@/lib/subscription-billing";
 import {
   buildInvitationEmail,
   buildOtpEmail,
@@ -42,7 +43,7 @@ export const betterAuthServer = betterAuth({
   // ── Rate Limiting ──────────────────────────────────────────────────────────
   rateLimit: {
     enabled: true,
-    window: 10,
+    window: 60,
     max: 100,
     customRules: {
       "/sign-in/email": { window: 60, max: 5 },
@@ -118,9 +119,9 @@ export const betterAuthServer = betterAuth({
       creatorRole: Role.ADMIN,
       allowUserToCreateOrganization: (user) => user.emailVerified === true,
       organizationLimit: 3,
-      membershipLimit: async (_user, org) => getMembershipLimit(org.id),
+      membershipLimit: async (_user, org) => getOrganizationAccountLimit(org.id),
       invitationExpiresIn: 60 * 60 * 24 * 7, // 7 days
-      invitationLimit: 100,
+      invitationLimit: async ({ organization }) => getOrganizationAccountLimit(organization.id),
       cancelPendingInvitationsOnReInvite: true,
       requireEmailVerificationOnInvitation: true,
       disableOrganizationDeletion: true,
@@ -156,6 +157,11 @@ export const betterAuthServer = betterAuth({
             organizationId: organization.id,
             createdBy: user.id,
           });
+          await createTrialSubscription({
+            organizationId: organization.id,
+            planCode: PlanCode.GROWTH,
+            createdBy: user.id,
+          });
         },
 
         afterAddMember: async ({ member, user, organization }) => {
@@ -164,8 +170,19 @@ export const betterAuthServer = betterAuth({
         },
 
         afterAcceptInvitation: async ({ member, user, organization }) => {
-          if (member.role !== Role.TEACHER) return;
-          await upsertTeacher({ userId: user.id, organizationId: organization.id });
+          await markMembershipAccepted(member.id);
+
+          if (member.role === Role.TEACHER) {
+            await upsertTeacher({ userId: user.id, organizationId: organization.id });
+          }
+
+          if (member.role === Role.PARENT) {
+            await linkParentProfile({
+              userId: user.id,
+              email: user.email,
+              organizationId: organization.id,
+            });
+          }
         },
 
         beforeRemoveMember: async ({ member, organization }) => {
@@ -175,6 +192,42 @@ export const betterAuthServer = betterAuth({
         beforeUpdateMemberRole: async ({ member, newRole, organization }) => {
           if (newRole === Role.ADMIN) return;
           await assertNotLastAdmin({ memberRole: member.role, organizationId: organization.id });
+        },
+
+        afterUpdateMemberRole: async ({ member, previousRole, organization }) => {
+          const newRole = member.role;
+
+          if (previousRole === Role.TEACHER && newRole !== Role.TEACHER) {
+            await prisma.teacher.updateMany({
+              where: { userId: member.userId, organizationId: organization.id },
+              data: { isActive: false },
+            });
+          }
+
+          if (previousRole === Role.PARENT && newRole !== Role.PARENT) {
+            await prisma.parent.updateMany({
+              where: { userId: member.userId, organizationId: organization.id },
+              data: { userId: null },
+            });
+          }
+
+          if (newRole === Role.TEACHER) {
+            await upsertTeacher({ userId: member.userId, organizationId: organization.id });
+          }
+
+          if (newRole === Role.PARENT) {
+            const user = await prisma.user.findUnique({
+              where: { id: member.userId },
+              select: { email: true },
+            });
+            if (user?.email) {
+              await linkParentProfile({
+                userId: member.userId,
+                email: user.email,
+                organizationId: organization.id,
+              });
+            }
+          }
         },
       },
     }),
@@ -300,13 +353,12 @@ export const getSessionOrNull = cache(async () => {
 
 export const auth = cache(
   async (
-    options: { callbackUrl?: string; organizationReturnUrl?: string } = {}
+    options: { organizationReturnUrl?: string } = {}
   ): Promise<AuthContext> => {
-    const callbackUrl = options.callbackUrl ?? "/dashboard";
-    const orgReturnUrl = options.organizationReturnUrl ?? callbackUrl;
+    const orgReturnUrl = options.organizationReturnUrl ?? "/dashboard";
 
     const session = await getSessionOrNull();
-    if (!session) redirect(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    if (!session) redirect("/sign-in");
 
     // Resolve active organisation
     let orgId = (session.session as { activeOrganizationId?: string | null }).activeOrganizationId;
@@ -375,8 +427,8 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
       where: { userId, organizationId: orgId },
       select: { id: true },
     });
-    if (!teacher) throw new Error(`Teacher profile missing for user ${userId} in org ${orgId}`);
-    return { role: Role.TEACHER, userId, teacherId: teacher.id, organizationId: orgId };
+    if (!teacher) redirect('/dashboard');
+    return { role: Role.TEACHER, userId, teacherId: teacher!.id, organizationId: orgId };
   }
 
   if (orgRole === Role.STUDENT) {
@@ -384,8 +436,8 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
       where: { userId, organizationId: orgId },
       select: { id: true },
     });
-    if (!student) throw new Error(`Student profile missing for user ${userId} in org ${orgId}`);
-    return { role: Role.STUDENT, userId, studentId: student.id, organizationId: orgId };
+    if (!student) redirect('/dashboard');
+    return { role: Role.STUDENT, userId, studentId: student!.id, organizationId: orgId };
   }
 
   // PARENT
@@ -449,16 +501,23 @@ export async function resolveDefaultOrganizationId(
   return lastSession?.activeOrganizationId ?? null;
 }
 
-async function getMembershipLimit(organizationId: string) {
+async function getOrganizationAccountLimit(organizationId: string) {
+  const subscription = await getActiveSubscription(organizationId);
+  if (subscription?.studentLimit) return subscription.studentLimit * 3;
+
   const org = await prisma.organization.findUnique({
     where: { id: organizationId },
     select: { plan: true, maxStudents: true },
   });
 
-  if (org?.maxStudents) return org.maxStudents;
-  if (org?.plan === PlanType.ENTERPRISE) return 5000;
-  if (org?.plan === PlanType.PREMIUM) return 1000;
-  return 200;
+  return (org?.maxStudents ?? getLegacyStudentLimit(org?.plan)) * 3;
+}
+
+function getLegacyStudentLimit(plan?: PlanType | null) {
+  if (plan === PlanType.ENTERPRISE) return 5000;
+  if (plan === PlanType.PREMIUM) return 1000;
+  if (plan === PlanType.FREE) return 100;
+  return 500;
 }
 
 async function createDefaultAcademicYear({
@@ -498,6 +557,54 @@ async function upsertTeacher({
     where: { organizationId, userId },
     update: { isActive: true },
     create: { userId, organizationId },
+  });
+}
+
+async function linkParentProfile({
+  userId,
+  email,
+  organizationId,
+}: {
+  userId: string;
+  email: string;
+  organizationId: string;
+}) {
+  const parent = await prisma.parent.findUnique({
+    where: {
+      organizationId_email: {
+        organizationId,
+        email: email.trim().toLowerCase(),
+      },
+    },
+    select: {
+      id: true,
+      userId: true,
+    },
+  });
+
+  if (!parent) return;
+
+  if (parent.userId && parent.userId !== userId) {
+    throw new APIError("BAD_REQUEST", {
+      message: "This parent profile is already linked to another account.",
+    });
+  }
+
+  if (parent.userId === userId) return;
+
+  await prisma.parent.update({
+    where: { id: parent.id },
+    data: { userId },
+  });
+}
+
+async function markMembershipAccepted(memberId: string) {
+  await prisma.membership.update({
+    where: { id: memberId },
+    data: {
+      status: MembershipStatus.ACTIVE,
+      acceptedAt: new Date(),
+    },
   });
 }
 
