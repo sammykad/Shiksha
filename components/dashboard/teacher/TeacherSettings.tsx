@@ -354,10 +354,8 @@ function AccountSection({ teacher, hasPassword }: { teacher: NonNullable<Awaited
                 {hasPassword ? 'Change your account password' : 'Set a password for your account'}
               </p>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <a href="/dashboard/settings/password">
-                {hasPassword ? 'Change Password' : 'Set Password'}
-              </a>
+            <Button variant="outline" size="sm">
+              {hasPassword ? 'Change Password' : 'Set Password'}
             </Button>
           </div>
           <Separator />

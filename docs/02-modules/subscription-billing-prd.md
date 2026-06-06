@@ -30,7 +30,7 @@ The job of this PRD is to create one clean billing model before money starts flo
 
 EarlyBird is an **Offer**, not a **Plan**.
 
-Starter, Growth, and Scale are plans. EarlyBird is a launch offer that can lower the price of a plan for eligible institutions. It should never be a standalone plan because it does not change product access.
+Starter, Growth, and Scale are plans. EarlyBird is a launch offer that can lower the price of a plan for offer institutions. It should never be a standalone plan because it does not change product access.
 
 Use this mental model:
 
@@ -72,13 +72,13 @@ This keeps the buyer story simple and keeps the code maintainable.
 | Offer | Meaning | Rule |
 |-------|---------|------|
 | Trial | No-risk onboarding | 3 months free, no card required |
-| EarlyBird | Launch urgency and price lock | First 50 eligible institutions lock a lower rate |
+| EarlyBird | Launch urgency and price lock | First 50 offer institutions lock a lower rate |
 | Annual | Prepay incentive | Annual billing discount |
 | Manual | Sales exception | Custom discount for approved contracts |
 
 ### Recommendation On EarlyBird
 
-For the public page, show EarlyBird as a strip or badge above eligible plans:
+For the public page, show EarlyBird as a strip or badge above offer plans:
 
 ```txt
 EarlyBird offer: first 50 institutions lock the launch price after their free trial.
@@ -442,7 +442,7 @@ getBillingEvents(subscriptionId)
 
 1. Visitor opens `/pricing`.
 2. Visitor selects Starter, Growth, or Scale.
-3. UI shows EarlyBird only as an eligible offer.
+3. UI shows EarlyBird only as an offer.
 4. Visitor clicks trial CTA.
 5. Signup receives `planCode`, `billingCycle`, and optional `offerCode`.
 6. Server validates plan and offer.
@@ -565,7 +565,7 @@ Important: billing should not be disabled just because no academic year exists. 
 
 1. Should V1 use flat student bands or per-student pricing?
    - Recommendation: flat student bands for clearer sales conversations.
-2. Should EarlyBird apply to Starter only, Growth only, or any eligible paid plan?
+2. Should EarlyBird apply to Starter only, Growth only, or any offer paid plan?
    - Recommendation: Starter and Growth only; Scale should be sales-led.
 3. What is the exact billable student definition?
    - Recommendation: active students/students, excluding alumni, transferred, dropped, and inactive records.

@@ -24,6 +24,11 @@ COMPLETE FEATURE LIST - NEXUS SCHOOL MANAGEMENT
 - Online Payment (UPI/Card/Net Banking/Wallet)
 - Offline Payment Recording
 - PDC Cheque Tracking
+  - PDC cheque is CHEQUE_PENDING — does NOT reduce fee balance
+  - Parent can still pay full pending amount via cash/UPI even if PDC exists
+  - If PDC clears after fee is already PAID: syncFeeBalance caps at totalFee, extra ₹ doesn't show
+  - This is BY DESIGN: PDC can bounce/cancel, so never block payment based on un-cleared PDC
+  - Admin can cancel the PDC if fee is already covered
 - Fee Receipt Generation (PDF)
 - Fee Status Tracking
 - Fee Reminders (Auto/Manual) Ai Agents
@@ -407,6 +412,10 @@ IMP : Find Best Sutable / Cheap Domain
 - Student Bulk Import should Need Clarity and also responsive on mobile
 - If internet gown show proper message
 - Setup Modal To Track Activity Logs But Very Smartly 
+- IFSC Auto-fill via Razorpay IFSC API: done in Recordpdcpaymentcard.tsx
+  - Uses [BANKCODE] from API to match banks.json keys (not bank name string)
+  - Debounced 500ms, auto-fills bank dropdown + branch + MICR
+  - Works for all banks in banks.json, fallback to manual entry on failure
 
 
 

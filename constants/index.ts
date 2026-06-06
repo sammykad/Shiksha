@@ -13,6 +13,8 @@ import {
   ZapIcon,
 } from 'lucide-react';
 
+export const PLATFORM_FEE_PERCENT = 0.025;
+
 export const ID_CARD_MOTTO: Record<string, string> = {
   STUDENT: 'Inspire  •  Learn  •  Grow',
   TEACHER: 'Empower  •  Educate  •  Excel',

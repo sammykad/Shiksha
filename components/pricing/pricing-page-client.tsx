@@ -2,15 +2,16 @@
 
 import { Fragment, useEffect, useState, useTransition, type ReactNode } from "react"
 import {
+  BadgeCheck,
   BellRing,
   CheckCircle2,
   CheckIcon,
+  ChevronDown,
   CreditCard,
   HardDrive,
   MinusIcon,
+  Quote,
   ShieldCheck,
-  Sparkles,
-  UsersRound,
 } from "lucide-react"
 import {
   Accordion,
@@ -24,7 +25,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -39,14 +39,13 @@ import {
   PLANS,
   STUDENT_STEPS,
   TESTIMONIALS,
-  TOTAL_STANDALONE_COST,
   TRUSTED_SCHOOLS,
-  computeMonthlyTotal,
   formatINR,
   formatStudentLabel,
   getEffectivePrice,
   type BillingCycle,
   type CellValue,
+  type ComparisonRow,
   type Plan,
   type StudentStep,
 } from "@/lib/pricing-data"
@@ -57,18 +56,21 @@ const PLAN_HEADERS = ["Starter", "Growth", "Scale"] as const
 const addonMeta = {
   notifications: {
     icon: BellRing,
-    label: "Live channel meter",
-    accent: "text-primary bg-primary/5 border-primary/20",
+    shortLabel: "Messages",
+    simpleNote: "WhatsApp, SMS, email, push or voice messages, only when sent.",
+    tone: "border-sky-200 bg-sky-50 text-sky-700",
   },
   payments: {
     icon: CreditCard,
-    label: "Charged on success",
-    accent: "text-primary bg-primary/5 border-primary/20",
+    shortLabel: "Online payments",
+    simpleNote: "Gateway fees apply only when parents pay fees online.",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   storage: {
     icon: HardDrive,
-    label: "Included first",
-    accent: "text-primary bg-primary/5 border-primary/20",
+    shortLabel: "Storage",
+    simpleNote: "Normal document storage is included. Extra storage is separate.",
+    tone: "border-amber-200 bg-amber-50 text-amber-700",
   },
 } as const
 
@@ -80,7 +82,6 @@ export function PricingPageClient() {
         <PlansGrid />
         <AddonCards />
         <FeatureTable />
-        <TrustedSchools />
         <TestimonialsCarousel />
         <FaqSection />
       </div>
@@ -133,6 +134,7 @@ function PricingHero() {
 function PlansGrid() {
   const [billing, setBilling] = useState<BillingCycle>("monthly")
   const [studentCount, setStudentCount] = useState<StudentStep>(STUDENT_STEPS[2])
+  const [showAllFeatures, setShowAllFeatures] = useState(false)
 
   return (
     <section className="space-y-10">
@@ -148,53 +150,55 @@ function PlansGrid() {
             plan={plan}
             billing={billing}
             studentCount={studentCount}
+            showAllFeatures={showAllFeatures}
           />
         ))}
       </div>
-      <div className="mx-auto grid max-w-5xl gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3 sm:grid-cols-3">
-        <ValueNote
-          icon={Sparkles}
-          title="All core modules included"
-          description="Fees, attendance, CRM, exams, certificates, documents, reports, AI and portals."
+
+      <button
+        onClick={() => setShowAllFeatures(!showAllFeatures)}
+        className="mx-auto flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        {showAllFeatures ? "Show fewer features" : "Show all features across plans"}
+        <ChevronDown
+          className={cn(
+            "size-4 transition-transform duration-200",
+            showAllFeatures && "rotate-180"
+          )}
         />
-        <ValueNote
-          icon={UsersRound}
-          title="No per-role billing"
-          description="Parents, teachers, admins and staff are free, so the real user count can grow."
-        />
-        <ValueNote
-          icon={CheckCircle2}
-          title="Built to replace many tools"
-          description="One operating layer for daily institution work, not a tiny feature bundle."
-        />
+      </button>
+
+      <div className="mx-auto max-w-5xl rounded-xl border border-primary/15 bg-gradient-to-r from-primary/[0.07] via-background to-background px-4 py-3 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/5 text-primary">
+              <ShieldCheck className="size-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Core school platform included in every plan
+              </p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Fees, attendance, admissions, exams, certificates, documents,
+                reports, AI and parent portals stay together.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap gap-1.5 md:justify-end">
+            {["Parents free", "Teachers free", "Admins free"].map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary"
+              >
+                <CheckCircle2 className="size-3.5" />
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
-  )
-}
-
-function ValueNote({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof Sparkles
-  title: string
-  description: string
-}) {
-  return (
-    <div className="flex gap-3 rounded-lg bg-background/80 p-3 shadow-sm">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-primary">
-        <Icon className="size-4" />
-      </div>
-      <div>
-        <p className="text-sm font-semibold leading-none text-foreground">
-          {title}
-        </p>
-        <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-          {description}
-        </p>
-      </div>
-    </div>
   )
 }
 
@@ -303,6 +307,7 @@ interface PlanCardProps {
   plan: Plan
   billing: BillingCycle
   studentCount: StudentStep
+  showAllFeatures: boolean
   className?: string
 }
 
@@ -310,6 +315,7 @@ function PlanCard({
   plan,
   billing,
   studentCount,
+  showAllFeatures,
   className,
 }: PlanCardProps) {
   const isLimitedOffer = plan.id === "free" || plan.id === "starter"
@@ -318,10 +324,9 @@ function PlanCard({
       ? getEffectivePrice(plan.pricePerStudent, billing)
       : null
 
-  const monthlyTotal =
-    plan.pricePerStudent && plan.pricePerStudent > 0
-      ? computeMonthlyTotal(studentCount, plan.pricePerStudent, billing)
-      : null
+  const visibleFeatures = showAllFeatures
+    ? plan.features
+    : plan.features.slice(0, 5)
 
   return (
     <Card
@@ -349,72 +354,86 @@ function PlanCard({
         </div>
       )}
 
-      <CardHeader className="space-y-3 pb-4 pt-8">
+      <CardHeader className="space-y-2 pb-3 pt-6">
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
           {plan.name}
         </p>
 
-        <div className="flex items-end gap-1.5 leading-none">
+        <div className="flex items-baseline gap-0.5 leading-none">
           {effectivePrice === 0 ? (
             <span className="text-4xl font-semibold tracking-tight">Free</span>
           ) : (
             <>
-              <span className="mt-1 text-2xl font-medium text-muted-foreground">
-                Rs
-              </span>
               <span className="text-4xl font-semibold tracking-tight tabular-nums">
-                {effectivePrice}
+                ₹{effectivePrice}
               </span>
-              <span className="pb-1 text-sm text-muted-foreground">
-                /student/mo
-              </span>
+              <span className="text-sm text-muted-foreground">/student/mo</span>
             </>
           )}
         </div>
 
-        <CardDescription className="min-h-[48px] text-sm leading-relaxed">
+        <CardDescription className="text-sm leading-relaxed">
           {plan.description}
         </CardDescription>
 
-        {monthlyTotal && (
-          <>
-            <p className="text-xs font-medium text-primary">{monthlyTotal}</p>
-            {plan.pricePerStudent && plan.pricePerStudent > 0 && (
-              <p className="text-[10px] text-muted-foreground/50">
-                Comparable standalone tools: ~₹{TOTAL_STANDALONE_COST}/mo
+        {plan.pricePerStudent && plan.pricePerStudent > 0 && studentCount < 5000 && (
+          <div className="space-y-1 pt-2 pb-1">
+            <p className="text-xs font-medium text-primary">
+              Estimated {billing === "annual" ? "annual" : "monthly"} bill:{" "}
+              {formatINR(
+                studentCount *
+                (effectivePrice ?? 0) *
+                (billing === "annual" ? 12 : 1)
+              )}{" "}
+              for {formatStudentLabel(studentCount)}
+            </p>
+            {billing === "annual" && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                You save{" "}
+                {formatINR(
+                  studentCount *
+                  (plan.pricePerStudent - (effectivePrice ?? 0)) *
+                  12
+                )}{" "}
+                annually
               </p>
             )}
-          </>
+          </div>
         )}
-        {plan.footnote && !monthlyTotal && (
-          <p className="text-xs text-muted-foreground">{plan.footnote}</p>
+        {studentCount >= 5000 && (
+          <p className="text-xs font-medium text-primary">
+            Contact us for organization pricing
+          </p>
         )}
+        {plan.footnote &&
+          (!plan.pricePerStudent || plan.pricePerStudent <= 0) && (
+            <p className="text-xs text-muted-foreground">{plan.footnote}</p>
+          )}
       </CardHeader>
 
-      <CardContent className="flex-1 pb-0">
-        <Button
-          variant={plan.ctaVariant}
-          className={cn(
-            "w-full",
-            plan.featured && plan.ctaVariant === "default" && "shadow-sm"
-          )}
-          asChild
-        >
-          <a href={plan.id === "scale" ? "/contact" : `/sign-up?plan=${plan.id}`}>
-            {plan.ctaLabel}
-          </a>
-        </Button>
-
-        <Separator className="my-5" />
-
-        <ul className="space-y-3">
-          {plan.features.map((feature) => (
+      <CardContent className="flex flex-1 flex-col border-t border-border/70 pt-5 pb-6">
+        <ul className="flex-1 space-y-3">
+          {visibleFeatures.map((feature) => (
             <PlanFeatureRow key={feature.label} feature={feature} />
           ))}
         </ul>
-      </CardContent>
 
-      <CardFooter />
+        <div className="mt-6">
+          <Separator className="mb-5" />
+          <Button
+            variant={plan.ctaVariant}
+            className={cn(
+              "w-full",
+              plan.featured && plan.ctaVariant === "default" && "shadow-sm"
+            )}
+            asChild
+          >
+            <a href={plan.id === "scale" ? "/contact" : `/sign-up?plan=${plan.id}`}>
+              {plan.ctaLabel}
+            </a>
+          </Button>
+        </div>
+      </CardContent>
     </Card>
   )
 }
@@ -429,12 +448,7 @@ function PlanFeatureRow({ feature }: PlanFeatureRowProps) {
   return (
     <li className="flex items-start gap-2.5 text-sm">
       {included === true || included === "addon" || included === "included-plus" ? (
-        <CheckIcon
-          className={cn(
-            "mt-px size-4 shrink-0",
-            included === true ? "text-emerald-500" : "text-primary"
-          )}
-        />
+        <BadgeCheck className="mt-px size-4 shrink-0 text-primary" />
       ) : (
         <MinusIcon className="mt-px size-4 shrink-0 text-muted-foreground/40" />
       )}
@@ -454,173 +468,215 @@ function PlanFeatureRow({ feature }: PlanFeatureRowProps) {
 
 function AddonCards() {
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <SectionLabel>Fair usage layer</SectionLabel>
 
-      <div className="grid gap-4 rounded-xl border border-border bg-card p-5 sm:grid-cols-[1fr_auto] sm:items-center">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            Your subscription stays clean. Variable costs stay visible.
-          </p>
-          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            These are not hidden add-ons. They are pass-through or usage-based
-            costs that only move when your institution actually uses them.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary">
-          <ShieldCheck className="size-4" />
-          No surprise billing
-        </div>
-      </div>
+      <div className="relative overflow-hidden rounded-xl border border-border bg-card">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, hsl(var(--border)) 1px, transparent 0)",
+            backgroundSize: "22px 22px",
+          }}
+        />
+        <div className="relative flex flex-col gap-6 p-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-primary">
+                <ShieldCheck className="size-4" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                No hidden add-ons
+              </p>
+            </div>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-foreground">
+              Your plan includes the core Shiksha.cloud platform.
+            </p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              A few outside costs may apply only when your school actually uses
+              them. If you do not use them, you do not pay for them.
+            </p>
+          </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {ADD_ONS.map((addon) => {
-          const meta = addonMeta[addon.id as keyof typeof addonMeta]
-          const Icon = meta.icon
+          <div className="grid gap-3 sm:grid-cols-3">
+            {ADD_ONS.map((addon) => {
+              const meta = addonMeta[addon.id as keyof typeof addonMeta]
+              const Icon = meta.icon
 
-          return (
-            <Card
-              key={addon.id}
-              className="border-border bg-card transition-all duration-200 hover:border-foreground/20 hover:shadow-sm"
-            >
-              <CardContent className="space-y-5 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-xl border",
-                      meta.accent
-                    )}
-                  >
-                    <Icon className="size-5" />
-                  </div>
-                  <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                    {meta.label}
-                  </span>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold leading-snug text-foreground">
-                    {addon.name}
-                  </p>
-                  <div className="mt-3 flex items-end gap-2">
-                    <p className="text-2xl font-semibold tracking-tight text-primary">
-                      {addon.price > 0 ? formatINR(addon.price) : "Only if used"}
+              return (
+                <div
+                  key={addon.id}
+                  className="group rounded-lg border border-border bg-background/90 p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={cn("flex size-8 items-center justify-center rounded-lg border", meta.tone)}>
+                      <Icon className="size-4" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">
+                      {meta.shortLabel}
                     </p>
-                    {addon.price > 0 && (
-                      <span className="pb-1 text-sm text-muted-foreground">
-                        / mo
-                      </span>
-                    )}
                   </div>
-                </div>
-
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {addon.description}
-                </p>
-
-                <div className="border-t border-border pt-4">
-                  <p className="text-xs font-medium text-foreground/80">
-                    Included in plan. Usage is shown separately.
+                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    {meta.simpleNote}
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+              )
+            })}
+          </div>
+        </div>
       </div>
     </section>
   )
 }
 
 function FeatureTable() {
+  const [showAllRows, setShowAllRows] = useState(false)
+
+  function allSame(row: ComparisonRow): boolean {
+    return row.starter === row.growth && row.growth === row.scale
+  }
+
+  const allRows = COMPARISON.flatMap((g) => g.rows)
+  const differentiators = allRows.filter((r) => !allSame(r))
+  const commonCount = allRows.filter((r) => allSame(r) && r.starter === true).length
+
   return (
     <section className="space-y-4">
-      <div className="space-y-3">
-        <SectionLabel>Feature comparison</SectionLabel>
-        <div className="rounded-xl border border-border bg-muted/20 p-4">
-          <p className="text-sm font-semibold text-foreground">
-            What your office, parents, teachers and management actually get.
-          </p>
-          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Read this like an owner, not like a software checklist. The goal is
-            simple: collect fees faster, reduce office work, keep parents
-            informed, improve admissions and see the institution clearly.
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <SectionLabel>Plan differences</SectionLabel>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Only the meaningful differences are shown first.
           </p>
         </div>
+        <Badge
+          variant="outline"
+          className="w-fit border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary"
+        >
+          Growth highlighted
+        </Badge>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="w-[38%] px-4 py-3 text-left text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              <tr className="border-b border-border bg-muted/20">
+                <th className="w-[38%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Feature
                 </th>
-                {PLAN_HEADERS.map((header) => (
+                {PLAN_HEADERS.map((header, i) => (
                   <th
                     key={header}
-                    className="whitespace-nowrap px-3 py-3 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground"
+                    className={cn(
+                      "whitespace-nowrap px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em]",
+                      i === 1
+                        ? "border-x border-primary/10 bg-primary/[0.06] text-primary"
+                        : "text-muted-foreground"
+                    )}
                   >
                     {header}
+                    {i === 1 && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-1.5 border-0 bg-primary/10 px-1.5 py-0 text-[11px] font-semibold text-primary align-middle"
+                      >
+                        Popular
+                      </Badge>
+                    )}
                   </th>
                 ))}
               </tr>
             </thead>
 
             <tbody>
-              {COMPARISON.map(({ group, rows }) => (
-                <Fragment key={group}>
-                  <tr className="border-y border-border bg-muted/20">
-                    <td
-                      colSpan={4}
-                      className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70"
-                    >
-                      {group}
-                    </td>
-                  </tr>
+              {COMPARISON.map(({ group, rows }) => {
+                const show = showAllRows ? rows : rows.filter((r) => !allSame(r))
+                if (show.length === 0) return null
 
-                  {rows.map((row) => (
-                    <tr
-                      key={row.label}
-                      className="border-b border-border/50 transition-colors last:border-0 hover:bg-muted/20"
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-medium leading-snug text-foreground/85">
-                          {row.label}
-                        </p>
-                        {row.note && (
-                          <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-                            {row.note}
+                return (
+                  <Fragment key={group}>
+                    {show.map((row, rowIndex) => (
+                      <tr
+                        key={row.label}
+                        className="border-b border-border/40 transition-colors last:border-0 hover:bg-muted/15"
+                      >
+                        <td className="px-4 py-3.5">
+                          {rowIndex === 0 && (
+                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/45">
+                              {group}
+                            </p>
+                          )}
+                          <p className="text-sm leading-snug text-foreground">
+                            {row.label}
                           </p>
+                        </td>
+                        {(["starter", "growth", "scale"] as const).map(
+                          (plan, i) => (
+                            <td
+                              key={plan}
+                              className={cn(
+                                "px-4 py-3.5 text-center",
+                                i === 1 &&
+                                  "border-x border-primary/10 bg-primary/[0.035]"
+                              )}
+                            >
+                              <Cell value={row[plan]} highlight={i === 1} />
+                            </td>
+                          )
                         )}
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <Cell value={row.starter} />
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <Cell value={row.growth} />
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <Cell value={row.scale} />
-                      </td>
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
+                      </tr>
+                    ))}
+                  </Fragment>
+                )
+              })}
+              {showAllRows && (
+                <tr className="bg-muted/10">
+                  <td colSpan={4} className="px-3 py-1.5 text-[11px] text-center text-muted-foreground/50">
+                    All features listed above
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/20 px-3 py-2">
+        <p className="text-xs leading-5 text-muted-foreground">
+          {showAllRows
+            ? `${allRows.length} features across all plans`
+            : `${differentiators.length} key differences`
+          }
+          {!showAllRows && (
+            <> &middot; <span className="text-muted-foreground/60">{commonCount} features included in all plans</span></>
+          )}
+        </p>
+
+        <button
+          onClick={() => setShowAllRows(!showAllRows)}
+          className="flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary"
+        >
+          {showAllRows ? "Collapse" : `Full list (${allRows.length})`}
+          <ChevronDown
+            className={cn(
+              "size-3 transition-transform duration-200",
+              showAllRows && "rotate-180"
+            )}
+          />
+        </button>
       </div>
     </section>
   )
 }
 
-function Cell({ value }: { value: CellValue }) {
+function Cell({ value, highlight }: { value: CellValue; highlight?: boolean }) {
   if (value === true) {
     return (
       <span className="inline-flex justify-center">
-        <CheckIcon className="size-4 text-emerald-500" />
+        <CheckIcon className={cn("text-emerald-500", highlight ? "size-4" : "size-3.5")} />
       </span>
     )
   }
@@ -628,7 +684,7 @@ function Cell({ value }: { value: CellValue }) {
   if (value === false) {
     return (
       <span className="inline-flex justify-center">
-        <MinusIcon className="size-4 text-muted-foreground/30" />
+        <MinusIcon className={cn("text-muted-foreground/30", highlight ? "size-4" : "size-3.5")} />
       </span>
     )
   }
@@ -637,7 +693,10 @@ function Cell({ value }: { value: CellValue }) {
     return (
       <Badge
         variant="outline"
-        className="border-primary/40 bg-primary/5 px-2 py-0 text-[10px] font-medium text-primary"
+        className={cn(
+          "border-primary/40 bg-primary/5 px-1.5 py-0 text-[11px] font-medium",
+          highlight && "border-primary/60 bg-primary/10"
+        )}
       >
         Add-on
       </Badge>
@@ -648,7 +707,10 @@ function Cell({ value }: { value: CellValue }) {
     return (
       <Badge
         variant="outline"
-        className="border-emerald-500/40 bg-emerald-500/5 px-2 py-0 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+        className={cn(
+          "border-emerald-500/40 bg-emerald-500/5 px-1.5 py-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400",
+          highlight && "border-emerald-500/60 bg-emerald-500/10"
+        )}
       >
         Included
       </Badge>
@@ -656,7 +718,9 @@ function Cell({ value }: { value: CellValue }) {
   }
 
   return (
-    <span className="text-xs font-medium text-muted-foreground">{value}</span>
+    <span className={cn("text-xs font-medium", highlight ? "font-semibold text-foreground" : "text-muted-foreground")}>
+      {value}
+    </span>
   )
 }
 
@@ -673,15 +737,26 @@ function SectionLabel({ children }: { children: ReactNode }) {
 
 function TrustedSchools() {
   return (
-    <div className="space-y-4 py-6 text-center">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">
-        Built for education teams across India
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
+    <div className="mx-auto max-w-5xl space-y-5 text-center">
+      <div className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/70">
+          Built for education teams across India
+        </p>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          One operating system for every institution format
+        </h2>
+        <p className="mx-auto max-w-2xl text-sm leading-6 text-muted-foreground">
+          From K-12 schools to multi-branch education groups, Shiksha.cloud
+          adapts to how Indian teams run admissions, fees, attendance, notices,
+          and parent communication.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-2">
         {TRUSTED_SCHOOLS.map((school) => (
           <span
             key={school}
-            className="text-sm italic text-muted-foreground/60"
+            className="rounded-full border border-border bg-card px-3.5 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:border-primary/30 hover:text-foreground"
           >
             {school}
           </span>
@@ -692,39 +767,21 @@ function TrustedSchools() {
 }
 
 function TestimonialsCarousel() {
-  const doubled = [...TESTIMONIALS, ...TESTIMONIALS]
-
   return (
-    <section className="space-y-5">
+    <section className="overflow-hidden rounded-lg border border-border bg-muted/20 px-4 py-6 sm:px-6 lg:px-8">
+      <TrustedSchools />
+
       <div
-        className="relative overflow-hidden"
-        style={{
-          maskImage:
-            "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
-          WebkitMaskImage:
-            "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
-        }}
+        className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Customer testimonials"
       >
-        <div className="flex w-max gap-4 animate-marquee hover:[animation-play-state:paused]">
-          {doubled.map((testimonial, index) => (
-            <TestimonialCard
-              key={`${testimonial.id}-${index}`}
-              testimonial={testimonial}
-            />
-          ))}
-        </div>
+        {TESTIMONIALS.map((testimonial) => (
+          <TestimonialCard
+            key={testimonial.id}
+            testimonial={testimonial}
+          />
+        ))}
       </div>
-
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 50s linear infinite;
-        }
-      `}</style>
     </section>
   )
 }
@@ -735,17 +792,22 @@ function TestimonialCard({
   testimonial: (typeof TESTIMONIALS)[number]
 }) {
   return (
-    <div className="flex w-[300px] shrink-0 flex-col gap-4 rounded-xl border border-border bg-card p-5">
-      <p className="line-clamp-5 text-sm leading-relaxed text-muted-foreground">
+    <article className="flex min-h-[232px] flex-col gap-4 rounded-lg border border-border bg-card p-5 shadow-sm">
+      <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Quote className="size-4" aria-hidden="true" />
+      </div>
+      <p className="text-sm leading-6 text-muted-foreground">
         &ldquo;{testimonial.quote}&rdquo;
       </p>
       <div className="mt-auto">
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-sm font-semibold text-foreground">
           {testimonial.name}
         </p>
-        <p className="text-xs text-muted-foreground">{testimonial.role}</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          {testimonial.role}
+        </p>
       </div>
-    </div>
+    </article>
   )
 }
 

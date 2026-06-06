@@ -22,6 +22,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyINWithSymbol } from '@/lib/utils';
+import { PLATFORM_FEE_PERCENT } from '@/constants';
 
 type PayFeeButtonProps = {
   feeId: string;
@@ -41,7 +42,7 @@ const PayFeeButton = ({
   const router = useRouter();
 
   const amount = Number(pendingAmount) || 0;
-  const platformFee = parseFloat((amount * 0.025).toFixed(2));
+  const platformFee = parseFloat((amount * PLATFORM_FEE_PERCENT).toFixed(2));
   const totalPayable = instituteAbsorbsFee ? amount : amount + platformFee;
 
   const handleClick = () => {
@@ -133,7 +134,7 @@ const PayFeeButton = ({
               {!instituteAbsorbsFee ? (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    Convenience Charge (2.5%)
+                    Convenience Charge ({(PLATFORM_FEE_PERCENT * 100).toFixed(1)}%)
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -145,7 +146,7 @@ const PayFeeButton = ({
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-[220px] text-xs leading-relaxed">
-                        This 2.5% charge covers secure payment gateway costs — not collected by your institute.
+                        This {(PLATFORM_FEE_PERCENT * 100).toFixed(1)}% charge covers secure payment gateway costs — not collected by your institute.
                       </TooltipContent>
                     </Tooltip>
                   </span>

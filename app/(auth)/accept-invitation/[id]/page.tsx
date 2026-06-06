@@ -37,6 +37,7 @@ export default async function AcceptInvitationPage({
                     id: true,
                     name: true,
                     logo: true,
+                    isActive: true,
                 },
             },
         },
@@ -53,6 +54,15 @@ export default async function AcceptInvitationPage({
             <InvitationMessage
                 title="Invitation not found"
                 description="This invitation link does not match an active invitation."
+            />
+        );
+    }
+
+    if (!invitation.organization.isActive) {
+        return (
+            <InvitationMessage
+                title="Organization unavailable"
+                description="This organization is no longer active. Please contact your administrator."
             />
         );
     }

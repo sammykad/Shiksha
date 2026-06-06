@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.toLowerCase();
-  const otpIdentifier = `sign-in-otp-${email}`;
+  const otpIdentifier = `email-ownership-otp-${email}`;
   const verification = await prisma.verification.findFirst({
     where: { identifier: otpIdentifier },
   });

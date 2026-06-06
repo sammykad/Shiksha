@@ -162,13 +162,13 @@ Billing is **per active student per month**. Parents, teachers, and admins are a
 | 501–1,000 | ₹33 |
 | 1,001–2,000 | ₹24 |
 
-### User-Based Plans
+<!-- ### User-Based Plans
 
 | Users | Price/User/Month |
 |---|---|
 | 100 | ₹55 |
 | 500 | ₹45 |
-| 1,500 | ₹35 |
+| 1,500 | ₹35 | -->
 
 ### Org/Institution Plans (Annual)
 
@@ -182,7 +182,7 @@ Billing is **per active student per month**. Parents, teachers, and admins are a
 - **Notification credits** — tracked in org wallet (paise)
 - **Payment gateway** — 2.5–3% charged to parent on online payments only
 - **Storage** — charged only beyond 1 GB
-- **Onboarding balance** — ₹1,00,000 paise given by Shiksha.cloud on signup
+- **Onboarding balance** — ₹10,000 paise given by Shiksha.cloud on signup
 
 **Never hardcode a price. Always read from billing config / constants.**
 
