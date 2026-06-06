@@ -93,13 +93,21 @@ export const betterAuthServer = betterAuth({
     deleteUser: {
       enabled: true,
       beforeDelete: async (user) => {
-        const membershipCount = await prisma.membership.count({
+        const adminMemberships = await prisma.membership.findMany({
           where: { userId: user.id, role: "ADMIN", status: "ACTIVE" },
+          include: { organization: { select: { name: true } } },
         });
-        if (membershipCount > 0) {
-          throw new APIError("BAD_REQUEST", {
-            message: "You are the last admin of an organization. Transfer ownership or add another admin before deleting your account.",
+
+        for (const membership of adminMemberships) {
+          const adminCount = await prisma.membership.count({
+            where: { organizationId: membership.organizationId, role: "ADMIN", status: "ACTIVE" },
           });
+          const isLastAdmin = adminCount <= 1;
+          if (isLastAdmin) {
+            throw new APIError("BAD_REQUEST", {
+              message: `You are the last admin of "${membership.organization.name}". Transfer ownership or add another admin before deleting your account.`,
+            });
+          }
         }
       },
     },
@@ -638,8 +646,4 @@ function normalizeSlug(value: string) {
 function normalizeMetadata(metadata: unknown) {
   if (!metadata) return undefined;
   return typeof metadata === "string" ? metadata : JSON.stringify(metadata);
-}
-
-function toRole(value: unknown): Role {
-  return Object.values(Role).includes(value as Role) ? (value as Role) : Role.STUDENT;
 }

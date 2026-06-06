@@ -8,6 +8,7 @@ import { Experimental_Agent as Agent, stepCountIs, tool } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { getFeeBalance } from '@/lib/data/fee/fee-balance';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
 
 const analysisSchema = z.object({
   studentId: z.string(),
@@ -191,12 +192,12 @@ const fetchOverdueFees = tool({
     organizationId: z.string().describe('Organization ID'),
   }),
   execute: async ({ organizationId }: { organizationId: string }) => {
-    console.log('🔍 [TOOL] fetchOverdueFees - START');
-    console.log('   organizationId:', organizationId);
+    const academicYearId = await getActiveAcademicYearId();
 
     const fees = await prisma.fee.findMany({
       where: {
         organizationId,
+        academicYearId,
       },
       include: {
         student: {
@@ -217,10 +218,7 @@ const fetchOverdueFees = tool({
       },
     });
 
-    console.log('   Fees found:', fees.length);
-
     if (fees.length === 0) {
-      console.log('⚠️  [TOOL] fetchOverdueFees - No overdue fees');
       return {
         count: 0,
         totalOverdue: 0,

@@ -36,9 +36,6 @@ import {
   BanIcon,
   ClockIcon,
   BuildingIcon,
-  CalendarIcon,
-  IndianRupeeIcon,
-  HashIcon,
   SearchIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -179,16 +176,14 @@ function ResolveDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm rounded-lg">
         <DialogHeader>
-          <DialogTitle className="text-base">Resolve cheque</DialogTitle>
-          <DialogDescription className="text-xs">
-            {student.firstName} {student.lastName} — Cheque #{cheque.chequeNumber}
+          <DialogTitle>Resolve cheque</DialogTitle>
+          <DialogDescription className="text-sm">
+            {student.firstName} {student.lastName} &mdash; Cheque #{cheque.chequeNumber}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Cheque summary — Re-organized for clarity */}
-        <div className="grid grid-cols-2 gap-3 rounded-xl border bg-muted/30 p-4">
-          {/* Bank Info — Full width header */}
-          <div className="col-span-2 flex items-center gap-3 pb-3 border-b border-border/50">
+        <div className="rounded-lg border bg-muted/30">
+          <div className="flex items-center gap-3 px-4 py-3 border-b">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white border shadow-sm">
               {(() => {
                 const bankEntry = Object.entries(banks).find(([_, name]) => name === cheque.bankName);
@@ -201,102 +196,67 @@ function ResolveDialog({
               })()}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground leading-none mb-1">
-                Issuing Bank
-              </p>
-              <p className="truncate text-xs font-semibold text-foreground">
+              <p className="text-xs text-muted-foreground mb-0.5">Issuing Bank</p>
+              <p className="text-sm font-semibold text-foreground truncate">
                 {cheque.bankName}
                 {cheque.branchName && (
-                  <span className="ml-1.5 font-normal text-muted-foreground opacity-70">
-                    &middot; {cheque.branchName}
-                  </span>
+                  <span className="ml-1.5 font-normal text-muted-foreground">&middot; {cheque.branchName}</span>
                 )}
               </p>
             </div>
           </div>
-
-          {/* Details Grid */}
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Cheque Date
-            </p>
-            <div className="flex items-center gap-1.5">
-              <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs font-medium">
+          <div className="grid grid-cols-2 gap-y-3 gap-x-4 px-4 py-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Cheque Date</p>
+              <p className="text-sm font-medium mt-0.5">
                 {new Date(cheque.chequeDate).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
+                  day: '2-digit', month: 'short', year: 'numeric',
                 })}
-              </span>
+              </p>
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Amount
-            </p>
-            <div className="flex items-center gap-1.5">
-              <IndianRupeeIcon className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-xs font-bold text-foreground tabular-nums">
+            <div>
+              <p className="text-xs text-muted-foreground">Amount</p>
+              <p className="text-sm font-bold mt-0.5 tabular-nums text-emerald-600 dark:text-emerald-400">
                 ₹{cheque.feePayment.amount.toLocaleString('en-IN')}
-              </span>
+              </p>
             </div>
-          </div>
-
-          <div className="space-y-1 pt-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Receipt No
-            </p>
-            <div className="flex items-center gap-1.5">
-              <HashIcon className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs font-mono font-medium text-muted-foreground">
+            <div>
+              <p className="text-xs text-muted-foreground">Receipt No</p>
+              <p className="text-sm font-mono font-medium mt-0.5 text-muted-foreground">
                 {cheque.feePayment.receiptNumber}
-              </span>
+              </p>
             </div>
-          </div>
-
-          <div className="space-y-1 pt-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Cheque No
-            </p>
-            <div className="flex items-center gap-1.5">
-              <HashIcon className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs font-mono font-bold text-foreground">
-                #{cheque.chequeNumber}
-              </span>
+            <div>
+              <p className="text-xs text-muted-foreground">Cheque No</p>
+              <p className="text-sm font-mono font-bold mt-0.5">#{cheque.chequeNumber}</p>
             </div>
           </div>
         </div>
 
         <Separator />
 
-        {/* Resolution selector */}
         <div className="space-y-3">
-          <Label className="text-xs font-semibold">Mark as</Label>
-          <Select
-            value={resolution}
-            onValueChange={(v) => setResolution(v as typeof resolution)}
-          >
-            <SelectTrigger className="h-9 text-sm">
+          <Label className="text-sm font-semibold">Mark as</Label>
+          <Select value={resolution} onValueChange={(v) => setResolution(v as typeof resolution)}>
+            <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="CLEARED">
-                <span className="flex items-center gap-2">
-                  <CheckCircleIcon className="h-3.5 w-3.5 text-green-600" />
-                  Cleared — credit the fee
+                <span className="flex items-center gap-2 text-sm">
+                  <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                  Cleared &mdash; credit the fee
                 </span>
               </SelectItem>
               <SelectItem value="BOUNCED">
-                <span className="flex items-center gap-2">
-                  <XCircleIcon className="h-3.5 w-3.5 text-red-600" />
-                  Bounced — fee stays unpaid
+                <span className="flex items-center gap-2 text-sm">
+                  <XCircleIcon className="h-4 w-4 text-red-600" />
+                  Bounced &mdash; fee stays unpaid
                 </span>
               </SelectItem>
               <SelectItem value="CANCELLED">
-                <span className="flex items-center gap-2">
-                  <BanIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="flex items-center gap-2 text-sm">
+                  <BanIcon className="h-4 w-4 text-muted-foreground" />
                   Cancelled
                 </span>
               </SelectItem>
@@ -305,30 +265,30 @@ function ResolveDialog({
 
           {resolution === 'BOUNCED' && (
             <div className="space-y-1.5">
-              <Label className="text-xs">
+              <Label className="text-sm">
                 Bounce reason <span className="text-destructive">*</span>
               </Label>
               <Textarea
                 value={bounceReason}
                 onChange={(e) => setBounceReason(e.target.value)}
                 placeholder="e.g. Insufficient funds, Payment stopped..."
-                className="resize-none h-16 text-sm"
+                className="resize-none h-20"
               />
             </div>
           )}
 
           {resolution === 'CLEARED' && (
-            <p className="text-xs text-muted-foreground bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md px-3 py-2">
-              Fee will be credited by ₹{cheque.feePayment.amount.toLocaleString('en-IN')} and the student account will be updated.
+            <p className="text-sm text-muted-foreground bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md px-3 py-2">
+              Fee will be credited by <span className="font-semibold text-foreground">₹{cheque.feePayment.amount.toLocaleString('en-IN')}</span> and the student account will be updated.
             </p>
           )}
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" size="sm" onClick={onClose} disabled={isPending}>
+          <Button variant="outline" onClick={onClose} disabled={isPending}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSubmit} disabled={isPending}>
+          <Button onClick={handleSubmit} disabled={isPending}>
             {isPending ? 'Saving...' : 'Confirm'}
           </Button>
         </DialogFooter>

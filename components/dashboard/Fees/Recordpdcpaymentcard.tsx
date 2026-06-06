@@ -29,15 +29,16 @@ import {
 } from '@/lib/schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { InfoIcon, AlertCircleIcon, CheckCircle2Icon, CalendarIcon, WalletIcon } from 'lucide-react';
+import { InfoIcon, AlertCircleIcon, CheckCircle2Icon, CalendarIcon, WalletIcon, Loader2 } from 'lucide-react';
 import { cn, formatCurrencyIN } from '@/lib/utils';
 import banks from '@/public/bank/banks.json';
 import { FeeRecord } from '@/types';
+import { getInFlightPdcAmount } from '@/lib/data/fee/fee-balance-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,13 +84,7 @@ export function RecordPdcPaymentCard({ selectedRecord, onSuccess }: RecordPdcPay
     const allChecked = Object.values(checklist).every(Boolean);
 
     const pending = Number(selectedRecord.fee.pendingAmount || 0);
-
-    const totalInFlightPdc = selectedRecord.payments
-        ? selectedRecord.payments
-            .filter((p) => p.status === 'CHEQUE_PENDING')
-            .reduce((sum, p) => sum + p.amount, 0)
-        : 0;
-
+    const totalInFlightPdc = getInFlightPdcAmount(selectedRecord.payments);
     const maxAllowable = Math.max(pending - totalInFlightPdc, 0);
 
     const form = useForm<PdcPaymentFormData>({
@@ -109,6 +104,48 @@ export function RecordPdcPaymentCard({ selectedRecord, onSuccess }: RecordPdcPay
             remarks: '',
         },
     });
+
+    // ── IFSC auto-fill via Razorpay IFSC API ────────────────────────────────
+    const [isLookingUpIfsc, setIsLookingUpIfsc] = useState(false);
+    const ifscTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+    const lookupIfscDetails = useCallback(async (ifsc: string) => {
+        if (ifsc.length !== 11 || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) return;
+        setIsLookingUpIfsc(true);
+        try {
+            const res = await fetch(`https://ifsc.razorpay.com/${ifsc}`);
+            if (!res.ok) throw new Error('Not found');
+            const data = await res.json();
+
+            const bankKey = data.BANKCODE?.toLowerCase();
+            if (bankKey && bankKey in banks) {
+                form.setValue('bankName', banks[bankKey as keyof typeof banks]);
+            } else if (Object.values(banks).includes(data.BANK)) {
+                form.setValue('bankName', data.BANK);
+            }
+            form.setValue('branchName', data.BRANCH);
+            if (data.MICR) form.setValue('micrCode', data.MICR);
+        } catch {
+            // silent — user can still enter manually
+        } finally {
+            setIsLookingUpIfsc(false);
+        }
+    }, [form]);
+
+    const watchedIfsc = form.watch('ifscCode');
+
+    useEffect(() => {
+        if (ifscTimerRef.current) clearTimeout(ifscTimerRef.current);
+        if (!watchedIfsc || watchedIfsc.length !== 11 || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(watchedIfsc)) return;
+
+        ifscTimerRef.current = setTimeout(() => {
+            lookupIfscDetails(watchedIfsc);
+        }, 500);
+
+        return () => {
+            if (ifscTimerRef.current) clearTimeout(ifscTimerRef.current);
+        };
+    }, [watchedIfsc, lookupIfscDetails]);
 
     const onSubmit = async (data: PdcPaymentFormData) => {
         if (!allChecked) {
@@ -273,7 +310,7 @@ export function RecordPdcPaymentCard({ selectedRecord, onSuccess }: RecordPdcPay
                                                     {...field}
                                                     type="number"
                                                     min={1}
-                                                    max={pending}
+                                                    max={maxAllowable}
                                                     step="0.01"
                                                     className="pl-7 tabular-nums h-10 text-lg font-semibold"
                                                     placeholder="0"
@@ -293,9 +330,54 @@ export function RecordPdcPaymentCard({ selectedRecord, onSuccess }: RecordPdcPay
                         </div>
                     </FieldGroup>
 
-                    {/* Bank details — Structured for clarity */}
+                    {/* Bank details — IFSC first, then auto-fills bank + branch + MICR below */}
                     <FieldGroup label="Bank">
                         <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="ifscCode"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>IFSC code</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <Input
+                                                    {...field}
+                                                    placeholder="SBIN0001234"
+                                                    maxLength={11}
+                                                    className="font-mono uppercase h-10 pr-8"
+                                                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                                                />
+                                                {isLookingUpIfsc && (
+                                                    <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                                                )}
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="micrCode"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>MICR code</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                placeholder="9-digit MICR"
+                                                maxLength={9}
+                                                className="font-mono h-10"
+                                                inputMode="numeric"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-4">
                             <FormField
                                 control={form.control}
                                 name="bankName"
@@ -357,44 +439,6 @@ export function RecordPdcPaymentCard({ selectedRecord, onSuccess }: RecordPdcPay
                                         <FormLabel>Branch name <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input {...field} placeholder="e.g. Pimple Saudagar" className="h-10" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="ifscCode"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>IFSC code</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                {...field}
-                                                placeholder="SBIN0001234"
-                                                maxLength={11}
-                                                className="font-mono uppercase h-10"
-                                                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="micrCode"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>MICR code</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                {...field}
-                                                placeholder="9-digit MICR"
-                                                maxLength={9}
-                                                className="font-mono h-10"
-                                                inputMode="numeric"
-                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

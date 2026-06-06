@@ -35,7 +35,27 @@ export type ChildSummary = {
 
 export async function getSelectedChildId(): Promise<string | null> {
     const cookieStore = await cookies();
-    return cookieStore.get(COOKIE_KEY)?.value ?? null;
+    const cookie = cookieStore.get(COOKIE_KEY)?.value ?? null;
+    if (cookie) return cookie;
+
+    // No cookie — auto-select the first child so parent pages work immediately
+    const [userId, organizationId] = await Promise.all([
+        getCurrentUserId(),
+        getOrganizationId(),
+    ]);
+
+    const firstChild = await prisma.parentStudent.findFirst({
+        where: {
+            parent: { userId, organizationId },
+            student: { organizationId },
+        },
+        orderBy: { isPrimary: 'desc' },
+        select: { studentId: true },
+    });
+
+    if (!firstChild) return null;
+
+    return firstChild.studentId;
 }
 
 export async function setSelectedChildId(studentId: string): Promise<void> {

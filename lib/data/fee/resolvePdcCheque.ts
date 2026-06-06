@@ -6,6 +6,7 @@ import { getCurrentUserId } from '@/lib/user';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getOrganizationId } from '@/lib/organization';
+import { getCurrentUserByRole } from '@/lib/auth';
 import { notify } from '@/lib/notifications/notify';
 import { preparePaymentReceipt } from './preparePaymentReceipt';
 import { syncFeeBalance } from './fee-balance';
@@ -19,6 +20,11 @@ const resolveSchema = z.object({
 export type ResolvePdcInput = z.infer<typeof resolveSchema>;
 
 export const resolvePdcCheque = async (input: ResolvePdcInput) => {
+  const currentUser = await getCurrentUserByRole();
+  if (currentUser.role !== 'ADMIN') {
+    throw new Error('Only admins can resolve PDC cheques');
+  }
+
   const userId = await getCurrentUserId();
   const organizationId = await getOrganizationId();
   const { chequeDetailId, resolution, bounceReason } = resolveSchema.parse(input);
@@ -112,7 +118,6 @@ export const resolvePdcCheque = async (input: ResolvePdcInput) => {
 
   // ── 3. Post-Resolution: Notifications & Receipts ───────────────────────────
   if (resolution === 'CLEARED') {
-    // Generate receipt PDF
     const { pdfBuffer } = await preparePaymentReceipt(fee.id, organizationId, {
       amount: feePayment.amount,
       paymentDate: new Date(),
@@ -169,6 +174,10 @@ export const resolvePdcCheque = async (input: ResolvePdcInput) => {
 };
 
 export const getPdcCheques = async () => {
+  const currentUser = await getCurrentUserByRole();
+  if (currentUser.role !== 'ADMIN') {
+    throw new Error('Only admins can view PDC cheques');
+  }
   const organizationId = await getOrganizationId();
   const pdcCheques = await prisma.chequeDetail.findMany({
     where: { feePayment: { organizationId } },

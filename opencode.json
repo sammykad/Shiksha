@@ -10,6 +10,9 @@
   "agent": {
     "review": {
       "description": "Reviews code for best practices and potential issues"
+    },
+    "git-review": {
+      "description": "Reviews git-changed files one by one with root-cause analysis"
     }
   }
 }

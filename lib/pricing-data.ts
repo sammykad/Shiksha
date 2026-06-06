@@ -61,19 +61,19 @@ export const PLANS: Plan[] = [
   {
     id: "starter",
     name: "Starter",
-    badge: "EarlyBird eligible",
+    badge: "Early Bird Offer",
     pricePerStudent: 29,
     description:
-      "Start with every core module included. First 50 eligible institutions can lock the launch offer.",
+      "Start with every core module included. First 50 institutions can lock this launch offer.",
     ctaLabel: "Start free trial",
     ctaVariant: "default",
-    footnote: "EarlyBird is an offer, not a separate plan.",
+    footnote: "Limited to first 50 institutions.",
     features: SHARED_FEATURES,
   },
   {
     id: "growth",
     name: "Growth",
-    badge: "Most Popular",
+    badge: "Early Bird Offer",
     pricePerStudent: 49,
     description:
       "For growing institutions that need automation, analytics, and stronger operations.",
@@ -86,7 +86,7 @@ export const PLANS: Plan[] = [
   {
     id: "scale",
     name: "Scale",
-    badge: "Best value",
+    badge: "Early Bird Offer",
     pricePerStudent: 21,
     description:
       "For colleges, trusts, coaching chains, and large multi-branch groups.",

@@ -150,18 +150,25 @@ export async function deactivateAccount(password?: string) {
       }
     }
 
-    const adminMemberships = await prisma.membership.count({
+    const adminMemberships = await prisma.membership.findMany({
       where: { userId, role: "ADMIN", status: "ACTIVE" },
+      include: { organization: { select: { name: true } } },
     });
-    if (adminMemberships > 0) {
-      const orgs = await prisma.membership.findMany({
-        where: { userId, role: "ADMIN", status: "ACTIVE" },
-        include: { organization: { select: { name: true } } },
+
+    const lastAdminOrgs: string[] = [];
+    for (const membership of adminMemberships) {
+      const adminCount = await prisma.membership.count({
+        where: { organizationId: membership.organizationId, role: "ADMIN", status: "ACTIVE" },
       });
-      const names = orgs.map((m) => m.organization.name).join(", ");
+      if (adminCount <= 1) {
+        lastAdminOrgs.push(membership.organization.name);
+      }
+    }
+
+    if (lastAdminOrgs.length > 0) {
       return {
         error: {
-          message: `You are the last admin of ${names}. Transfer ownership or add another admin before deactivating your account.`,
+          message: `You are the last admin of ${lastAdminOrgs.join(", ")}. Transfer ownership or add another admin before deactivating your account.`,
         },
       };
     }

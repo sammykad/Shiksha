@@ -26,7 +26,14 @@ export const recordPdcPayment = async (data: PdcPaymentFormData) => {
         where: { status: { in: [PaymentStatus.COMPLETED, PaymentStatus.CHEQUE_PENDING] } },
         select: { amount: true, status: true },
       },
-      student: { select: { firstName: true, lastName: true } },
+      student: {
+        select: {
+          firstName: true,
+          lastName: true,
+          userId: true,
+          parents: { select: { parent: { select: { userId: true } } } },
+        },
+      },
       feeCategory: { select: { name: true } },
     },
   });
@@ -56,12 +63,13 @@ export const recordPdcPayment = async (data: PdcPaymentFormData) => {
     );
   }
 
-  // Validate payer exists
-  const payer = await prisma.user.findUnique({
-    where: { id: validatedData.payerId },
-    select: { id: true },
-  });
-  if (!payer) throw new Error(`Payer ID '${validatedData.payerId}' does not exist.`);
+  const validPayerIds = [
+    fee.student.userId,
+    ...fee.student.parents.map((p) => p.parent.userId),
+  ].filter((id): id is string => !!id);
+  if (!validPayerIds.includes(validatedData.payerId)) {
+    throw new Error('Payer must be the student or one of their parents');
+  }
 
   const receiptNumber = `PDC-${randomUUID().slice(0, 8).toUpperCase()}`;
 

@@ -12,6 +12,7 @@ import FeeDistributionByCategory from '@/components/dashboard/Fees/FeeDistributi
 import AdminFeesSummaryCards from '@/components/dashboard/Fees/AdminFeesSummaryCards';
 import { Suspense } from 'react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getMonthlyFeeData } from '@/lib/data/fee/getMonthlyFeeData';
 import { Skeleton } from '@/components/ui/skeleton';
 import StudentPaymentHistoryTable from '@/components/dashboard/Fees/StudentPaymentHistoryTable';
@@ -22,11 +23,17 @@ import { getFeeCategoryDistribution } from '@/lib/data/fee/get-fee-category-dist
 import { PageHeader } from '@/components/ui/page-header';
 import { getPdcCheques } from '@/lib/data/fee/resolvePdcCheque';
 import { PdcChequesAdminView } from '@/components/dashboard/Fees/pdc-cheques-admin-view';
+import { getCurrentUserByRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function AdminFeeDashboard() {
+  const currentUser = await getCurrentUserByRole();
+  if (currentUser.role !== 'ADMIN') {
+    redirect('/dashboard');
+  }
+
   const [data, feeCategories, feeRecords, pdcCheques] = await Promise.all([
     getMonthlyFeeData(),
     getFeeCategoryDistribution(),

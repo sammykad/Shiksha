@@ -3,6 +3,7 @@
 import prisma from '@/lib/db';
 import { FeeStatus, PaymentStatus } from '@/generated/prisma/enums';
 import { getOrganizationId } from '@/lib/organization';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { offlinePaymentFormData, offlinePaymentSchema } from '@/lib/schemas';
 import { getCurrentUserId } from '@/lib/user';
 import { formatCurrencyIN } from '@/lib/utils';
@@ -15,11 +16,12 @@ import { getFeeBalance, syncFeeBalance } from './fee-balance';
 export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
   const userId = await getCurrentUserId();
   const organizationId = await getOrganizationId();
+  const academicYearId = await getActiveAcademicYearId();
 
   const validatedData = offlinePaymentSchema.parse(data);
 
   const fee = await prisma.fee.findFirst({
-    where: { id: validatedData.feeId, organizationId },
+    where: { id: validatedData.feeId, organizationId, academicYearId },
     select: {
       id: true,
       status: true,
@@ -35,7 +37,16 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
     },
   });
 
-  if (!fee) throw new Error('Fee not found');
+  if (!fee) {
+    const existsOtherYear = await prisma.fee.findFirst({
+      where: { id: validatedData.feeId, organizationId },
+      select: { academicYearId: true },
+    });
+    if (existsOtherYear) {
+      throw new Error('Fee exists in a different academic year. Switch academic year and try again.');
+    }
+    throw new Error('Fee not found');
+  }
   const currentBalance = getFeeBalance(fee);
   if (currentBalance.status === FeeStatus.PAID) throw new Error('Fee is already fully paid');
 
@@ -91,34 +102,25 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
   });
 
   // ── 4. Send email + WhatsApp with the PDF attached ─────────────────────────
-  try {
-    await notify.fee.paymentSuccess({
-      feeId: fee.id,
-      // Stable, unique key scoped to this specific payment — not the fee
-      eventId: `fee:${fee.id}:payment:${receiptNumber}`,
-      recipients: [{ studentId: fee.studentId }],
-      attachment: {
-        filename: `Receipt-${receiptNumber}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf',
-      },
-      variables: {
-        studentName: `${feeRecord.student.firstName} ${feeRecord.student.lastName}`,
-        receiptNumber,
-        paymentMethod: validatedData.method,
-        // receiptUrl is the dashboard deep-link shown in email/push body text.
-        // The WhatsApp PDF attachment comes from pdfBuffer via Meta media upload.
-        // this URL is NOT used as the document link in the WA template header.
-        receiptUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/fees/?txn=${validatedData.transactionId}`,
-        feeName: feeRecord.feeCategory.name,
-        amount: validatedData.amount,
-        paidAt: new Date(),
-      },
-    });
-  } catch (notifyErr) {
-    // Payment is already persisted — notification failure must never bubble up
-    console.error('[recordOfflinePayment] Notification failed (non-fatal):', (notifyErr as Error).message);
-  };
+  await notify.fee.paymentSuccess({
+    feeId: fee.id,
+    eventId: `fee:${fee.id}:payment:${receiptNumber}`,
+    recipients: [{ studentId: fee.studentId }],
+    attachment: {
+      filename: `Receipt-${receiptNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf',
+    },
+    variables: {
+      studentName: `${feeRecord.student.firstName} ${feeRecord.student.lastName}`,
+      receiptNumber,
+      paymentMethod: validatedData.method,
+      receiptUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/fees/?txn=${validatedData.transactionId}`,
+      feeName: feeRecord.feeCategory.name,
+      amount: validatedData.amount,
+      paidAt: new Date(),
+    },
+  });
 
   // Step 5: Revalidate pages
   revalidatePath('/dashboard/fees');

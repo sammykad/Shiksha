@@ -66,7 +66,8 @@ import { FeeRecord } from '@/types';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { recordOfflinePayment } from '@/lib/data/fee/recordOfflinePayment';
-import { PaymentMethod } from '@/generated/prisma/enums';
+import { PaymentMethod, PaymentStatus } from '@/generated/prisma/enums';
+import { getMaxCollectible } from '@/lib/data/fee/fee-balance-utils';
 import { offlinePaymentSchema, offlinePaymentFormData } from '@/lib/schemas';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -243,7 +244,10 @@ const RecordPaymentCard = ({
 }: RecordPaymentCardProps) => {
   const [isPending, startTransition] = useTransition();
 
-  const maxPayableAmount = Number(selectedRecord.fee.pendingAmount || 0);
+  const maxPayableAmount = getMaxCollectible(
+    Number(selectedRecord.fee.pendingAmount || 0),
+    selectedRecord.payments,
+  );
 
   const form = useForm<offlinePaymentFormData>({
     resolver: zodResolver(offlinePaymentSchema),
@@ -1029,7 +1033,7 @@ const FeeDetailsContent = ({
                               payment.status === 'COMPLETED' &&
                               'text-emerald-600',
                               payment.status === 'PENDING' && 'text-yellow-600',
-                              payment.status === 'CHEQUE_PENDING' && 'text-amber-600',
+                              payment.status === PaymentStatus.CHEQUE_PENDING && 'text-amber-600',
                               payment.status === 'FAILED' && 'text-red-600',
                               payment.status === 'UNPAID' && 'text-gray-600',
                               payment.status === 'REFUNDED' &&
@@ -1044,10 +1048,10 @@ const FeeDetailsContent = ({
                             Amount Paid:
                           </dt>
                           <dd className="font-semibold tabular-nums">
-                            {['COMPLETED', 'CHEQUE_PENDING', 'PENDING'].includes(payment.status)
+                            {([PaymentStatus.COMPLETED, PaymentStatus.CHEQUE_PENDING, PaymentStatus.PENDING] as PaymentStatus[]).includes(payment.status)
                               ? formatCurrencyIN(payment.amount)
                               : formatCurrencyIN(0)}
-                            {payment.status === 'CHEQUE_PENDING' && (
+                            {payment.status === PaymentStatus.CHEQUE_PENDING && (
                               <span className="ml-1.5 text-[10px] text-amber-600 font-normal italic">
                                 (Uncredited)
                               </span>

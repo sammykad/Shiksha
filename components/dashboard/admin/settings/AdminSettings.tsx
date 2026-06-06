@@ -9,7 +9,7 @@ import RolePermissions from "@/components/dashboard/admin/settings/RolePermissio
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Settings2 } from "lucide-react"
-import { getBillingSummary } from "@/lib/subscription-billing"
+import { getBillingSummary, getPublicPlans } from "@/lib/subscription-billing"
 import BillingSettings from "./BillingSettings"
 import { getOrganizationNotificationSettings } from "@/lib/notifications/organization-notification-settings"
 import { getAcademicYears, getCurrentAcademicYearIdSafe } from "@/lib/academicYear"
@@ -61,11 +61,12 @@ export default async function AdminSettingsPage() {
   const organizationId = await getOrganizationId()
   const academicYearId = await getCurrentAcademicYearIdSafe()
 
-  const [organization, academicYears, notificationSettings, staffMembers] = await Promise.all([
+  const [organization, academicYears, notificationSettings, staffMembers, billingPlans] = await Promise.all([
     getDatabaseOrganization(organizationId),
     getAcademicYears(organizationId),
     getOrganizationNotificationSettings(organizationId),
     getStaffMembers(organizationId),
+    getPublicPlans(),
   ])
 
   const billingSummary = await getBillingSummary(organizationId, academicYearId)
@@ -95,6 +96,14 @@ export default async function AdminSettingsPage() {
           <NotificationSettings notificationSettings={notificationSettings} />
           <BillingSettings
             billingSummary={billingSummary}
+            plans={billingPlans.map((plan) => ({
+              code: plan.code,
+              name: plan.name,
+              description: plan.description ?? "Shiksha.cloud subscription plan.",
+              monthlyPrice: plan.monthlyPrice ?? 0,
+              annualPrice: plan.annualPrice ?? 0,
+              studentLimit: plan.studentLimit ?? 0,
+            }))}
           />
           <RolePermissions
             users={staffMembers}

@@ -71,6 +71,7 @@ import { getCurrentUserId } from '@/lib/user';
 import { notify } from '@/lib/notifications/notify';
 import { preparePaymentReceipt } from './preparePaymentReceipt';
 import { getFeeBalance, syncFeeBalance } from './fee-balance';
+import { PLATFORM_FEE_PERCENT } from '@/constants';
 import type { FeeRecord } from '@/types';
 
 function generateSha256(data: string): string {
@@ -95,8 +96,8 @@ export const phonePayInitPayment = async (
   // Validate environment variables
   const requiredEnvVars = [
     'NEXT_PUBLIC_PAYMENT_MERCHANT_ID',
-    'NEXT_PUBLIC_SALT_KEY',
-    'NEXT_PUBLIC_SALT_INDEX',
+    'PHONEPE_SALT_KEY',
+    'PHONEPE_SALT_INDEX',
     'NEXT_PUBLIC_PHONE_PAY_HOST_URL',
     'NEXT_PUBLIC_APP_URL',
   ];
@@ -137,7 +138,7 @@ export const phonePayInitPayment = async (
     throw new Error('No outstanding amount to pay');
   }
 
-  const platformFee = parseFloat((pendingAmount * 0.025).toFixed(2));
+  const platformFee = parseFloat((pendingAmount * PLATFORM_FEE_PERCENT).toFixed(2));
 
   const totalPayableAmount = pendingAmount + platformFee;
   const payload = {
@@ -153,18 +154,18 @@ export const phonePayInitPayment = async (
     },
   };
 
-  console.log('Payment Payload:', payload);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Payment] Init for fee ${feeId}, amount ₹${pendingAmount}`);
+  }
 
   const dataPayload = JSON.stringify(payload);
   const dataBase64 = Buffer.from(dataPayload).toString('base64');
 
   const stringToHash =
-    dataBase64 + '/pg/v1/pay' + process.env.NEXT_PUBLIC_SALT_KEY;
+    dataBase64 + '/pg/v1/pay' + process.env.PHONEPE_SALT_KEY;
 
   const dataSha256 = generateSha256(stringToHash);
-  const checksum = dataSha256 + '###' + process.env.NEXT_PUBLIC_SALT_INDEX;
-
-  console.log('Checksum generated:', checksum);
+  const checksum = dataSha256 + '###' + process.env.PHONEPE_SALT_INDEX;
 
   const PAY_API_URL = `${process.env.NEXT_PUBLIC_PHONE_PAY_HOST_URL}/pg/v1/pay`;
 
@@ -181,12 +182,10 @@ export const phonePayInitPayment = async (
     });
 
     const responseData = await response.json();
-    console.log('Payment API Response:', responseData);
 
     if (!response.ok) {
-      console.error('API Error Details:', responseData);
       throw new Error(
-        `Payment API error: ${response.status} ${response.statusText}. Details: ${JSON.stringify(responseData)}`
+        `Payment API error: ${response.status} ${response.statusText}`
       );
     }
 
@@ -224,7 +223,6 @@ export const phonePayInitPayment = async (
       throw new Error(responseData.message || 'Payment initialization failed');
     }
   } catch (error) {
-    console.error('Error in payFeesAction:', error);
     throw error;
   }
 };
@@ -414,8 +412,8 @@ export const verifyPhonePePayment = async (
   shouldRevalidate: boolean = true,
 ) => {
   const merchantId = process.env.NEXT_PUBLIC_PAYMENT_MERCHANT_ID!;
-  const saltKey = process.env.NEXT_PUBLIC_SALT_KEY!;
-  const saltIndex = process.env.NEXT_PUBLIC_SALT_INDEX!;
+  const saltKey = process.env.PHONEPE_SALT_KEY!;
+  const saltIndex = process.env.PHONEPE_SALT_INDEX!;
   const host = process.env.NEXT_PUBLIC_PHONE_PAY_HOST_URL!;
 
   // ── 1. Load our payment record ────────────────────────────────────────────
@@ -445,7 +443,6 @@ export const verifyPhonePePayment = async (
   });
 
   if (!payment) {
-    console.error(`[VERIFY_PAYMENT] No record for transactionId=${transactionId}`);
     return { success: false, status: 'NOT_FOUND', message: 'Payment record not found' };
   }
 
@@ -490,11 +487,9 @@ export const verifyPhonePePayment = async (
       break;
     }
 
-    const errorBody = await res.text();
-    console.error(
-      `[VERIFY_PAYMENT] PhonePe API error: ${res.status} | attempt ${attempt + 1}/${PHONEPE_STATUS_RETRY_DELAYS_MS.length}`,
-      errorBody,
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[VERIFY_PAYMENT] PhonePe API error: ${res.status} | attempt ${attempt + 1}/${PHONEPE_STATUS_RETRY_DELAYS_MS.length}`);
+    }
 
     if (res.status === 429 && attempt < PHONEPE_STATUS_RETRY_DELAYS_MS.length - 1) {
       continue;
@@ -515,8 +510,6 @@ export const verifyPhonePePayment = async (
     return { success: false, status: 'PENDING', message: 'PhonePe verification is still pending.' };
   }
 
-  console.log('[VERIFY_PAYMENT] PhonePe response:', JSON.stringify(json, null, 2));
-
   const state = json?.data?.state;
   const paymentMethodType = json?.data?.paymentInstrument?.type;
   const responseAmount = json?.data?.amount;          // in paise
@@ -524,7 +517,6 @@ export const verifyPhonePePayment = async (
 
   // ── 4. Verify merchant ID integrity ──────────────────────────────────────
   if (responseMerchantId !== merchantId) {
-    console.error(`[VERIFY_PAYMENT] Merchant ID mismatch: expected=${merchantId} got=${responseMerchantId}`);
     return { success: false, status: 'ERROR', message: 'Merchant ID mismatch' };
   }
 
@@ -536,7 +528,6 @@ export const verifyPhonePePayment = async (
     // 4a. Amount integrity check — prevents spoofed callbacks
     const expectedPaise = Math.round((payment.amount + (payment.platformFee ?? 0)) * 100);
     if (responseAmount !== expectedPaise) {
-      console.error(`[VERIFY_PAYMENT] Amount mismatch: expected=${expectedPaise} got=${responseAmount}`);
       await prisma.feePayment.update({
         where: { id: payment.id },
         data: {
@@ -589,8 +580,8 @@ export const verifyPhonePePayment = async (
         revalidatePath('/dashboard/fees');
         revalidatePath('/dashboard/fees/student');
         revalidatePath('/dashboard/fees/admin/assign');
-      } catch (e) {
-        console.warn('[VERIFY_PAYMENT] Revalidation skipped:', e);
+      } catch {
+        // Revalidation is non-critical
       }
     }
 
@@ -650,7 +641,7 @@ export const verifyPhonePePayment = async (
     //  re-derive from source-of-truth rather than assuming UNPAID.)
     await syncFeeBalance(payment.feeId);
 
-    notify.fee.paymentFailed({
+    await notify.fee.paymentFailed({
       feeId: payment.feeId,
       recipients: [{ studentId: payment.fee.studentId }],
       variables: {
@@ -667,8 +658,8 @@ export const verifyPhonePePayment = async (
       try {
         revalidatePath('/dashboard/fees');
         revalidatePath('/dashboard/fees/student');
-      } catch (e) {
-        console.warn('[VERIFY_PAYMENT] Revalidation skipped:', e);
+      } catch {
+        // Revalidation is non-critical
       }
     }
 
