@@ -175,6 +175,21 @@ function NoticeRow({ notice }: { notice: Notice }) {
 }
 
 // ─────────────────────────────────────────────
+// ListLoadingSVG
+// ─────────────────────────────────────────────
+
+function ListLoadingSVG({ className }: { className?: string }) {
+    return (
+        <div
+            className={className}
+            dangerouslySetInnerHTML={{
+                __html: `<svg fill="none" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="cp-200-100"><rect height="100" width="200" y="0" x="0" /></clipPath><g id="comp_0"><g id="Shape Layer 1"><g transform="translate(48.961,49.211)"><g transform="scale(0,0)"><animateTransform repeatCount="indefinite" type="scale" attributeName="transform" dur="1.2s" begin="5.066s" calcMode="spline" values="0 0; 0.93 0.93" keyTimes="0; 1" keySplines="0.333 0 0.044 0.991" fill="freeze" /><g transform="translate(66.789,32.789)"><g id="Rectangle 1" transform="matrix(1,0,0,1,-66.789,-32.789)"><rect ry="4" rx="4" height="38.422" width="38.422" y="0" x="0" fill="#e4e6eb" fill-opacity="1" /></g></g></g></g></g><g id="Shape Layer 2"><g transform="translate(81,41.26)"><g transform="scale(0,0.755)"><animateTransform repeatCount="indefinite" type="scale" attributeName="transform" dur="2s" begin="5.266s" calcMode="spline" values="0 0.755; 0.9 0.755; 0.85 0.755" keyTimes="0; 0.6; 1" keySplines="0.333 0 0.651 0.997; 0.379 0.027 0.524 0.94" fill="freeze" /><g transform="translate(30,6.544)"><g id="Rectangle 1" transform="matrix(1,0,0,1,12.63,-8.364)"><rect ry="2" rx="2" height="14.271" width="85.26" y="0" x="0" fill="#f0f2f5" fill-opacity="1" /></g></g></g></g></g><g id="Shape Layer 3"><animate repeatCount="indefinite" begin="5.066s" calcMode="discrete" fill="freeze" dur="7.866s" values="visible; hidden" keyTimes="0; 1" attributeName="visibility" /><g transform="translate(81,59.26)"><g transform="scale(0,0.755)"><animateTransform repeatCount="indefinite" type="scale" attributeName="transform" dur="2s" begin="5.666s" calcMode="spline" values="0 0.755; 1.1 0.755; 1 0.755" keyTimes="0; 0.6; 1" keySplines="0.333 0 0.651 0.998; 0.379 0.013 0.524 0.97" fill="freeze" /><g transform="translate(30,6.544)"><g id="Rectangle 1" transform="matrix(1,0,0,1,12.63,-8.364)"><rect ry="2" rx="2" height="14.271" width="85.26" y="0" x="0" fill="#f0f2f5" fill-opacity="1" /></g></g></g></g></g></g></defs><g opacity="0.557" id="Comp 1"><animate repeatCount="indefinite" begin="5.066s" calcMode="discrete" fill="freeze" dur="0.934s" values="visible; hidden" keyTimes="0; 1" attributeName="visibility" /><animate repeatCount="indefinite" attributeName="opacity" dur="3.2s" begin="2.733s" calcMode="spline" values="1; 0.6; 0.6; 0" keyTimes="0; 0.292; 0.708; 1" keySplines="0 0 1 1; 0 0 1 1; 0 0 1 1" fill="freeze" /><g transform="translate(150,121.029)"><animateTransform repeatCount="indefinite" type="translate" attributeName="transform" dur="3.2s" begin="2.734s" calcMode="spline" values="150 175; 150 123.5; 150 123.5; 150 86.5" keyTimes="0; 0.292; 0.708; 1" keySplines="0.333 0 0.182 1; 0 0 1 1; 0.167 0 0.182 1" fill="freeze" /><g transform="scale(0.79,0.79)"><animateTransform repeatCount="indefinite" type="scale" attributeName="transform" dur="3.2s" begin="2.734s" calcMode="spline" values="1 1; 0.8 0.8; 0.8 0.8; 0.5 0.5" keyTimes="0; 0.292; 0.708; 1" keySplines="0.333 0 0.069 0.995; 0 0 1 1; 0.167 0 0.833 1" fill="freeze" /><g transform="translate(-100,-50)"><use clip-path="url(#cp-200-100)" height="100" width="200" y="0" x="0" xlink:href="#comp_0" href="#comp_0" /></g></g></g></g><g opacity="0.971" id="Comp 1"><animate repeatCount="indefinite" begin="5.066s" calcMode="discrete" fill="freeze" dur="3.8s" values="visible; hidden" keyTimes="0; 1" attributeName="visibility" /><animate repeatCount="indefinite" attributeName="opacity" dur="3.067s" begin="5s" calcMode="spline" values="1; 0.6; 0.6; 0" keyTimes="0; 0.304; 0.696; 1" keySplines="0 0 1 1; 0 0 1 1; 0 0 1 1" fill="freeze" /><g transform="translate(150,174.062)"><animateTransform repeatCount="indefinite" type="translate" attributeName="transform" dur="3.066s" begin="5s" calcMode="spline" values="150 175; 150 123.5; 150 123.5; 150 86.5" keyTimes="0; 0.304; 0.696; 1" keySplines="0.333 0 0.182 1; 0 0 1 1; 0.167 0 0.182 1" fill="freeze" /><g transform="scale(0.996,0.996)"><animateTransform repeatCount="indefinite" type="scale" attributeName="transform" dur="3.066s" begin="5s" calcMode="spline" values="1 1; 0.8 0.8; 0.8 0.8; 0.5 0.5" keyTimes="0; 0.304; 0.696; 1" keySplines="0.333 0 0.069 0.995; 0 0 1 1; 0.167 0 0.833 1" fill="freeze" /><g transform="translate(-100,-50)"><use clip-path="url(#cp-200-100)" height="100" width="200" y="0" x="0" xlink:href="#comp_0" href="#comp_0" /></g></g></g></g><g opacity="1" id="Comp 1"><animate repeatCount="indefinite" begin="5.066s" calcMode="discrete" fill="freeze" dur="5.866s" values="visible; hidden" keyTimes="0; 1" attributeName="visibility" /><animate repeatCount="indefinite" attributeName="opacity" dur="3.067s" begin="7.066s" calcMode="spline" values="1; 0.6; 0.6; 0" keyTimes="0; 0.304; 0.696; 1" keySplines="0 0 1 1; 0 0 1 1; 0 0 1 1" fill="freeze" /><g transform="translate(150,175)"><animateTransform repeatCount="indefinite" type="translate" attributeName="transform" dur="3.066s" begin="7.066s" calcMode="spline" values="150 175; 150 123.5; 150 123.5; 150 86.5" keyTimes="0; 0.304; 0.696; 1" keySplines="0.333 0 0.182 1; 0 0 1 1; 0.167 0 0.182 1" fill="freeze" /><g transform="scale(1,1)"><animateTransform repeatCount="indefinite" type="scale" attributeName="transform" dur="3.066s" begin="7.066s" calcMode="spline" values="1 1; 0.8 0.8; 0.8 0.8; 0.5 0.5" keyTimes="0; 0.304; 0.696; 1" keySplines="0.333 0 0.069 0.995; 0 0 1 1; 0.167 0 0.833 1" fill="freeze" /><g transform="translate(-100,-50)"><use clip-path="url(#cp-200-100)" height="100" width="200" y="0" x="0" xlink:href="#comp_0" href="#comp_0" /></g></g></g></g><g opacity="1" visibility="hidden" id="Comp 1"><animate repeatCount="indefinite" begin="7.066s" calcMode="discrete" fill="freeze" dur="6s" values="visible; visible" keyTimes="0; 1" attributeName="visibility" /><animate repeatCount="indefinite" attributeName="opacity" dur="2.133s" begin="9.2s" calcMode="spline" values="1; 0.6; 0.6" keyTimes="0; 0.438; 1" keySplines="0 0 1 1; 0 0 1 1" fill="freeze" /><g transform="translate(150,175)"><animateTransform repeatCount="indefinite" type="translate" attributeName="transform" dur="2.134s" begin="9.2s" calcMode="spline" values="150 175; 150 123.5; 150 123.5" keyTimes="0; 0.438; 1" keySplines="0.333 0 0.182 1; 0 0 1 1" fill="freeze" /><g transform="scale(1,1)"><animateTransform repeatCount="indefinite" type="scale" attributeName="transform" dur="2.134s" begin="9.2s" calcMode="spline" values="1 1; 0.8 0.8; 0.8 0.8" keyTimes="0; 0.438; 1" keySplines="0.333 0 0.069 0.995; 0 0 1 1" fill="freeze" /><g transform="translate(-100,-50)"><use clip-path="url(#cp-200-100)" height="100" width="200" y="0" x="0" xlink:href="#comp_0" href="#comp_0" /></g></g></g></g><g transform="matrix(1,0,0,1,50,125)" visibility="hidden" id="Comp 1"><animate repeatCount="indefinite" begin="9.2s" calcMode="discrete" fill="freeze" dur="6s" values="visible; visible" keyTimes="0; 1" attributeName="visibility" /><use clip-path="url(#cp-200-100)" height="100" width="200" y="0" x="0" xlink:href="#comp_0" href="#comp_0" /></g></svg>`
+            }}
+        />
+    );
+}
+
+// ─────────────────────────────────────────────
 // NoticesWidget
 // ─────────────────────────────────────────────
 
@@ -331,16 +346,14 @@ export function NoticesWidget({
                             />
                         </div>
                     ) : (
-                        <div
-                            className="flex flex-col items-center justify-center"
-                            style={{ minHeight: maxHeight }}
-                        >
-                            <EmptyState
-                                title="No notices yet"
-                                description={"Announcements, events & alerts\nwill appear here."}
-                                icons={[Bell, Megaphone, Info]}
-                                className="border-none p-6 max-w-full"
-                            />
+                        <div className="flex flex-col items-center justify-center gap-3 p-6" style={{ minHeight: maxHeight }}>
+                            <ListLoadingSVG className="w-80 h-80 sm:w-72 sm:h-72" />
+                            <div className="text-center">
+                                <h3 className="text-sm font-medium text-foreground">No notices yet</h3>
+                                <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">
+                                    {"Announcements, events & alerts\nwill appear here."}
+                                </p>
+                            </div>
                         </div>
                     )
                 ) : (
