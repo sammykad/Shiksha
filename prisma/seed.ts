@@ -114,36 +114,45 @@ async function generateNotices(count: number) {
 async function initFeeSenseAgent() {
   console.log(`⚙️ Initializing FeeSense Agent...`);
 
-  await prisma.feeSenseAgent.create({
+  const orgId = randomItem(organizationIds);
+
+  await prisma.aiAgent.create({
     data: {
-      organizationId: randomItem(organizationIds),
-      name: 'FeeSense AI Agent',
-      description:
-        'Intelligent fee collection assistant that analyzes payment patterns and sends personalized reminders',
-      isActive: true,
-      capabilities: [
-        'Fetch all Fees Data and check if any fee is pending or not',
-        'Analyzes payment patterns and identifies at-risk families',
-        'Sends personalized payment reminders via email and SMS',
-        'Generates daily reports with collection insights',
-        'Schedules voice calls for high-priority overdue fees',
-      ],
-      lastRunAt: new Date(),
-      successfulRuns: 0,
-      failedRuns: 0,
-      totalRuns: 0,
-      createdAt: new Date(),
-      riskScoreLowThreshold: 30,
-      riskScoreMediumThreshold: 60,
-      riskScoreHighThreshold: 80,
-      maxNotificationAttempts: 3,
-      voiceCallThreshold: 3,
-      enableEmailReminders: true,
-      enableSMSReminders: true,
-      enableVoiceCalls: false,
-      enableWhatsApp: false,
-      runFrequency: 'DAILY',
-      scheduleTime: '23:00',
+      organizationId: orgId,
+      name: 'FeeSense AI',
+      description: 'Fee collection and payment reminders',
+      status: 'ACTIVE',
+      config: {
+        create: {
+          config: {
+            riskThresholds: { low: 30, medium: 60, high: 80 },
+            channels: { email: true, sms: true, whatsapp: false, voice: false },
+            notification: { maxAttempts: 3, voiceCallThreshold: 3, cooldownHours: 24 },
+            report: { deliverTo: [], channels: ['EMAIL'] },
+            llmMaxOutputTokens: 8192,
+            throttle: { monthlyCap: 4, notificationWindow: { startHour: 8, endHour: 20 }, voiceWindow: { startHour: 9, endHour: 21 } },
+          },
+        },
+      },
+    },
+  });
+
+  await prisma.aiAgent.create({
+    data: {
+      organizationId: orgId,
+      name: 'Attendance Monitor',
+      description: 'Attendance tracking and alerts',
+      status: 'ACTIVE',
+      config: {
+        create: {
+          config: {
+            absenceThreshold: 75,
+            lookbackDays: 90,
+            notifyParent: true,
+            notifyTeacher: true,
+          },
+        },
+      },
     },
   });
 }

@@ -85,7 +85,7 @@ npx prisma db seed
 │       ├── leaves/
 │       ├── transport/
 │       ├── reports/
-│       ├── ai-agents/
+│       ├── agents/
 │       ├── settings/
 │       └── institution/        # SuperAdmin ONLY — see access rules below
 ├── components/

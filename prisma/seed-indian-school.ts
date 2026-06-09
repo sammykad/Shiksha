@@ -854,7 +854,7 @@ async function main() {
     [
       feeSenseAgentId, orgId, 'FeeSense AI',
       'Fee collection and payment reminders',
-      'ACTIVE', 'google/gemini-2.0-flash-exp', 20, 0, 0, 0, now, now,
+      'ACTIVE', 'google/gemini-2.5-flash', 20, 0, 0, 0, now, now,
     ]
   );
   await pool.query(
@@ -866,7 +866,9 @@ async function main() {
         riskThresholds: { low: 30, medium: 60, high: 80 },
         channels: { email: true, sms: true, whatsapp: false, voice: false },
         notification: { maxAttempts: 3, voiceCallThreshold: 3, cooldownHours: 24 },
-        report: { deliverTo: [], channels: ['EMAIL'] },
+            report: { deliverTo: [], channels: ['EMAIL'] },
+            llmMaxOutputTokens: 8192,
+            throttle: { monthlyCap: 4, notificationWindow: { startHour: 8, endHour: 20 }, voiceWindow: { startHour: 9, endHour: 21 } },
       }),
       now, now,
     ]
@@ -881,7 +883,7 @@ async function main() {
     [
       attendanceAgentId, orgId, 'Attendance Monitor',
       'Attendance tracking and alerts',
-      'ACTIVE', 'google/gemini-2.0-flash-exp', 20, 0, 0, 0, now, now,
+      'ACTIVE', 'google/gemini-2.5-flash', 20, 0, 0, 0, now, now,
     ]
   );
   await pool.query(
