@@ -12,7 +12,14 @@
 
 import { useEffect, useState, useRef } from 'react';
 
-const TASK_SEQUENCES = [
+import { cn } from '@/lib/utils';
+
+export interface AILoadingSequence {
+  status: string;
+  lines: string[];
+}
+
+const TASK_SEQUENCES: AILoadingSequence[] = [
   {
     status: 'Starting Monthly Fee Report Analysis',
     lines: [
@@ -47,8 +54,14 @@ const TASK_SEQUENCES = [
   },
 ];
 
-const LoadingAnimation = ({ progress }: { progress: number }) => (
-  <div className="relative w-6 h-6">
+const LoadingAnimation = ({
+  progress,
+  className,
+}: {
+  progress: number;
+  className?: string;
+}) => (
+  <div className={cn('relative size-6', className)}>
     <svg
       viewBox="0 0 240 240"
       fill="none"
@@ -114,30 +127,61 @@ const LoadingAnimation = ({ progress }: { progress: number }) => (
   </div>
 );
 
-export default function AILoadingState() {
+interface AILoadingStateProps {
+  sequences?: AILoadingSequence[];
+  className?: string;
+  contentClassName?: string;
+  statusClassName?: string;
+  lineClassName?: string;
+  lineNumberClassName?: string;
+  overlayClassName?: string;
+  lineHeight?: number;
+  visibleLineCount?: number;
+  intervalMs?: number;
+  indicatorClassName?: string;
+}
+
+export default function AILoadingState({
+  sequences = TASK_SEQUENCES,
+  className,
+  contentClassName,
+  statusClassName,
+  lineClassName,
+  lineNumberClassName,
+  overlayClassName,
+  lineHeight = 28,
+  visibleLineCount = 3,
+  intervalMs = 2000,
+  indicatorClassName,
+}: AILoadingStateProps) {
   const [sequenceIndex, setSequenceIndex] = useState(0);
   const [visibleLines, setVisibleLines] = useState<
-    Array<{ text: string; number: number }>
+    Array<{ id: number; text: string; number: number }>
   >([]);
   const [scrollPosition, setScrollPosition] = useState(0);
   const codeContainerRef = useRef<HTMLDivElement>(null);
-  const lineHeight = 28;
+  const lineIdRef = useRef(0);
 
-  const currentSequence = TASK_SEQUENCES[sequenceIndex];
+  const currentSequence = sequences[sequenceIndex];
   const totalLines = currentSequence.lines.length;
 
   // Initialize visible lines
   useEffect(() => {
-    const initialLines = [];
-    for (let i = 0; i < Math.min(5, totalLines); i++) {
-      initialLines.push({
-        text: currentSequence.lines[i],
-        number: i + 1,
-      });
-    }
-    setVisibleLines(initialLines);
-    setScrollPosition(0);
-  }, [sequenceIndex, currentSequence.lines, totalLines]);
+    const resetTimer = window.setTimeout(() => {
+      const initialLines = [];
+      for (let i = 0; i < Math.min(visibleLineCount, totalLines); i++) {
+        initialLines.push({
+          id: lineIdRef.current++,
+          text: currentSequence.lines[i],
+          number: i + 1,
+        });
+      }
+      setVisibleLines(initialLines);
+      setScrollPosition(0);
+    }, 0);
+
+    return () => window.clearTimeout(resetTimer);
+  }, [sequenceIndex, currentSequence.lines, totalLines, visibleLineCount]);
 
   // Handle line advancement
   useEffect(() => {
@@ -149,7 +193,7 @@ export default function AILoadingState() {
       // If we're about to wrap around, move to next sequence
       if (nextLineIndex < firstVisibleLineIndex && nextLineIndex !== 0) {
         setSequenceIndex(
-          (prevIndex) => (prevIndex + 1) % TASK_SEQUENCES.length
+          (prevIndex) => (prevIndex + 1) % sequences.length
         );
         return;
       }
@@ -159,6 +203,7 @@ export default function AILoadingState() {
         setVisibleLines((prevLines) => [
           ...prevLines,
           {
+            id: lineIdRef.current++,
             text: currentSequence.lines[nextLineIndex],
             number: nextLineIndex + 1,
           },
@@ -167,7 +212,7 @@ export default function AILoadingState() {
 
       // Scroll to the next line
       setScrollPosition((prevPosition) => prevPosition + lineHeight);
-    }, 2000); // Slightly slower than the example for better readability
+    }, intervalMs);
 
     return () => clearInterval(advanceTimer);
   }, [
@@ -177,6 +222,8 @@ export default function AILoadingState() {
     sequenceIndex,
     currentSequence.lines,
     lineHeight,
+    intervalMs,
+    sequences.length,
   ]);
 
   // Apply scroll position
@@ -187,11 +234,17 @@ export default function AILoadingState() {
   }, [scrollPosition]);
 
   return (
-    <div className="flex items-center justify-center ">
-      <div className="space-y-4 w-auto">
-        <div className="ml-2 flex items-center space-x-2 text-gray-600 dark:text-gray-300 font-medium">
+    <div className={cn('flex items-center justify-center', className)}>
+      <div className={cn('w-auto space-y-3', contentClassName)}>
+        <div
+          className={cn(
+            'ml-1 flex items-center space-x-2 font-medium text-gray-600 dark:text-gray-300',
+            statusClassName
+          )}
+        >
           <LoadingAnimation
-            progress={(sequenceIndex / TASK_SEQUENCES.length) * 100}
+            progress={(sequenceIndex / sequences.length) * 100}
+            className={indicatorClassName}
           />
           <span className="text-sm">{currentSequence.status}...</span>
         </div>
@@ -199,22 +252,35 @@ export default function AILoadingState() {
         <div className="relative">
           <div
             ref={codeContainerRef}
-            className="font-mono text-xs overflow-hidden w-full h-[84px] relative rounded-lg"
-            style={{ scrollBehavior: 'smooth' }}
+            className="relative w-full overflow-hidden rounded-lg font-mono text-xs"
+            style={{
+              scrollBehavior: 'smooth',
+              height: lineHeight * visibleLineCount,
+            }}
           >
             <div>
-              {visibleLines.map((line, index) => (
+              {visibleLines.map((line) => (
                 <div
-                  key={`${line.number}-${line.text}`}
+                  key={line.id}
                   className="flex h-[28px] items-center px-2"
                 >
                   {/* Line number */}
-                  <div className="text-gray-400 dark:text-gray-500 pr-3 select-none w-6 text-right">
+                  <div
+                    className={cn(
+                      'w-6 select-none pr-3 text-right text-gray-400 dark:text-gray-500',
+                      lineNumberClassName
+                    )}
+                  >
                     {line.number}
                   </div>
 
                   {/* Task content */}
-                  <div className="text-gray-800 dark:text-gray-200 flex-1 ml-1">
+                  <div
+                    className={cn(
+                      'ml-1 flex-1 text-gray-800 dark:text-gray-200',
+                      lineClassName
+                    )}
+                  >
                     {line.text}
                   </div>
                 </div>
@@ -224,7 +290,10 @@ export default function AILoadingState() {
 
           {/* Linear gradient overlay */}
           <div
-            className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-lg from-white/90 via-white/50 to-transparent dark:from-black/90 dark:via-black/50 dark:to-transparent"
+            className={cn(
+              'pointer-events-none absolute bottom-0 left-0 right-0 top-0 rounded-lg from-white/90 via-white/50 to-transparent dark:from-black/90 dark:via-black/50 dark:to-transparent',
+              overlayClassName
+            )}
             style={{
               background:
                 'linear-gradient(to bottom, var(--tw-gradient-from) 0%, var(--tw-gradient-via) 30%, var(--tw-gradient-to) 100%)',
