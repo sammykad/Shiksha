@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma-base";
 const OTP_LENGTH = 6;
 const MAX_ATTEMPTS = 3;
 const OWNERSHIP_TTL_MS = 10 * 60 * 1000;
+const OWNERSHIP_OTP_TYPE = "sign-in";
 
 const bodySchema = z.object({
   email: z.string().trim().email(),
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.toLowerCase();
-  const otpIdentifier = `email-ownership-otp-${email}`;
+  const otpIdentifier = `${OWNERSHIP_OTP_TYPE}-otp-${email}`;
   const verification = await prisma.verification.findFirst({
     where: { identifier: otpIdentifier },
   });

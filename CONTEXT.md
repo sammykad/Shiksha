@@ -43,3 +43,47 @@ _Avoid_: Subscription balance, credit account
 **Billing Event**:
 An audit record for meaningful billing changes, such as trial started, plan changed, offer applied, invoice paid, or subscription cancelled.
 _Avoid_: Log, note, activity
+
+---
+
+# Shiksha.cloud AI Agents Context
+
+This context defines the language for Shiksha.cloud's AI agent system. It exists so new agents, schema models, and tool files use consistent terminology.
+
+## Language
+
+**AiAgent**:
+A base record representing any AI-powered agent in the system. Identified by its `name` field (not an enum). No unique constraint — orgs can have multiple instances of the same agent (e.g. one per branch).
+_Avoid_: Agent type, agent enum, agent category
+
+**AiAgentConfig**:
+A one-to-one extension table holding domain-specific configuration as a JSON blob. Every agent gets one. Config shape is defined by each agent's `defaultConfig` in the registry.
+_Avoid_: Settings, preferences, agent params
+
+**AiAgentExecutionLog**:
+A per-run audit record capturing execution metadata: status, duration, cost (in paise), student/item count, errors, and warnings. Linked to both agent and organization. Source of truth for agent observability.
+_Avoid_: Run log, execution history, audit trail
+
+**AiAgentReport**:
+A per-run AI-generated report with risk breakdown, channel delivery counts, and a merged `data` JSON for all domain-specific content. One per agent per day per report type (unique on `[agentId, reportDate, reportType]`).
+_Avoid_: Summary, analysis, insight report
+
+**totalProcessed**:
+The count of items (students, records, etc.) the agent examined during a run. Generic — applies to all agent types.
+_Avoid_: totalAtRisk, studentsScanned, itemsChecked
+
+**data (on AiAgentReport)**:
+A merged JSON field containing both AI-generated analysis (trends, recommendations, top risk items) and raw metrics (counts, totals). Domain-specific fields like `totalOverdue` live inside this JSON, not as columns.
+_Avoid_: insights, reportData, payload
+
+**Flow**:
+An ordered sequence of agents executed one after another. Defined in `FLOW_REGISTRY` as a name → `[agentNames]` mapping. No DAG support.
+_Avoid_: Workflow, pipeline, chain
+
+**Agent Registry**:
+A code-level map of agent name → factory function + default config. Adding a new agent means adding one entry here.
+_Avoid_: Agent list, agent catalog, agent directory
+
+**checkEnabled**:
+A shared tool auto-injected into every agent. The LLM calls it first to verify the agent is ACTIVE and fetch its config. Agents that skip this step may produce unexpected results.
+_Avoid_: Health check, status check, ping

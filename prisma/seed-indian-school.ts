@@ -220,7 +220,7 @@ async function main() {
   // Clear existing data (reverse dependency order)
   console.log('🧹 Clearing existing data...');
   const tables = [
-    '"NotificationSetting"', '"FeeSenseReport"', '"FeeSenseExecutionLog"', '"FeeSenseAgent"',
+    '"NotificationSetting"', '"AiAgentReport"', '"AiAgentExecutionLog"', '"AiAgentConfig"', '"AiAgent"',
     '"LeadActivity"', '"Lead"', '"LeaveStatusTimeline"', '"Leave"',
     '"HallTicket"', '"ReportCard"', '"ExamResult"', '"ExamEnrollment"', '"Exam"', '"ExamSession"',
     '"NoticeAttachment"', '"Notice"', '"AcademicCalendar"',
@@ -844,27 +844,61 @@ async function main() {
   console.log(`   ✅ ${CONFIG.leadsCount} Leads created`);
 
   // ==========================================
-  // 21. Create FeeSense Agent
+  // 21. Create Default AI Agents
   // ==========================================
   console.log('🤖 Creating FeeSense AI Agent...');
+  const feeSenseAgentId = generateId();
   await pool.query(
-    `INSERT INTO "FeeSenseAgent" (id, "organizationId", name, description, "isActive", capabilities, "riskScoreLowThreshold", "riskScoreMediumThreshold", "riskScoreHighThreshold", "maxNotificationAttempts", "voiceCallThreshold", "enableEmailReminders", "enableSMSReminders", "enableVoiceCalls", "enableWhatsApp", "runFrequency", "scheduleTime", "totalRuns", "successfulRuns", "failedRuns", "createdAt", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+    `INSERT INTO "AiAgent" (id, "organizationId", name, description, status, "llmModel", "llmMaxSteps", "totalRuns", "successfulRuns", "failedRuns", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
-      generateId(), orgId, 'FeeSense AI Agent',
-      'Intelligent fee collection assistant that analyzes payment patterns and sends personalized reminders',
-      true,
-      generatePgArray([
-        'Fetch all Fees Data and check if any fee is pending or not',
-        'Analyzes payment patterns and identifies at-risk families',
-        'Sends personalized payment reminders via email and SMS',
-        'Generates daily reports with collection insights',
-        'Schedules voice calls for high-priority overdue fees',
-      ]),
-      30, 60, 80, 3, 3, true, true, false, false, 'DAILY', '23:00', 0, 0, 0, now, now
+      feeSenseAgentId, orgId, 'FeeSense AI',
+      'Fee collection and payment reminders',
+      'ACTIVE', 'google/gemini-2.0-flash-exp', 20, 0, 0, 0, now, now,
+    ]
+  );
+  await pool.query(
+    `INSERT INTO "AiAgentConfig" (id, "agentId", config, "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      generateId(), feeSenseAgentId,
+      JSON.stringify({
+        riskThresholds: { low: 30, medium: 60, high: 80 },
+        channels: { email: true, sms: true, whatsapp: false, voice: false },
+        notification: { maxAttempts: 3, voiceCallThreshold: 3, cooldownHours: 24 },
+        report: { deliverTo: [], channels: ['EMAIL'] },
+      }),
+      now, now,
     ]
   );
   console.log(`   ✅ FeeSense Agent created`);
+
+  console.log('🤖 Creating Attendance Monitor Agent...');
+  const attendanceAgentId = generateId();
+  await pool.query(
+    `INSERT INTO "AiAgent" (id, "organizationId", name, description, status, "llmModel", "llmMaxSteps", "totalRuns", "successfulRuns", "failedRuns", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    [
+      attendanceAgentId, orgId, 'Attendance Monitor',
+      'Attendance tracking and alerts',
+      'ACTIVE', 'google/gemini-2.0-flash-exp', 20, 0, 0, 0, now, now,
+    ]
+  );
+  await pool.query(
+    `INSERT INTO "AiAgentConfig" (id, "agentId", config, "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      generateId(), attendanceAgentId,
+      JSON.stringify({
+        absenceThreshold: 75,
+        lookbackDays: 90,
+        notifyParent: true,
+        notifyTeacher: true,
+      }),
+      now, now,
+    ]
+  );
+  console.log(`   ✅ Attendance Monitor Agent created`);
 
   // ==========================================
   // 22. Create Notification Settings
@@ -915,7 +949,7 @@ async function main() {
   console.log(`   Notices: ${SCHOOL_NOTICES.length}`);
   console.log(`   Calendar Events: ${INDIAN_HOLIDAYS_2025_26.length}`);
   console.log(`   Notification Settings: ${notificationTypes.length}`);
-  console.log(`   FeeSense Agent: 1`);
+  console.log(`   AI Agents: 2 (FeeSense AI + Attendance Monitor)`);
   console.log('\n🎉 Seed data ready!\n');
 
   await pool.end();

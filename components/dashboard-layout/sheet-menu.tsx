@@ -14,7 +14,6 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { Menu } from './menu';
-import { cn } from '@/lib/utils';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import type { Role } from '@/generated/prisma/enums';
 import { OrganizationSwitcher } from '@/components/auth/organization-switcher';

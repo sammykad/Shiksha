@@ -27,6 +27,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { FeeSenseAgent } from '@/generated/prisma/client';
+import { configureFeeSenseAgent } from '@/lib/data/ai-agents/agent-actions';
 
 export const feeSenseConfigSchema = z.object({
   runFrequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'ON_DEMAND']),
@@ -84,12 +85,7 @@ export default function ConfigureAgentSheet({ agent }: ConfigureAgentSheetProps)
   const onSubmit = async (data: FeeSenseConfig) => {
     setIsPending(true);
     try {
-      const response = await fetch(`/api/agents/${agent.id}/configure`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to save configuration');
+      await configureFeeSenseAgent(agent.id, data);
       toast.success('Configuration saved', {
         description: `${agent.name} has been configured successfully.`,
       });

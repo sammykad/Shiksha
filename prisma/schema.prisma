@@ -261,7 +261,6 @@ model Organization {
   exam                 Exam[]
   hallTicket           HallTicket[]
   leads                Lead[]
-  feeSenseAgent        FeeSenseAgent?
   notificationSettings NotificationSetting[]
   notifications        Notification[]
   NotificationLog      NotificationLog[]
@@ -283,6 +282,8 @@ model Organization {
   gradingScales GradingScale[]
   idCards       IdCard[]
   subscriptions Subscription[]
+  aiAgents              AiAgent[]
+  aiAgentExecutionLogs  AiAgentExecutionLog[]
 
   @@index([id])
   @@index([slug])
@@ -2025,125 +2026,6 @@ model MetaIntegration {
   @@index([organizationId])
 }
 
-model FeeSenseAgent {
-  id             String       @id @default(cuid())
-  organizationId String       @unique // One per org
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  name           String       @default("FeeSense AI Agent")
-  description    String?      @default("Intelligent fee collection assistant that analyzes payment patterns and sends personalized reminders")
-
-  isActive Boolean @default(true)
-
-  capabilities             String[]
-  // capabilities: [
-  //       "Fetch all Fees Data and check if any fee is pending or not",
-  //       "Analyzes payment patterns and identifies at-risk families",
-  //       "Sends personalized payment reminders via email and SMS",
-  //       "Generates daily reports with collection insights",
-  //       "Schedules voice calls for high-priority overdue fees",
-  //     ],
-  // FeeSense-specific configuration
-  riskScoreLowThreshold    Int      @default(30)
-  riskScoreMediumThreshold Int      @default(60)
-  riskScoreHighThreshold   Int      @default(80)
-  maxNotificationAttempts  Int      @default(3)
-  voiceCallThreshold       Int      @default(3) // Days overdue before call
-
-  // Notification preferences
-  enableEmailReminders Boolean @default(true)
-  enableSMSReminders   Boolean @default(true)
-  enableVoiceCalls     Boolean @default(false)
-  enableWhatsApp       Boolean @default(false)
-
-  // Scheduling
-  runFrequency AIAgentRunFrequency @default(DAILY)
-  scheduleTime String              @default("23:00") // HH:mm format
-
-  // // AI Model config
-  // aiModel     String @default("gpt-4")
-  // temperature Float  @default(0.7)
-
-  // Execution tracking
-  lastRunAt      DateTime?
-  nextRunAt      DateTime?
-  totalRuns      Int       @default(0)
-  successfulRuns Int       @default(0)
-  failedRuns     Int       @default(0)
-
-  // Relations
-  executionLogs FeeSenseExecutionLog[]
-  reports       FeeSenseReport[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([organizationId, isActive])
-}
-
-model FeeSenseExecutionLog {
-  id      String        @id @default(cuid())
-  agentId String
-  agent   FeeSenseAgent @relation(fields: [agentId], references: [id])
-
-  startedAt   DateTime
-  completedAt DateTime?
-  status      AIAgentExecutionStatus // RUNNING, SUCCESS, FAILED, PARTIAL
-
-  // FeeSense-specific metrics
-  studentsAnalyzed    Int
-  remindersGenerated  Int
-  emailsSent          Int
-  smsSent             Int
-  voiceCallsScheduled Int
-  totalAmountOverdue  Float
-
-  errorMessage String?
-  errorDetails Json?
-
-  createdAt DateTime @default(now())
-
-  @@index([agentId, startedAt])
-}
-
-model FeeSenseReport {
-  id String @id @default(cuid())
-
-  agentId String
-  agent   FeeSenseAgent @relation(fields: [agentId], references: [id])
-
-  reportDate DateTime
-
-  // Summary metrics
-  totalStudentsAtRisk Int
-  highRiskCount       Int
-  mediumRiskCount     Int
-  lowRiskCount        Int
-
-  totalOverdueAmount Float
-  paymentsReceived   Float // Since last report
-
-  // Outreach summary
-  emailsSent          Int
-  smsSent             Int
-  voiceCallsScheduled Int
-  responseRate        Float?
-
-  // Detailed insights (AI-generated)
-  insights Json
-  // Example: {
-  //   "trends": "Payment rates down 15% this week",
-  //   "recommendations": ["Focus on Grade 10 students", "Increase SMS frequency"],
-  //   "topRiskStudents": [...]
-  // }
-
-  sentToEmails String[] // Admin emails where report was sent
-
-  createdAt DateTime @default(now())
-
-  @@unique([agentId, reportDate])
-  @@index([agentId, reportDate])
-}
-
 enum AIAgentRunFrequency {
   DAILY
   WEEKLY
@@ -2407,4 +2289,125 @@ model IdCard {
   @@index([organizationId, studentId])
   @@index([organizationId, teacherId])
   @@index([cardNumber])
+}
+
+// ============================================================================
+// AI AGENT SYSTEM — Unified base models for all AI agents
+// ============================================================================
+
+enum AiAgentStatus {
+  ACTIVE
+  PAUSED
+  DRAFT
+}
+
+model AiAgent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  status      AiAgentStatus @default(DRAFT)
+  name        String
+  description String?
+
+  // Scheduling
+  runFrequency AIAgentRunFrequency @default(DAILY)
+  scheduleTime String              @default("23:00")
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+
+  // LLM Configuration
+  llmModel    String @default("google/gemini-2.0-flash-exp")
+  llmMaxSteps Int    @default(20)
+
+  // Execution stats
+  totalRuns      Int @default(0)
+  successfulRuns Int @default(0)
+  failedRuns     Int @default(0)
+
+  // Relations
+  executionLogs AiAgentExecutionLog[]
+  config        AiAgentConfig?
+  reports       AiAgentReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([nextRunAt])
+}
+
+model AiAgentConfig {
+  id      String  @id @default(cuid())
+  agentId String  @unique
+  agent   AiAgent @relation(fields: [agentId], references: [id])
+
+  config Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiAgentExecutionLog {
+  id      String  @id @default(cuid())
+  agentId String
+  agent   AiAgent @relation(fields: [agentId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  startedAt   DateTime
+  completedAt DateTime?
+  status      AIAgentExecutionStatus
+
+  studentsProcessed Int @default(0)
+  notificationsSent Int @default(0)
+  errorsCount       Int @default(0)
+  warningsCount     Int @default(0)
+
+  // Cost tracking
+  llmCost    Int @default(0)
+  llmTokens  Int @default(0)
+  durationMs Int @default(0)
+
+  errorMessage String?
+  errorDetails Json?
+  output       Json?
+  reports      AiAgentReport[]
+
+  createdAt DateTime @default(now())
+
+  @@index([agentId, startedAt])
+  @@index([agentId, status, startedAt])
+  @@index([organizationId, startedAt])
+}
+
+model AiAgentReport {
+  id String @id @default(cuid())
+
+  agentId String
+  agent   AiAgent @relation(fields: [agentId], references: [id])
+  logId   String?
+  log     AiAgentExecutionLog? @relation(fields: [logId], references: [id])
+
+  reportDate DateTime
+  reportType String // DAILY_SUMMARY, WEEKLY_ANALYSIS, ALERT
+
+  totalProcessed Int @default(0)
+  highRiskCount  Int @default(0)
+  mediumRiskCount Int @default(0)
+  lowRiskCount   Int @default(0)
+
+  emailsSent   Int @default(0)
+  smsSent      Int @default(0)
+  whatsappSent Int @default(0)
+  voiceCalls   Int @default(0)
+
+  data Json // AI-generated content + raw metrics merged
+
+  deliveredTo String[] // Email/phone of recipients the report was sent to
+
+  createdAt DateTime @default(now())
+
+  @@unique([agentId, reportDate, reportType])
+  @@index([agentId, reportDate])
 }
