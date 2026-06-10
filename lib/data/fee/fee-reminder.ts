@@ -14,7 +14,10 @@ import { getOrganizationId } from '@/lib/organization';
 import { getCurrentUser } from '@/lib/user';
 import { z } from 'zod';
 import { notify } from '@/lib/notifications/notify';
-import { checkTimeOfDay, getMonthlyFeeCount } from '@/lib/notifications/throttle';
+import {
+  getMonthlyFeeCounts,
+  shouldSendManualFeeReminder,
+} from '@/lib/notifications/throttle';
 
 const reminderDataSchema = z.object({
   recipients: z.array(
@@ -131,34 +134,26 @@ export async function executeReminders(
   organizationId: string,
 ): Promise<ReminderResult> {
   const method = TEMPLATE_MAP[validated.templateType];
-  let totalSent = 0;
-  let totalFailed = 0;
-  let totalSkipped = 0;
+  const totals = {
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+  };
 
-  const timeCheck = checkTimeOfDay(false)
+  const monthlyCounts = await getMonthlyFeeCounts(
+    validated.recipients.map((recipient) => recipient.studentId),
+    organizationId,
+  );
 
   for (const recipient of validated.recipients) {
-    // Throttle check: monthly cap
-    const monthlyCount = await getMonthlyFeeCount(recipient.studentId, organizationId)
-    const isOverCap = monthlyCount >= 4
+    const policy = shouldSendManualFeeReminder({
+      monthlyCount: monthlyCounts.get(recipient.studentId) ?? 0,
+      templateType: validated.templateType,
+    });
 
-    if (isOverCap) {
-      totalSkipped++
-      console.log('[fee-reminder] SKIPPED (monthly cap)', {
-        studentName: recipient.studentName,
-        monthlyCount,
-      })
-      continue
-    }
-
-    // Time-of-day warning (block only for non-urgent templates)
-    if (validated.templateType === 'FEE_FRIENDLY_REMINDER' && !timeCheck.allowed) {
-      totalSkipped++
-      console.log('[fee-reminder] SKIPPED (time-of-day)', {
-        studentName: recipient.studentName,
-        reason: timeCheck.reason,
-      })
-      continue
+    if (!policy.allowed) {
+      totals.skipped++;
+      continue;
     }
 
     const result = await notify.fee[method]({
@@ -184,37 +179,34 @@ export async function executeReminders(
     });
 
     if (result.ok) {
-      totalSent++;
+      totals.sent++;
     } else {
-      let isDuplicate = false;
-      if (result.results && result.results.length > 0) {
-        const allChannels = result.results.flatMap(r => r.channels);
-        if (allChannels.length > 0 && allChannels.every(c => c.error === "Duplicate")) {
-          isDuplicate = true;
-        }
-      }
-
-      if (isDuplicate) {
-        totalSkipped++;
+      if (isDuplicateResult(result)) {
+        totals.skipped++;
       } else {
-        totalFailed++;
+        totals.failed++;
       }
     }
   }
 
   const parts = [];
-  if (totalSent > 0) parts.push(`${totalSent} sent`);
-  if (totalSkipped > 0) parts.push(`${totalSkipped} already sent today`);
-  if (totalFailed > 0) parts.push(`${totalFailed} failed`);
+  if (totals.sent > 0) parts.push(`${totals.sent} sent`);
+  if (totals.skipped > 0) parts.push(`${totals.skipped} skipped`);
+  if (totals.failed > 0) parts.push(`${totals.failed} failed`);
 
   const summary = parts.length > 0 ? parts.join(', ') : 'No reminders sent';
 
-  const isSuccess = totalFailed === 0 && totalSent > 0;
+  const isSuccess = totals.failed === 0 && totals.sent > 0;
 
   return {
     success: isSuccess,
-    sentCount: totalSent,
+    sentCount: totals.sent,
     message: summary,
     error: !isSuccess ? summary : undefined,
   };
+}
+
+function isDuplicateResult(result: Awaited<ReturnType<typeof notify.fee.friendlyReminder>>) {
+  const channels = result.results?.flatMap((item) => item.channels) ?? [];
+  return channels.length > 0 && channels.every((channel) => channel.error === 'Duplicate');
 }
