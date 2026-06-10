@@ -1,43 +1,74 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { DialogClose } from '@/components/ui/dialog';
-import { FeeSenseAgent } from '@/generated/prisma/client';
-import { toggleAgentActivation } from '@/lib/data/ai-agents/toggle-agent-activation';
+import { toggleAgentActivation } from '@/lib/ai-agents/toggle-agent-activation';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface Capability {
+  label: string
+  badge?: string
+}
+
+const AGENT_CAPABILITIES: Record<string, Capability[]> = {
+  'FeeSense AI': [
+    { label: 'Monitors overdue fee payments' },
+    { label: 'Sends payment reminders via WhatsApp, SMS, and Email' },
+    { label: 'Generates daily fee collection reports' },
+    { label: 'Analyzes payment patterns and identifies risk levels' },
+    { label: 'Schedules voice calls for high-priority overdue fees', badge: 'META' },
+  ],
+  'Attendance Monitor': [
+    { label: 'Tracks daily student attendance patterns' },
+    { label: 'Identifies students with low attendance rates' },
+    { label: 'Sends absence alerts to parents and teachers' },
+    { label: 'Generates attendance summary and trend reports' },
+  ],
+};
+
+function getCapabilities(name: string): Capability[] {
+  return AGENT_CAPABILITIES[name] ?? [
+    { label: 'Automates routine school management tasks' },
+    { label: 'Sends notifications via configured channels' },
+    { label: 'Generates summary reports and insights' },
+    { label: 'Runs on a scheduled basis' },
+  ];
+}
+
 interface AgentActivationDialogProps {
-  agent: FeeSenseAgent;
+  agent: {
+    id: string
+    name: string
+    description: string | null
+    status: string
+    config?: { config: Record<string, unknown> } | null
+  }
 }
 
 export function AgentActivationDialog({ agent }: AgentActivationDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [isActive, setIsActive] = useState<boolean>(!!agent.isActive);
+  const capabilities = getCapabilities(agent.name);
+  const isActive = agent.status === 'ACTIVE';
 
   const onSubmit = () => {
-    startTransition(() => {
-      toggleAgentActivation(agent.id)
-        .then(() => {
-          setIsActive((prev) => {
-            const next = !prev;
-            if (next) {
-              toast.success(`"${agent.name}" activated`);
-            } else {
-              toast.info(`"${agent.name}" deactivated`);
-            }
-            return next;
-          });
+    startTransition(async () => {
+      try {
+        await toggleAgentActivation(agent.id)
+        if (isActive) {
+          toast.info(`"${agent.name}" deactivated`)
+        } else {
+          toast.success(`"${agent.name}" activated`)
+        }
+      } catch (error) {
+        toast.error('Something went wrong', {
+          description:
+            error instanceof Error ? error.message : 'Please try again.',
         })
-        .catch((error) => {
-          toast.error('Something went wrong', {
-            description:
-              error instanceof Error ? error.message : 'Please try again.',
-          });
-        });
-    });
-  };
+      }
+    })
+  }
 
   const deactivating = isActive;
 
@@ -48,27 +79,32 @@ export function AgentActivationDialog({ agent }: AgentActivationDialogProps) {
       <div>
         <p className="text-sm font-medium text-foreground">{agent.name}</p>
         {agent.description && (
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {agent.description}
           </p>
         )}
       </div>
 
       {/* Capabilities */}
-      {agent.capabilities?.length > 0 && (
+      {capabilities.length > 0 && (
         <div className="space-y-2">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
             What this agent does
           </p>
           <ul className="space-y-1.5">
-            {agent.capabilities.map((capability, index) => (
+            {capabilities.map((capability, index) => (
               <li key={index} className="flex items-start gap-2">
                 {deactivating ? (
-                  <XCircle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                  <XCircle className="mt-0.5 size-3.5 shrink-0 text-destructive" />
                 ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
                 )}
-                <span className="text-sm text-muted-foreground">{capability}</span>
+                <span className="text-sm text-muted-foreground">{capability.label}</span>
+                {capability.badge && (
+                  <span className="ml-1.5 rounded-[3px] border border-amber-300 bg-amber-50 px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                    {capability.badge}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -77,7 +113,7 @@ export function AgentActivationDialog({ agent }: AgentActivationDialogProps) {
 
       {/* Status note */}
       <div className="rounded-lg border border-border bg-muted/40 px-4 py-3">
-        <p className="text-xs text-muted-foreground leading-relaxed">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           {deactivating
             ? 'Deactivating will stop all scheduled runs and notifications for this agent.'
             : 'Activating will enable scheduled runs and notifications for this agent.'}
@@ -98,7 +134,7 @@ export function AgentActivationDialog({ agent }: AgentActivationDialogProps) {
           className="flex-1 gap-2"
         >
           {isPending ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />{deactivating ? 'Deactivating...' : 'Activating...'}</>
+            <><Loader2 className="size-4 animate-spin" />{deactivating ? 'Deactivating...' : 'Activating...'}</>
           ) : (
             deactivating ? 'Deactivate' : 'Activate'
           )}

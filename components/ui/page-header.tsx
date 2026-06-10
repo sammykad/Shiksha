@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card';
-import { ReactNode } from 'react';
-import { LucideIcon } from 'lucide-react';
+import React, { ReactNode, isValidElement } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
@@ -8,8 +8,8 @@ interface PageHeaderProps {
     title: string;
     /** Optional subtitle / description */
     description?: string;
-    /** Optional lucide icon shown left of the title */
-    icon?: LucideIcon;
+    /** Optional icon or custom element shown left of the title */
+    icon?: LucideIcon | ReactNode;
     /** Action buttons / links rendered on the right */
     actions?: ReactNode;
     /** Extra className on the root Card */
@@ -48,7 +48,7 @@ interface PageHeaderProps {
 export function PageHeader({
     title,
     description,
-    icon: Icon,
+    icon,
     actions,
     className,
 }: PageHeaderProps) {
@@ -61,9 +61,9 @@ export function PageHeader({
 
                 {/* Left — icon + text */}
                 <div className="flex items-center gap-2.5 min-w-0">
-                    {Icon && (
+                    {icon && (
                         <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg bg-muted border border-border/50">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            {isValidElement(icon) ? icon : React.createElement(icon as LucideIcon, { className: 'h-4 w-4 text-muted-foreground' })}
                         </div>
                     )}
                     <div className="min-w-0">

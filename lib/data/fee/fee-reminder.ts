@@ -14,6 +14,7 @@ import { getOrganizationId } from '@/lib/organization';
 import { getCurrentUser } from '@/lib/user';
 import { z } from 'zod';
 import { notify } from '@/lib/notifications/notify';
+import { checkTimeOfDay, getMonthlyFeeCount } from '@/lib/notifications/throttle';
 
 const reminderDataSchema = z.object({
   recipients: z.array(
@@ -134,7 +135,32 @@ export async function executeReminders(
   let totalFailed = 0;
   let totalSkipped = 0;
 
+  const timeCheck = checkTimeOfDay(false)
+
   for (const recipient of validated.recipients) {
+    // Throttle check: monthly cap
+    const monthlyCount = await getMonthlyFeeCount(recipient.studentId, organizationId)
+    const isOverCap = monthlyCount >= 4
+
+    if (isOverCap) {
+      totalSkipped++
+      console.log('[fee-reminder] SKIPPED (monthly cap)', {
+        studentName: recipient.studentName,
+        monthlyCount,
+      })
+      continue
+    }
+
+    // Time-of-day warning (block only for non-urgent templates)
+    if (validated.templateType === 'FEE_FRIENDLY_REMINDER' && !timeCheck.allowed) {
+      totalSkipped++
+      console.log('[fee-reminder] SKIPPED (time-of-day)', {
+        studentName: recipient.studentName,
+        reason: timeCheck.reason,
+      })
+      continue
+    }
+
     const result = await notify.fee[method]({
       feeId: recipient.id,  // stable per-recipient fee ID
       organizationId,

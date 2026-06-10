@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react';
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,43 +11,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ensureAgentByName } from '@/lib/ai-agents/create-agent';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 const AGENT_TYPES = [
   {
-    id: 'FEE_SENSE',
-    name: 'FeeSenseAI',
+    id: 'FeeSense AI',
+    name: 'FeeSense AI',
     description: 'Fee collection and payment reminders',
     icon: '💰',
   },
   {
-    id: 'PERFORMANCE_ADVISOR',
-    name: 'Performance Advisor',
-    description: 'Student performance analysis',
-    icon: '📊',
-  },
-  {
-    id: 'ATTENDANCE_MONITOR',
+    id: 'Attendance Monitor',
     name: 'Attendance Monitor',
     description: 'Attendance tracking and alerts',
     icon: '📋',
-  },
-  {
-    id: 'ENGAGEMENT_TRACKER',
-    name: 'Engagement Tracker',
-    description: 'Student engagement monitoring',
-    icon: '👥',
-  },
-  {
-    id: 'COMMUNICATION_HUB',
-    name: 'Communication Hub',
-    description: 'Parent-teacher communication',
-    icon: '💬',
-  },
-  {
-    id: 'EXAM_ANALYZER',
-    name: 'Exam Analyzer',
-    description: 'Exam results analysis',
-    icon: '📝',
   },
 ];
 
@@ -61,6 +40,27 @@ export default function CreateAgentDialog({
   onOpenChange,
 }: CreateAgentDialogProps) {
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleCreate = async () => {
+    if (!selectedType) return;
+    setLoading(true);
+    try {
+      const result = await ensureAgentByName(selectedType);
+      if (result.created) {
+        toast.success(`"${selectedType}" agent created`);
+      } else {
+        toast.info(`"${selectedType}" agent already exists`);
+      }
+      onOpenChange(false);
+      router.refresh();
+    } catch {
+      toast.error('Failed to create agent');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,13 +120,12 @@ export default function CreateAgentDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            disabled={!selectedType}
-            onClick={() => {
-              onOpenChange(false);
-            }}
-          >
-            Create Agent
+          <Button disabled={!selectedType || loading} onClick={handleCreate}>
+            {loading ? (
+              <><Loader2 className="size-4 animate-spin" /> Creating...</>
+            ) : (
+              'Create Agent'
+            )}
           </Button>
         </div>
       </DialogContent>

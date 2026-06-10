@@ -864,11 +864,11 @@ async function main() {
       generateId(), feeSenseAgentId,
       JSON.stringify({
         riskThresholds: { low: 30, medium: 60, high: 80 },
-        channels: { email: true, sms: true, whatsapp: false, voice: false },
+        channels: { email: true, sms: true, whatsapp: true, voice: false },
         notification: { maxAttempts: 3, voiceCallThreshold: 3, cooldownHours: 24 },
             report: { deliverTo: [], channels: ['EMAIL'] },
             llmMaxOutputTokens: 8192,
-            throttle: { monthlyCap: 4, notificationWindow: { startHour: 8, endHour: 20 }, voiceWindow: { startHour: 9, endHour: 21 } },
+            throttle: { monthlyCap: 4, notificationWindow: { startHour: 11, endHour: 19 }, voiceWindow: { startHour: 11, endHour: 19 } },
       }),
       now, now,
     ]

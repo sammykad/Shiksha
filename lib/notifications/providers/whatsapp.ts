@@ -143,3 +143,45 @@ export async function uploadBufferToMeta(
 
   return mediaId;
 }
+
+/**
+ * Send a plain-text WhatsApp message via Meta Cloud API.
+ * Used for delivering reports and one-off admin notifications.
+ */
+export async function sendWhatsAppText(to: string, body: string): Promise<{ success: boolean; error?: string }> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+  const accessToken = (process.env.WHATSAPP_ACCESS_TOKEN || '').replace(/['"]/g, '').trim()
+
+  if (!phoneNumberId || !accessToken) {
+    return { success: false, error: 'WhatsApp not configured (missing WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_ACCESS_TOKEN)' }
+  }
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body },
+        }),
+      },
+    )
+
+    const json = await res.json()
+
+    if (!res.ok) {
+      return { success: false, error: json.error?.message ?? 'WhatsApp API error' }
+    }
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}

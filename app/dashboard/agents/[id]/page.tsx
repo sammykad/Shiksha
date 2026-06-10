@@ -1,63 +1,73 @@
-import AgentDetailView from '@/components/dashboard/agents/fee-sense-agent-detail-view';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AgentDetailView from '@/components/dashboard/agents/agent-detail-view';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { notFound } from 'next/navigation';
-import FeeSenseAgentLogs from '@/components/dashboard/agents/fee-sense-log';
-import FeeSenseAgentReports from '@/components/dashboard/agents/fee-sense-reports';
 
 export default async function AgentDetailPage({
   params,
 }: {
-  params: Promise<{ agentId: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { agentId } = await params;
-
+  const { id } = await params;
   const organizationId = await getOrganizationId();
 
-  const agent = await prisma.feeSenseAgent.findUnique({
-    where: {
-      id: agentId,
-      organizationId,
-    },
+  const agent = await prisma.aiAgent.findFirst({
+    where: { id, organizationId },
+    include: { config: true },
   });
 
-  const executionLogs = await prisma.feeSenseExecutionLog.findMany({
-    where: {
-      agentId,
-    },
+  if (!agent) return notFound();
+
+  const executionLogs = await prisma.aiAgentExecutionLog.findMany({
+    where: { agentId: id },
+    orderBy: { startedAt: 'desc' },
+    take: 50,
   });
 
-  const reports = await prisma.feeSenseReport.findMany({
-    where: {
-      agentId,
-    },
+  const reports = await prisma.aiAgentReport.findMany({
+    where: { agentId: id },
+    orderBy: { reportDate: 'desc' },
+    take: 50,
   });
-
-  if (!agent) {
-    return notFound();
-  }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview">
-          <AgentDetailView agent={agent} />
-        </TabsContent>
-        <TabsContent value="logs">
-          <FeeSenseAgentLogs executionLogs={executionLogs} />
-        </TabsContent>
-        <TabsContent value="reports">
-          <FeeSenseAgentReports reports={reports} />
-        </TabsContent>
-      </Tabs>
+    <div className="bg-background">
+      <AgentDetailView
+        agent={{
+          id: agent.id,
+          name: agent.name,
+          description: agent.description,
+          status: agent.status,
+          runFrequency: agent.runFrequency,
+          scheduleTime: agent.scheduleTime,
+          totalRuns: agent.totalRuns,
+          successfulRuns: agent.successfulRuns,
+          failedRuns: agent.failedRuns,
+          lastRunAt: agent.lastRunAt,
+          config: agent.config ? { config: agent.config.config as Record<string, unknown> } : null,
+        }}
+        executionLogs={executionLogs.map((log) => ({
+          id: log.id,
+          status: log.status,
+          startedAt: log.startedAt,
+          completedAt: log.completedAt,
+          studentsProcessed: log.studentsProcessed,
+          notificationsSent: log.notificationsSent,
+          errorsCount: log.errorsCount,
+          warningsCount: log.warningsCount,
+          errorMessage: log.errorMessage,
+        }))}
+        reports={reports.map((r) => ({
+          id: r.id,
+          reportDate: r.reportDate,
+          reportType: r.reportType,
+          totalProcessed: r.totalProcessed,
+          highRiskCount: r.highRiskCount,
+          mediumRiskCount: r.mediumRiskCount,
+          lowRiskCount: r.lowRiskCount,
+          data: r.data as Record<string, unknown>,
+        }))}
+      />
     </div>
   );
 }

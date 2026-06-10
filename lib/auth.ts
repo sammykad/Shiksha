@@ -7,9 +7,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { MembershipStatus, PlanCode, Role, YearType } from "@/generated/prisma/enums";
+import { MembershipStatus, Role } from "@/generated/prisma/enums";
 import prisma from "@/lib/prisma-base";
-import { createTrialSubscription, getActiveSubscription } from "@/lib/subscription-billing";
+import { getActiveSubscription } from "@/lib/subscription-billing";
 import {
   buildInvitationEmail,
   buildOtpEmail,
@@ -17,6 +17,7 @@ import {
   OTP_SUBJECTS,
 } from "./auth-email";
 import { sendBrevoEmail } from "./brevo";
+import { initializeOrganization } from "./initialize-organization";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -71,6 +72,12 @@ export const betterAuthServer = betterAuth({
     },
   },
 
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "email-password"],
+    }
+  },
   emailVerification: {
     sendOnSignUp: false,
     sendOnSignIn: false,
@@ -172,15 +179,7 @@ export const betterAuthServer = betterAuth({
         }),
 
         afterCreateOrganization: async ({ organization, user }) => {
-          await createDefaultAcademicYear({
-            organizationId: organization.id,
-            createdBy: user.id,
-          });
-          await createTrialSubscription({
-            organizationId: organization.id,
-            planCode: PlanCode.GROWTH,
-            createdBy: user.id,
-          });
+          await initializeOrganization(organization.id, user.id);
         },
 
         afterAddMember: async ({ member, user, organization }) => {
@@ -523,32 +522,6 @@ async function getOrganizationAccountLimit(organizationId: string) {
   const subscription = await getActiveSubscription(organizationId);
   if (subscription?.studentLimit) return subscription.studentLimit;
   return 100;
-}
-
-async function createDefaultAcademicYear({
-  organizationId,
-  createdBy,
-}: {
-  organizationId: string;
-  createdBy: string;
-}) {
-  const now = new Date();
-  const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-  const name = `${startYear}-${String(startYear + 1).slice(-2)}`;
-
-  await prisma.academicYear.upsert({
-    where: { organizationId_name: { organizationId, name } },
-    update: { isCurrent: true },
-    create: {
-      organizationId,
-      name,
-      startDate: new Date(startYear, 3, 1),
-      endDate: new Date(startYear + 1, 2, 31),
-      type: YearType.ANNUAL,
-      isCurrent: true,
-      createdBy,
-    },
-  });
 }
 
 async function upsertTeacher({
