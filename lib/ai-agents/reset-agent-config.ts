@@ -1,48 +1,33 @@
 'use server'
 
-import prisma from '@/lib/db'
-import { getOrganizationId } from '@/lib/organization'
-import { AGENT_REGISTRY } from '@/lib/ai-agents/registry'
 import { revalidatePath } from 'next/cache'
-
-function getNextRunAt(): Date {
-  const next = new Date()
-  next.setHours(23, 0, 0, 0)
-  if (next <= new Date()) next.setDate(next.getDate() + 1)
-  return next
-}
+import prisma from '@/lib/prisma-base'
+import { getOrganizationId } from '@/lib/organization'
+import { createMissingAgentsFromRegistry } from './create-agents'
 
 export async function resetOrganizationAgents() {
-  const organizationId = await getOrganizationId()
+  try {
+    const organizationId = await getOrganizationId()
 
-  const agents = await prisma.aiAgent.findMany({
-    where: { organizationId },
-    select: { id: true, name: true },
-  })
+    // Delete order: child tables first (no cascade deletes in schema)
+    //   1. AiAgentReport — FK to AiAgent and AiAgentExecutionLog
+    //   2. AiAgentConfig  — FK to AiAgent
+    //   3. AiAgentExecutionLog — FK to AiAgent (reports already cleaned)
+    //   4. AiAgent — all dependents removed
+    await prisma.$transaction([
+      prisma.aiAgentReport.deleteMany({ where: { agent: { organizationId } } }),
+      prisma.aiAgentConfig.deleteMany({ where: { agent: { organizationId } } }),
+      prisma.aiAgentExecutionLog.deleteMany({ where: { organizationId } }),
+      prisma.aiAgent.deleteMany({ where: { organizationId } }),
+    ])
 
-  if (agents.length > 0) {
-    const ids = agents.map(a => a.id)
-    await prisma.aiAgentReport.deleteMany({ where: { agentId: { in: ids } } })
-    await prisma.aiAgentExecutionLog.deleteMany({ where: { agentId: { in: ids } } })
-    await prisma.aiAgentConfig.deleteMany({ where: { agentId: { in: ids } } })
-    await prisma.aiAgent.deleteMany({ where: { id: { in: ids } } })
+    // Re-create agents from registry with defaults
+    await createMissingAgentsFromRegistry(organizationId)
+
+    revalidatePath('/dashboard/agents')
+    return { success: true, redirect: '/dashboard/agents' }
+  } catch (error) {
+    console.error('resetOrganizationAgents failed:', error)
+    return { success: false, error: 'Failed to reset agents. Please try again.' }
   }
-
-  for (const entry of Object.values(AGENT_REGISTRY)) {
-    await prisma.aiAgent.create({
-      data: {
-        organizationId,
-        name: entry.name,
-        description: entry.description,
-        status: 'ACTIVE',
-        config: {
-          create: { config: entry.defaultConfig as any },
-        },
-        nextRunAt: getNextRunAt(),
-      },
-    })
-  }
-
-  revalidatePath('/dashboard/agents')
-  return { success: true, redirect: '/dashboard/agents' }
 }
