@@ -3,10 +3,10 @@ import AdminPanelLayout from "@/components/dashboard-layout/dashboard-panel-layo
 import { Navbar } from "@/components/dashboard-layout/navbar";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import prisma from "@/lib/db";
 import { TerminologyProvider } from "@/context/terminology";
 import { AcademicYearProvider } from "@/context/AcademicYearContext";
 import { getAcademicYears, getActiveAcademicYearId } from "@/lib/academicYear";
+import { getOrganizationType } from "@/lib/organization";
 import RoleLayoutWrapper from "@/components/dashboard-layout/role-layout-wrapper";
 import { getOnboardingStatus } from "@/lib/onboarding";
 import { headers } from "next/headers";
@@ -46,18 +46,15 @@ export default async function DashboardLayout({
     if (needsOnboarding) redirect("/dashboard/onboarding");
   }
 
-  const [organization, academicYears, activeYearId] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: orgId },
-      select: { organizationType: true },
-    }),
+  const [organizationType, academicYears, activeYearId] = await Promise.all([
+    getOrganizationType(orgId),
     getAcademicYears(orgId),
     getActiveAcademicYearId(),
   ]);
 
 
   return (
-    <TerminologyProvider organizationType={organization?.organizationType}>
+    <TerminologyProvider organizationType={organizationType}>
       <AcademicYearProvider
         years={academicYears}
         initialActiveYearId={activeYearId}

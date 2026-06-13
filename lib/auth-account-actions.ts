@@ -32,6 +32,7 @@ export async function validatePasswordResetEmail(email: string) {
   if (!user) {
     return {
       ok: false,
+      code: 'USER_NOT_FOUND',
       message: 'No account exists with this email. Please sign up first.',
     };
   }

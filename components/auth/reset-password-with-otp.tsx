@@ -2,9 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, LoaderCircle } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -28,6 +29,24 @@ import { AuthFooter } from "./_components/auth-footer";
 type Step = "email" | "otp" | "password" | "done";
 
 const OTP_LENGTH = 6;
+const NO_ACCOUNT_MESSAGE = "No account exists with this email. Please sign up first.";
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function isMissingAccountError(code?: string, message?: string) {
+  if (code === 'USER_NOT_FOUND') return true;
+  return message === NO_ACCOUNT_MESSAGE;
+}
+
+function buildSignUpHref(signUpUrl: string, email: string) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return signUpUrl;
+
+  const params = new URLSearchParams({ email: normalizedEmail });
+  return `${signUpUrl}?${params.toString()}`;
+}
 
 const emailSchema = z.object({
   email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address."),
@@ -57,17 +76,18 @@ type PasswordValues = z.infer<typeof passwordSchema>;
 
 type EmailOtpApi = {
   requestPasswordReset: (input: { email: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
-  checkVerificationOtp?: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
-  checkVerificationOTP?: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
+  checkVerificationOtp: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
   resetPassword: (input: { email: string; otp: string; password: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
 };
 
 export function ResetPasswordWithOtp({
   initialEmail = "",
   signInUrl = "/sign-in",
+  signUpUrl = "/sign-up",
 }: {
   initialEmail?: string;
   signInUrl?: string;
+  signUpUrl?: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("email");
@@ -92,9 +112,16 @@ export function ResetPasswordWithOtp({
     defaultValues: { password: "", confirmPassword: "" },
     mode: "onTouched",
   });
+  const enteredEmail = useWatch({
+    control: emailForm.control,
+    name: "email",
+  });
 
   const otp = useMemo(() => otpDigits.join(""), [otpDigits]);
   const canVerifyOtp = otp.length === OTP_LENGTH && !pending;
+  const emailFieldError = emailForm.formState.errors.email;
+  const shouldShowSignUpLink = isMissingAccountError(emailFieldError?.type, emailFieldError?.message);
+  const signUpHref = buildSignUpHref(signUpUrl, enteredEmail);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -105,13 +132,16 @@ export function ResetPasswordWithOtp({
   const startCooldown = () => setResendCooldown(30);
 
   const handleRequestOtp = async (values: EmailValues, options?: { stayOnOtp?: boolean }) => {
-    const nextEmail = values.email.trim().toLowerCase();
+    const nextEmail = normalizeEmail(values.email);
     setPending(true);
     setOtpError(null);
     try {
       const validation = await validatePasswordResetEmail(nextEmail);
       if (!validation.ok) {
-        emailForm.setError("email", { message: validation.message });
+        emailForm.setError("email", {
+          type: validation.code ?? "manual",
+          message: validation.message,
+        });
         toast.error(validation.message);
         return;
       }
@@ -176,19 +206,16 @@ export function ResetPasswordWithOtp({
     setPending(true);
     setOtpError(null);
     try {
-      const checkOtp = emailOtp.checkVerificationOtp ?? emailOtp.checkVerificationOTP;
-      if (checkOtp) {
-        const { error } = await checkOtp({
-          email,
-          type: "forget-password",
-          otp,
-        });
-        if (error) {
-          const message = error.message ?? "The verification code is incorrect or expired.";
-          setOtpError(message);
-          toast.error(message);
-          return;
-        }
+      const { error } = await emailOtp.checkVerificationOtp({
+        email,
+        type: "forget-password",
+        otp,
+      });
+      if (error) {
+        const message = error.message ?? "The verification code is incorrect or expired.";
+        setOtpError(message);
+        toast.error(message);
+        return;
       }
 
       setVerifiedOtp(otp);
@@ -324,6 +351,14 @@ export function ResetPasswordWithOtp({
                     </FormItem>
                   )}
                 />
+                {shouldShowSignUpLink ? (
+                  <p className="-mt-2 text-center text-[0.8125rem] text-neutral-500">
+                    New to Shiksha Cloud?{" "}
+                    <Link href={signUpHref} className="font-medium text-violet-600 underline-offset-4 hover:underline">
+                      Create account
+                    </Link>
+                  </p>
+                ) : null}
                 <button
                   type="submit"
                   disabled={pending}
@@ -349,6 +384,7 @@ export function ResetPasswordWithOtp({
                     type="text"
                     inputMode="numeric"
                     autoComplete={index === 0 ? "one-time-code" : "off"}
+                    aria-label={`Verification code digit ${index + 1} of ${OTP_LENGTH}`}
                     maxLength={1}
                     value={digit}
                     disabled={pending}

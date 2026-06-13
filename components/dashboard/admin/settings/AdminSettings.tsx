@@ -6,11 +6,11 @@ import ConfigSettings from "@/components/dashboard/admin/settings/ConfigSettings
 import { GradingSettings } from "@/components/dashboard/admin/settings/GradingSettings"
 import { NotificationSettings } from "@/components/dashboard/admin/settings/NotificationSettings"
 import RolePermissions from "@/components/dashboard/admin/settings/RolePermissions"
+import BillingSettings from "./BillingSettings"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Settings2 } from "lucide-react"
 import { getBillingSummary, getPublicPlans } from "@/lib/subscription-billing"
-import BillingSettings from "./BillingSettings"
 import { getOrganizationNotificationSettings } from "@/lib/notifications/organization-notification-settings"
 import { getAcademicYears, getCurrentAcademicYearIdSafe } from "@/lib/academicYear"
 import { Role } from "@/generated/prisma/enums"
@@ -20,12 +20,8 @@ async function getStaffMembers(organizationId: string) {
     where: {
       organizationId,
       status: "ACTIVE",
-      role: {
-        in: [Role.ADMIN, Role.TEACHER],
-      },
-      user: {
-        isActive: true,
-      },
+      role: { in: [Role.ADMIN, Role.TEACHER] },
+      user: { isActive: true },
     },
     select: {
       role: true,
@@ -40,7 +36,7 @@ async function getStaffMembers(organizationId: string) {
         },
       },
     },
-  });
+  })
 
   return memberships.map((m) => {
     const first = m.user.firstName ?? ""
@@ -55,7 +51,6 @@ async function getStaffMembers(organizationId: string) {
     }
   })
 }
-
 
 export default async function AdminSettingsPage() {
   const organizationId = await getOrganizationId()
@@ -72,47 +67,47 @@ export default async function AdminSettingsPage() {
   const billingSummary = await getBillingSummary(organizationId, academicYearId)
 
   if (!organization) {
-    return (
-      <EmptyState title="Organization not found" description="Please contact support." />
-    )
+    return <EmptyState title="Organization not found" description="Please contact support." />
   }
 
-
   return (
-    <div className=" bg-background px-2">
-      {/* Header */}
+    <div className="bg-background px-2">
       <PageHeader
         title="Admin Settings"
         description="Manage your application settings, configurations, and access controls."
         icon={Settings2}
       />
 
-      {/* Main Content */}
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 mt-4">
-        <AdminSettingsSidebar>
-          <GeneralSettings organization={organization} />
-          <ConfigSettings academicYears={academicYears} organizationId={organizationId} />
-          <GradingSettings organizationType={organization.organizationType ?? undefined} />
-          <NotificationSettings notificationSettings={notificationSettings} />
-          <BillingSettings
-            billingSummary={billingSummary}
-            plans={billingPlans.map((plan) => ({
-              code: plan.code,
-              name: plan.name,
-              description: plan.description ?? "Shiksha.cloud subscription plan.",
-              monthlyPrice: plan.monthlyPrice ?? 0,
-              annualPrice: plan.annualPrice ?? 0,
-              studentLimit: plan.studentLimit ?? 0,
-            }))}
-          />
-          <RolePermissions
-            users={staffMembers}
-          />
-        </AdminSettingsSidebar>
+        <AdminSettingsSidebar
+          sections={{
+            general: <GeneralSettings organization={organization} />,
+            configurations: (
+              <ConfigSettings academicYears={academicYears} organizationId={organizationId} />
+            ),
+            grading: (
+              <GradingSettings organizationType={organization.organizationType ?? undefined} />
+            ),
+            notifications: (
+              <NotificationSettings notificationSettings={notificationSettings} />
+            ),
+            billing: (
+              <BillingSettings
+                billingSummary={billingSummary}
+                plans={billingPlans.map((plan) => ({
+                  code: plan.code,
+                  name: plan.name,
+                  description: plan.description ?? "Shiksha.cloud subscription plan.",
+                  monthlyPrice: plan.monthlyPrice ?? 0,
+                  annualPrice: plan.annualPrice ?? 0,
+                  studentLimit: plan.studentLimit ?? 0,
+                }))}
+              />
+            ),
+            permissions: <RolePermissions users={staffMembers} />,
+          }}
+        />
       </div>
     </div>
   )
 }
-
-
-// https://dribbble.com/shots/26544075-Realtor-agent-Permissions-page-for-real-estate-platform

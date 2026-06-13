@@ -327,7 +327,7 @@ export default function GeneralSettings({ organization }: GeneralSettingsProps) 
                                             <FormItem>
                                                 <FormLabel>Contact Phone</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="+1 (555) 123-4567" {...field} />
+                                                    <Input placeholder="+91 98765 43210" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

@@ -390,7 +390,6 @@ export function GradingSettings({ organizationType }: { organizationType?: Organ
           toast.error(result.error || "Failed to save grading configuration.");
         }
       } catch (error) {
-        console.error("Save error:", error);
         toast.error("An unexpected error occurred while saving.");
       }
     });

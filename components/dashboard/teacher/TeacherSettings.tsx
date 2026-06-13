@@ -36,6 +36,7 @@ import {
   NotepadTextDashed,
   Building2,
   Hash,
+  type LucideIcon,
 } from 'lucide-react';
 import { TeacherProfileForm } from './TeacherProfileForm';
 import { TeacherPayoutForm } from './TeacherPayoutForm';
@@ -129,7 +130,7 @@ function InfoRow({
   label,
   value,
 }: {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   value: string | undefined | null;
 }) {

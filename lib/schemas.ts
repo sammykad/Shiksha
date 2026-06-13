@@ -240,7 +240,11 @@ export const organizationSchema = z.object({
     .email('Please enter a valid email address')
     .optional()
     .or(z.literal('')),
-  contactPhone: z.string().optional(),
+  contactPhone: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number')
+    .optional()
+    .or(z.literal('')),
   website: z
     .string()
     .url('Please enter a valid URL')
@@ -281,7 +285,7 @@ export const teacherProfileSchema = z.object({
 
   // Contact Information
   contactEmail: z.string().email('Please enter a valid email address'),
-  contactPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  contactPhone: z.string().regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number'),
   address: z.string().min(10, 'Please enter a complete address'),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -343,7 +347,7 @@ export const createTeacherSchema = z.object({
 
   // Contact Information
   contactEmail: z.string().email('Invalid email address'),
-  contactPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  contactPhone: z.string().regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number'),
   address: z.string().min(10, 'Address must be at least 10 characters'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
