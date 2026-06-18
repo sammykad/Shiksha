@@ -29,6 +29,14 @@ enum BillingMetric {
   FLAT
 }
 
+enum PricingMode {
+  PLAN_BASED
+  CUSTOM_FLAT
+  CUSTOM_PER_STUDENT
+  CUSTOM_PER_USER
+  CUSTOM_SLAB
+}
+
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
@@ -279,11 +287,12 @@ model Organization {
   updatedAt       DateTime         @updatedAt
   metaIntegration MetaIntegration?
 
-  gradingScales GradingScale[]
-  idCards       IdCard[]
-  subscriptions Subscription[]
-  aiAgents              AiAgent[]
-  aiAgentExecutionLogs  AiAgentExecutionLog[]
+  gradingScales        GradingScale[]
+  idCards              IdCard[]
+  subscriptions        Subscription[]
+  invoices             Invoice[]
+  aiAgents             AiAgent[]
+  aiAgentExecutionLogs AiAgentExecutionLog[]
 
   @@index([id])
   @@index([slug])
@@ -338,17 +347,21 @@ model Subscription {
   id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  planId         String
-  plan           Plan         @relation(fields: [planId], references: [id])
+  planId         String?
+  plan           Plan?        @relation(fields: [planId], references: [id])
   offerId        String?
   offer          Offer?       @relation(fields: [offerId], references: [id])
 
-  status        SubscriptionStatus @default(TRIALING)
-  billingCycle  BillingCycle       @default(MONTHLY)
-  billingMetric BillingMetric
-  price         Int?
-  studentLimit  Int?
-  studentCount  Int                @default(0)
+  pricingMode       PricingMode        @default(PLAN_BASED)
+  status            SubscriptionStatus @default(TRIALING)
+  billingCycle      BillingCycle       @default(MONTHLY)
+  billingMetric     BillingMetric
+  price             Int?
+  unitPrice         Int?
+  customPrice       Int?
+  contractReference String?
+  studentLimit      Int?
+  studentCount      Int                @default(0)
 
   trialStartedAt     DateTime?
   trialEndsAt        DateTime?
@@ -360,14 +373,30 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  invoices Invoice[]
-  payments SubscriptionPayment[]
-  events   BillingEvent[]
+  invoices     Invoice[]
+  payments     SubscriptionPayment[]
+  events       BillingEvent[]
+  pricingSlabs PricingSlab[]
 
   @@index([organizationId, status])
   @@index([planId])
   @@index([offerId])
   @@index([currentPeriodEnd])
+  @@index([pricingMode])
+}
+
+model PricingSlab {
+  id              String       @id @default(cuid())
+  subscriptionId  String
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  minStudents     Int
+  maxStudents     Int?
+  pricePerStudent Int
+  billingCycle    BillingCycle
+  createdAt       DateTime     @default(now())
+
+  @@unique([subscriptionId, minStudents])
+  @@index([subscriptionId])
 }
 
 model Invoice {
@@ -375,6 +404,9 @@ model Invoice {
   subscriptionId String
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  invoiceNumber String? @unique
 
   periodStart  DateTime
   periodEnd    DateTime
@@ -2349,9 +2381,9 @@ model AiAgentConfig {
 }
 
 model AiAgentExecutionLog {
-  id      String  @id @default(cuid())
-  agentId String
-  agent   AiAgent @relation(fields: [agentId], references: [id])
+  id             String       @id @default(cuid())
+  agentId        String
+  agent          AiAgent      @relation(fields: [agentId], references: [id])
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
@@ -2385,17 +2417,17 @@ model AiAgentReport {
   id String @id @default(cuid())
 
   agentId String
-  agent   AiAgent @relation(fields: [agentId], references: [id])
+  agent   AiAgent              @relation(fields: [agentId], references: [id])
   logId   String?
   log     AiAgentExecutionLog? @relation(fields: [logId], references: [id])
 
   reportDate DateTime
   reportType String // DAILY_SUMMARY, WEEKLY_ANALYSIS, ALERT
 
-  totalProcessed Int @default(0)
-  highRiskCount  Int @default(0)
+  totalProcessed  Int @default(0)
+  highRiskCount   Int @default(0)
   mediumRiskCount Int @default(0)
-  lowRiskCount   Int @default(0)
+  lowRiskCount    Int @default(0)
 
   emailsSent   Int @default(0)
   smsSent      Int @default(0)

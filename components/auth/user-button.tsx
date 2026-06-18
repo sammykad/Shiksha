@@ -58,7 +58,6 @@ export function UserButton({
                 }
 
                 router.push(afterSignOutUrl);
-                router.refresh();
             } catch {
                 toast.error("Something went wrong. Please try again.");
             }

@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { getInitials, capitalizeName } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import {
   UserRound,
@@ -179,12 +180,12 @@ function ProfileSection({ teacher }: { teacher: NonNullable<Awaited<ReturnType<t
               <Avatar className="h-16 w-16 border-2 border-border">
                 <AvatarImage src={teacher.profilePhoto || undefined} />
                 <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                  {teacher.firstName?.[0]}{teacher.lastName?.[0]}
+                  {getInitials(`${teacher.firstName} ${teacher.lastName}`)}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <CardTitle className="text-lg">
-                  {teacher.firstName} {teacher.lastName}
+                  {capitalizeName(teacher.firstName)} {capitalizeName(teacher.lastName)}
                 </CardTitle>
                 <CardDescription className="flex items-center gap-2 mt-0.5">
                   <Badge variant="secondary" className="text-[11px] font-normal">

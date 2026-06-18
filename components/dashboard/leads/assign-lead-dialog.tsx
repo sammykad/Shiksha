@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Users, Loader2, UserX, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { getInitials } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -36,13 +37,13 @@ import { Badge } from '@/components/ui/badge';
 import { AssignLeadFormData, assignLeadSchema } from '@/lib/schemas';
 import {
   assignLead,
-  getAvailableUsersForLeads,
+  getAvailableMembers,
   unassignLead,
 } from '@/lib/data/leads/assign-lead';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface TeamMember {
+interface AvailableMember {
   id: string;
   firstName: string;
   lastName: string;
@@ -66,20 +67,20 @@ interface AssignLeadDialogProps {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function UserOption({ user }: { user: TeamMember }) {
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+function MemberOption({ member }: { member: AvailableMember }) {
+  const initials = getInitials(`${member.firstName} ${member.lastName}`);
 
   return (
     <div className="flex items-center gap-2">
       <Avatar className="w-6 h-6">
-        <AvatarImage src={user.profileImage ?? ''} className="object-cover" />
+        <AvatarImage src={member.profileImage ?? ''} className="object-cover" />
         <AvatarFallback className="text-xs">{initials}</AvatarFallback>
       </Avatar>
       <span>
-        {user.firstName} {user.lastName}
+        {member.firstName} {member.lastName}
       </span>
       <Badge variant="outline" className="ml-auto text-xs">
-        {user.role}
+        {member.role}
       </Badge>
     </div>
   );
@@ -93,10 +94,9 @@ export function AssignLeadDialog({
   onAssignmentChange,
 }: AssignLeadDialogProps) {
   const [open, setOpen] = useState(false);
-  const [users, setUsers] = useState<TeamMember[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
+  const [members, setMembers] = useState<AvailableMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
 
-  // useTransition: keeps UI responsive during non-urgent async state updates
   const [isAssigning, startAssignTransition] = useTransition();
   const [isUnassigning, startUnassignTransition] = useTransition();
 
@@ -114,25 +114,28 @@ export function AssignLeadDialog({
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
-  const fetchUsers = useCallback(async () => {
-    setUsersLoading(true);
+  const fetchMembers = useCallback(async () => {
+    setMembersLoading(true);
     try {
-      const result = await getAvailableUsersForLeads();
+      const result = await getAvailableMembers();
       if (result.success && result.data) {
-        setUsers(result.data);
+        setMembers(result.data);
       } else {
-        toast.error('Failed to load team members');
+        toast.error(result.error ?? 'Failed to load members');
       }
     } catch {
-      toast.error('Failed to load team members');
+      toast.error('Failed to load members');
     } finally {
-      setUsersLoading(false);
+      setMembersLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (open) fetchUsers();
-  }, [open, fetchUsers]);
+    if (open) {
+      fetchMembers();
+      form.reset({ leadId, assignedToUserId: currentAssignedTo?.id ?? '' });
+    }
+  }, [open, fetchMembers, form, leadId, currentAssignedTo]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -197,7 +200,7 @@ export function AssignLeadDialog({
   const dialogTitle = currentAssignedTo ? 'Reassign Lead' : 'Assign Lead';
   const dialogDescription = currentAssignedTo
     ? `Currently assigned to ${currentAssignedTo.firstName} ${currentAssignedTo.lastName}`
-    : 'Assign this lead to a team member';
+    : 'Assign this lead to a member';
 
   const triggerLabel = currentAssignedTo ? 'Reassign' : 'Assign';
 
@@ -229,32 +232,32 @@ export function AssignLeadDialog({
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={usersLoading || isPending}
+                    disabled={membersLoading || isPending}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a team member" />
+                        <SelectValue placeholder="Select a member" />
                       </SelectTrigger>
                     </FormControl>
 
                     <SelectContent>
-                      {usersLoading ? (
+                      {membersLoading ? (
                         <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground text-sm">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Loading team members…
+                          Loading members…
                         </div>
-                      ) : users.length === 0 ? (
+                      ) : members.length === 0 ? (
                         <div className="py-4 text-center text-sm text-muted-foreground">
-                          No team members available
+                          No members available
                         </div>
                       ) : (
-                        users.map((user) => (
+                        members.map((member) => (
                           <SelectItem
-                            key={user.id}
-                            value={user.id}
+                            key={member.id}
+                            value={member.id}
                             className="cursor-pointer"
                           >
-                            <UserOption user={user} />
+                            <MemberOption member={member} />
                           </SelectItem>
                         ))
                       )}

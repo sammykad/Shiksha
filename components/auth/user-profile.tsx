@@ -706,7 +706,6 @@ export function UserProfile({
             toast.success("Account deactivated.");
             await authClient.signOut().catch(() => null);
             router.push("/sign-in");
-            router.refresh();
         } catch {
             toast.error("Something went wrong.");
         } finally {

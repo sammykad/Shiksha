@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Building2,
+  CreditCard,
   IndianRupee,
   Landmark,
   LayoutDashboard,
@@ -32,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { cn, formatDateIN } from "@/lib/utils";
 import type { InstitutionDashboardData, OrganizationDashboardItem } from "@/lib/data/institution/get-institution-dashboard";
 
 type Status = "healthy" | "warning" | "critical";
@@ -89,6 +90,51 @@ function StatusBadge({ status }: { status: Status }) {
   );
 }
 
+const SUBSCRIPTION_STYLES: Record<
+  string,
+  { label: string; badge: string; dot: string }
+> = {
+  TRIALING: { label: "Trial", badge: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" },
+  ACTIVE: { label: "Active", badge: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
+  PAST_DUE: { label: "Past Due", badge: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-500" },
+  PAUSED: { label: "Paused", badge: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+  CANCELLED: { label: "Cancelled", badge: "bg-slate-50 text-slate-600 border-slate-200", dot: "bg-slate-400" },
+  EXPIRED: { label: "Expired", badge: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-500" },
+};
+
+function SubscriptionBadge({ status, planName }: { status: string; planName: string }) {
+  const style = SUBSCRIPTION_STYLES[status] ?? SUBSCRIPTION_STYLES.EXPIRED;
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn("gap-1.5 rounded-full px-2.5 py-1 text-[11px]", style.badge)}
+    >
+      <span className={cn("size-1.5 rounded-full", style.dot)} />
+      {planName} &middot; {style.label}
+    </Badge>
+  );
+}
+
+function BillingAlertBanner({ organizations }: { organizations: OrganizationDashboardItem[] }) {
+  const critical = organizations.filter(o => o.subscription?.billingStatus === 'critical');
+  if (critical.length === 0) return null;
+
+  return (
+    <Card className="border-red-200 bg-red-50">
+      <CardContent className="flex items-center gap-3 p-4">
+        <CreditCard className="size-5 shrink-0 text-red-600" />
+        <div className="min-w-0 text-sm text-red-800">
+          <span className="font-semibold">{critical.length}</span>{' '}
+          {critical.length === 1 ? 'organization has' : 'organizations have'} a billing issue:{' '}
+          {critical.map(o => o.name).join(', ')}.
+          <span className="ml-1 text-red-600">Review subscription details.</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function SummaryCard({
   title,
   value,
@@ -135,17 +181,25 @@ function OrganizationMobileCard({ organization }: { organization: OrganizationDa
   return (
     <Card className="overflow-hidden md:hidden">
       <CardContent className="flex flex-col gap-4 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {organization.name}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {organization.organizationType} - {organization.location}
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {organization.name}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {organization.organizationType} - {organization.location}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <StatusBadge status={organization.status} />
+              {organization.subscription && (
+                <SubscriptionBadge
+                  status={organization.subscription.status}
+                  planName={organization.subscription.planName}
+                />
+              )}
+            </div>
           </div>
-          <StatusBadge status={organization.status} />
-        </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
           <Metric label="Students" value={organization.students.toLocaleString("en-IN")} />
@@ -204,13 +258,15 @@ export default function InstitutionSuperAdminDashboard({
         description={`${institutionName} - ${organizations.length} organizations`}
         actions={
           <Button asChild size="sm">
-            <Link href="/select-organization?returnUrl=/dashboard/institution&create=true">
+            <Link href="/select-organization?returnUrl=/dashboard/institution">
               <Plus data-icon="inline-start" />
               Add organization
             </Link>
           </Button>
         }
       />
+
+      <BillingAlertBanner organizations={organizations} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
@@ -267,14 +323,14 @@ export default function InstitutionSuperAdminDashboard({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Organization</TableHead>
+                    <TableHead>Plan</TableHead>
                     <TableHead>Academic year</TableHead>
                     <TableHead className="text-right">Students</TableHead>
                     <TableHead className="text-right">Collected</TableHead>
                     <TableHead className="text-right">Pending</TableHead>
                     <TableHead>Attendance</TableHead>
                     <TableHead>Branches</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -282,13 +338,30 @@ export default function InstitutionSuperAdminDashboard({
                     <TableRow key={org.id}>
                       <TableCell>
                         <div className="min-w-0">
-                          <p className="max-w-52 truncate font-medium text-foreground">
+                          <p className="max-w-44 truncate font-medium text-foreground">
                             {org.name}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {org.organizationType} - {org.location}
                           </p>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {org.subscription ? (
+                          <div className="flex flex-col gap-0.5">
+                            <SubscriptionBadge
+                              status={org.subscription.status}
+                              planName={org.subscription.planName}
+                            />
+                            {org.subscription.periodEnd && (
+                              <span className="text-[11px] text-muted-foreground">
+                                Expires {formatDateIN(org.subscription.periodEnd)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
                         {org.academicYear}
@@ -329,9 +402,6 @@ export default function InstitutionSuperAdminDashboard({
                           <MapPinned className="size-3" />
                           {org.branchSummary}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={org.status} />
                       </TableCell>
                       <TableCell className="text-right">
                         <Button asChild size="sm" variant="outline">

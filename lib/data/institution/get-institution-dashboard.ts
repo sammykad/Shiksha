@@ -8,6 +8,13 @@ import { getFeesSummary } from '@/lib/data/fee/fee-balance';
 type OrgStatus = 'healthy' | 'warning' | 'critical';
 type BranchStatus = 'ready' | 'multi' | 'pending';
 
+export type SubscriptionInfo = {
+  planName: string;
+  status: string;
+  periodEnd: string | null;
+  billingStatus: 'healthy' | 'warning' | 'critical';
+};
+
 export type OrganizationDashboardItem = {
   id: string;
   name: string;
@@ -23,6 +30,7 @@ export type OrganizationDashboardItem = {
   branchStatus: BranchStatus;
   branchSummary: string;
   attention: string[];
+  subscription: SubscriptionInfo | null;
 };
 
 export type InstitutionDashboardData = {
@@ -81,6 +89,23 @@ const ATTENTION_THRESHOLDS = [
   },
 ];
 
+function determineBillingStatus(
+  status: string,
+  periodEnd: Date | null,
+): 'healthy' | 'warning' | 'critical' {
+  if (status === 'ACTIVE') return 'healthy';
+  if (status === 'TRIALING') {
+    if (!periodEnd) return 'warning';
+    const daysLeft = Math.ceil((periodEnd.getTime() - Date.now()) / 86400000);
+    if (daysLeft <= 7) return 'critical';
+    if (daysLeft <= 14) return 'warning';
+    return 'healthy';
+  }
+  if (status === 'PAST_DUE') return 'critical';
+  if (status === 'EXPIRED') return 'critical';
+  return 'warning';
+}
+
 export async function getInstitutionDashboard(): Promise<InstitutionDashboardData | null> {
   const { orgId, userId } = await auth();
 
@@ -129,21 +154,27 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
   const orgIds = orgs.map(o => o.id);
   const location = [institution.city, institution.state].filter(Boolean).join(', ');
 
-  // 3. Query academic years, student counts, and fee aggregates for all organizations in parallel (Optimized GroupBys)
-  const [academicYears, studentGroupStats, fees] = await Promise.all([
-    prisma.academicYear.findMany({
-      where: { organizationId: { in: orgIds }, isCurrent: true },
-      select: { id: true, organizationId: true, name: true },
-    }),
+  // 3. Get current academic years for all orgs — used to scope fee & attendance queries
+  const academicYears = await prisma.academicYear.findMany({
+    where: { organizationId: { in: orgIds }, isCurrent: true },
+    select: { id: true, organizationId: true, name: true },
+  });
+  const academicYearIds = academicYears.map(ay => ay.id);
+  const academicYearMap = new Map(academicYears.map(ay => [ay.organizationId, ay.name]));
+  const academicYearIdToOrgMap = new Map(academicYears.map(ay => [ay.id, ay.organizationId]));
+
+  // 4. Query student counts, fees (year-scoped), subscriptions, and attendance in parallel
+  const [studentGroupStats, fees, subscriptions] = await Promise.all([
     prisma.student.groupBy({
       by: ['organizationId'],
       _count: { id: true },
       where: { organizationId: { in: orgIds } },
     }),
     prisma.fee.findMany({
-      where: { organizationId: { in: orgIds } },
+      where: { organizationId: { in: orgIds }, academicYearId: { in: academicYearIds } },
       select: {
         organizationId: true,
+        studentId: true,
         totalFee: true,
         dueDate: true,
         payments: {
@@ -152,11 +183,17 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
         },
       },
     }),
+    prisma.subscription.findMany({
+      where: { organizationId: { in: orgIds } },
+      select: {
+        organizationId: true,
+        status: true,
+        currentPeriodEnd: true,
+        trialEndsAt: true,
+        plan: { select: { name: true, code: true } },
+      },
+    }),
   ]);
-
-  // Create maps for efficient O(1) lookups
-  const academicYearMap = new Map(academicYears.map(ay => [ay.organizationId, ay.name]));
-  const academicYearIdToOrgMap = new Map(academicYears.map(ay => [ay.id, ay.organizationId]));
 
   const studentCountMap = new Map<string, number>(orgIds.map(id => [id, 0]));
   for (const stat of studentGroupStats) {
@@ -172,11 +209,11 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
     });
   }
 
-  // 4. Query student attendance stats in a single optimized groupBy query
+  const subscriptionMap = new Map(subscriptions.map(s => [s.organizationId, s]));
+
+  // 5. Query student attendance stats in a single optimized groupBy query
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const academicYearIds = academicYears.map(ay => ay.id);
   const attendanceStatsMap = new Map<string, { presentLate: number; totalAttendance: number }>();
   for (const id of orgIds) {
     attendanceStatsMap.set(id, { presentLate: 0, totalAttendance: 0 });
@@ -246,6 +283,16 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
     const branchStatus: BranchStatus = orgCount > 1 ? 'multi' : 'ready';
     const branchSummary = orgCount > 1 ? `${orgCount} branches` : '1 campus';
 
+    const sub = subscriptionMap.get(org.id);
+    const subscription = sub
+      ? {
+          planName: sub.plan?.name ?? 'Custom',
+          status: sub.status,
+          periodEnd: sub.currentPeriodEnd?.toISOString() ?? sub.trialEndsAt?.toISOString() ?? null,
+          billingStatus: determineBillingStatus(sub.status, sub.currentPeriodEnd ?? sub.trialEndsAt),
+        }
+      : null;
+
     totalStudents += students;
     totalCollected += feeCollected;
     totalPending += pendingDues;
@@ -266,6 +313,7 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
       branchStatus,
       branchSummary,
       attention,
+      subscription,
     };
   });
 
@@ -281,6 +329,29 @@ export async function getInstitutionDashboard(): Promise<InstitutionDashboardDat
       status: org.status,
     }))
   );
+
+  for (const org of organizations) {
+    if (org.subscription?.billingStatus === 'critical') {
+      const label = org.subscription.status === 'TRIALING'
+        ? `Trial ending soon`
+        : org.subscription.status === 'PAST_DUE'
+          ? 'Payment overdue'
+          : `Subscription ${org.subscription.status.toLowerCase()}`;
+      attentionItems.push({
+        id: `${org.id}-billing-${org.subscription.status.toLowerCase()}`,
+        organization: org.name,
+        item: `${label} — ${org.subscription.planName} plan`,
+        status: 'critical',
+      });
+    } else if (org.subscription?.billingStatus === 'warning') {
+      attentionItems.push({
+        id: `${org.id}-billing-trial-ending`,
+        organization: org.name,
+        item: `Trial ends ${org.subscription.periodEnd ? new Date(org.subscription.periodEnd).toLocaleDateString('en-IN') : 'soon'} — ${org.subscription.planName} plan`,
+        status: 'warning',
+      });
+    }
+  }
 
   return {
     institutionName: institution.name,

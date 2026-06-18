@@ -229,7 +229,6 @@ function GeneralContent({
             }).list;
             const remaining = listOrganizations ? (await listOrganizations()).data ?? [] : [];
             router.push(remaining.length > 0 ? "/dashboard" : "/select-organization");
-            router.refresh();
         } catch {
             toast.error("Something went wrong.");
         } finally {

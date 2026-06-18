@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { getInitials, capitalizeName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -178,8 +179,8 @@ export function TeacherDetailsModal({
   if (!teacher) return null;
 
   const { user, profile } = teacher;
-  const fullName = `${user.firstName} ${user.lastName}`;
-  const initials = `${user.firstName[0]}${user.lastName[0]}`;
+  const fullName = `${capitalizeName(user.firstName)} ${capitalizeName(user.lastName)}`;
+  const initials = getInitials(fullName);
   const statusConfig = getStatusConfig(
     teacher.employmentStatus,
     teacher.isActive

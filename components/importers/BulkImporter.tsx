@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Check, Download, Upload, AlertCircle, CheckCircle2, RotateCcw, File, AlertTriangle } from "lucide-react"
+import { Check, Upload, AlertCircle, CheckCircle2, RotateCcw, File, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ImporterConfig, ImportHandlerResult } from "@/types/importer"
+import type { ImporterConfig, ImportHandlerResult } from "@/types/importer"
 import { useImporter } from "@/hooks/use-importer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { DownloadTemplateButton } from "./DownloadTemplateButton"
 
+const STEPS = ["upload", "map", "validate", "done"] as const
+const STEP_LABELS: Record<string, string> = {
+    upload: "Upload",
+    map: "Map fields",
+    validate: "Review",
+    done: "Done",
+}
 
 interface BulkImporterProps<TRow> {
     config: ImporterConfig<TRow>
@@ -33,13 +40,6 @@ export function BulkImporter<TRow = Record<string, string>>({
         if (!v) importer.reset()
     }
 
-    const sizes: Record<string, string> = {
-        upload: "sm:max-w-md",
-        map: "sm:max-w-2xl",
-        validate: "sm:max-w-4xl",
-        done: "sm:max-w-md",
-    }
-
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
@@ -50,14 +50,14 @@ export function BulkImporter<TRow = Record<string, string>>({
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className={cn("overflow-hidden", sizes[importer.step])}>
+            <DialogContent className="sm:max-w-2xl overflow-hidden">
                 <DialogHeader>
                     <DialogTitle>Import {config.label}</DialogTitle>
                     <DialogDescription>
                         Upload a CSV to bulk-create {config.label.toLowerCase()}.
                     </DialogDescription>
                 </DialogHeader>
-                <Steps current={importer.step} />
+                <StepIndicator current={importer.step} />
                 {importer.step === "upload" && <UploadStep importer={importer} config={config} />}
                 {importer.step === "map" && <MapStep importer={importer} config={config} />}
                 {importer.step === "validate" && <ValidateStep importer={importer} config={config} />}
@@ -67,32 +67,31 @@ export function BulkImporter<TRow = Record<string, string>>({
     )
 }
 
-// ─── Steps ────────────────────────────────────────────────────────────────────
-
-const STEPS = ["upload", "map", "validate", "done"] as const
-const LABELS = ["Upload", "Map", "Validate", "Import"]
-
-function Steps({ current }: { current: string }) {
-    const idx = STEPS.indexOf(current as any)
+function StepIndicator({ current }: { current: string }) {
+    const idx = STEPS.indexOf(current as (typeof STEPS)[number])
     return (
         <div className="flex items-center gap-1 mb-2">
             {STEPS.map((s, i) => {
-                const done = i < idx; const active = i === idx
+                const done = i < idx
+                const active = i === idx
                 return (
                     <React.Fragment key={s}>
-                        <div className={cn("flex items-center gap-1.5 text-xs", active ? "text-foreground font-medium" : "text-muted-foreground")}>
+                        <div className={cn(
+                            "flex items-center gap-1.5 text-xs",
+                            active ? "text-foreground font-medium" : "text-muted-foreground",
+                        )}>
                             <span className={cn(
                                 "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-medium",
                                 done && "border-emerald-500 bg-emerald-500 text-white",
                                 active && "border-foreground bg-foreground text-background",
-                                !done && !active && "border-muted-foreground/30"
+                                !done && !active && "border-muted-foreground/30",
                             )}>
                                 {done ? <Check className="h-3 w-3" /> : i + 1}
                             </span>
-                            {LABELS[i]}
+                            {STEP_LABELS[s]}
                         </div>
                         {i < STEPS.length - 1 && (
-                            <div className={cn("h-px w-6 shrink-0 mx-1", i < idx ? "bg-emerald-400" : "bg-border")} />
+                            <div className={cn("h-px flex-1 mx-1", i < idx ? "bg-emerald-400" : "bg-border")} />
                         )}
                     </React.Fragment>
                 )
@@ -101,9 +100,7 @@ function Steps({ current }: { current: string }) {
     )
 }
 
-// ─── Upload ───────────────────────────────────────────────────────────────────
-
-function UploadStep<TRow>({ importer, config }: { importer: ReturnType<typeof useImporter<TRow>>, config: ImporterConfig<TRow> }) {
+function UploadStep<TRow>({ importer, config }: { importer: ReturnType<typeof useImporter<TRow>>; config: ImporterConfig<TRow> }) {
     const [drag, setDrag] = React.useState(false)
     const ref = React.useRef<HTMLInputElement>(null)
 
@@ -116,7 +113,9 @@ function UploadStep<TRow>({ importer, config }: { importer: ReturnType<typeof us
                 onDrop={(e) => { importer.handleDrop(e); setDrag(false) }}
                 className={cn(
                     "flex flex-col items-center gap-2.5 rounded-lg border-2 border-dashed py-10 cursor-pointer transition-colors select-none",
-                    drag ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-muted-foreground/40 hover:bg-muted/10"
+                    drag
+                        ? "border-primary bg-primary/5"
+                        : "border-muted-foreground/20 hover:border-muted-foreground/40 hover:bg-muted/10",
                 )}
             >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-background">
@@ -126,8 +125,10 @@ function UploadStep<TRow>({ importer, config }: { importer: ReturnType<typeof us
                     <p className="text-sm font-medium">Drop CSV here or click to browse</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Max {config.maxRows ?? 1000} rows</p>
                 </div>
-                <input ref={ref} type="file" accept=".csv,text/csv" className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) importer.handleFile(f); e.target.value = "" }} />
+                <input
+                    ref={ref} type="file" accept=".csv,text/csv" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) importer.handleFile(f); e.target.value = "" }}
+                />
             </div>
 
             {importer.hasFile && (
@@ -141,18 +142,15 @@ function UploadStep<TRow>({ importer, config }: { importer: ReturnType<typeof us
 
             <div className="flex items-center justify-between pt-1">
                 <DownloadTemplateButton config={config} />
-
                 <Button disabled={!importer.hasFile} onClick={() => importer.setStep("map")}>
-                    Continue →
+                    Continue
                 </Button>
             </div>
         </div>
     )
 }
 
-// ─── Map ──────────────────────────────────────────────────────────────────────
-
-function MapStep<TRow>({ importer, config }: { importer: ReturnType<typeof useImporter<TRow>>, config: ImporterConfig<TRow> }) {
+function MapStep<TRow>({ importer, config }: { importer: ReturnType<typeof useImporter<TRow>>; config: ImporterConfig<TRow> }) {
     const unmappedCount = config.fields
         .filter((f) => f.required && !importer.fieldMappings[f.key as string]).length
 
@@ -162,7 +160,7 @@ function MapStep<TRow>({ importer, config }: { importer: ReturnType<typeof useIm
                 <div className="space-y-4">
                     {importer.groups.map((group) => (
                         <div key={group}>
-                            <p className="text-[11px] font-medium tracking-wider text-muted-foreground mb-2 capitalize">
+                            <p className="text-[11px] font-medium tracking-wider text-muted-foreground mb-2 uppercase">
                                 {group}
                             </p>
                             <div className="space-y-1.5">
@@ -171,35 +169,51 @@ function MapStep<TRow>({ importer, config }: { importer: ReturnType<typeof useIm
                                     const mapped = importer.fieldMappings[key] ?? ""
                                     const isErr = field.required && !mapped
                                     return (
-                                        <div key={key}>
-                                            <div className="grid grid-cols-[1fr_16px_1fr] items-center gap-2">
-                                                <div className={cn(
-                                                    "flex items-center justify-between rounded border px-2.5 py-1.5 text-xs",
-                                                    isErr ? "border-destructive/40 bg-destructive/5" : "border-border bg-muted/20"
-                                                )}>
-                                                    <span className="font-medium truncate">{field.label}</span>
-                                                    {field.required && <span className="ml-1 shrink-0 text-[9px] text-muted-foreground">req</span>}
-                                                </div>
-                                                <span className="text-center text-[10px] text-muted-foreground">←</span>
-                                                <Select value={mapped || "__none__"} onValueChange={(v) => importer.updateMapping(key, v === "__none__" ? "" : v)}>
-                                                    <SelectTrigger className="h-8 text-xs">
-                                                        <SelectValue>
-                                                            {mapped ? <span>{mapped}</span> : <span className="text-muted-foreground">skip</span>}
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="__none__"><span className="text-muted-foreground">— skip —</span></SelectItem>
-                                                        {importer.csvHeaders.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
+                                        <div key={key} className="flex items-start gap-2">
+                                            <div className={cn(
+                                                "flex-1 flex items-center justify-between rounded border px-2.5 py-1.5 text-xs min-h-8",
+                                                isErr
+                                                    ? "border-destructive/40 bg-destructive/5"
+                                                    : "border-border bg-muted/20",
+                                            )}>
+                                                <span className="font-medium truncate">{field.label}</span>
+                                                {field.required && (
+                                                    <span className="ml-1 shrink-0 text-[9px] text-muted-foreground">req</span>
+                                                )}
                                             </div>
-                                            {field.hint && (
-                                                <p className="mt-0.5 pl-0.5 text-[10px] text-muted-foreground">{field.hint}</p>
-                                            )}
+                                            <Select
+                                                value={mapped || "__none__"}
+                                                onValueChange={(v) => importer.updateMapping(key, v === "__none__" ? "" : v)}
+                                            >
+                                                <SelectTrigger className={cn(
+                                                    "w-48 h-8 text-xs",
+                                                    isErr && "border-destructive/40",
+                                                )}>
+                                                    <SelectValue>
+                                                        {mapped
+                                                            ? <span>{mapped}</span>
+                                                            : <span className="text-muted-foreground">— skip —</span>
+                                                        }
+                                                    </SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__none__">
+                                                        <span className="text-muted-foreground">— skip —</span>
+                                                    </SelectItem>
+                                                    {importer.csvHeaders.map((h) => (
+                                                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     )
                                 })}
                             </div>
+                            {config.fields.filter((f) => f.group === group).some((f) => f.hint) && (
+                                <p className="text-[10px] text-muted-foreground px-0.5">
+                                    {config.fields.filter((f) => f.group === group).map((f) => f.hint).filter(Boolean).join(" · ")}
+                                </p>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -207,25 +221,27 @@ function MapStep<TRow>({ importer, config }: { importer: ReturnType<typeof useIm
 
             <div className="flex items-center justify-between border-t pt-3">
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => importer.setStep("upload")}>← Back</Button>
+                    <Button variant="outline" size="sm" onClick={() => importer.setStep("upload")}>
+                        Back
+                    </Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={importer.resetMappings}>
-                        <RotateCcw className="mr-1 h-3 w-3" /> Reset
+                        <RotateCcw className="mr-1 h-3 w-3" /> Auto-map
                     </Button>
                 </div>
                 <div className="flex items-center gap-2">
                     {unmappedCount > 0 && (
                         <span className="text-xs text-destructive">{unmappedCount} required unmapped</span>
                     )}
-                    <Button onClick={importer.goToValidate} disabled={unmappedCount > 0}>Validate →</Button>
+                    <Button onClick={importer.goToValidate} disabled={unmappedCount > 0}>
+                        Review
+                    </Button>
                 </div>
             </div>
         </div>
     )
 }
 
-// ─── Validate ─────────────────────────────────────────────────────────────────
-
-function ValidateStep<TRow>({ importer, config }: { importer: ReturnType<typeof useImporter<TRow>>, config: ImporterConfig<TRow> }) {
+function ValidateStep<TRow>({ importer, config }: { importer: ReturnType<typeof useImporter<TRow>>; config: ImporterConfig<TRow> }) {
     const { validationSummary: s, validatedRows } = importer
     const previewFields = config.fields.filter((f) => f.required).slice(0, 5)
 
@@ -234,8 +250,14 @@ function ValidateStep<TRow>({ importer, config }: { importer: ReturnType<typeof 
             <div className="grid grid-cols-3 gap-2">
                 {[
                     { label: "Total", value: s.total, color: "" },
-                    { label: "Ready", value: s.ready, color: s.ready > 0 ? "text-emerald-600 dark:text-emerald-400" : "" },
-                    { label: "Errors", value: s.rowsWithErrors, color: s.rowsWithErrors > 0 ? "text-destructive" : "text-emerald-600" },
+                    {
+                        label: "Ready", value: s.ready,
+                        color: s.ready > 0 ? "text-emerald-600 dark:text-emerald-400" : "",
+                    },
+                    {
+                        label: "Errors", value: s.rowsWithErrors,
+                        color: s.rowsWithErrors > 0 ? "text-destructive" : "text-emerald-600",
+                    },
                 ].map(({ label, value, color }) => (
                     <div key={label} className="rounded-md border bg-muted/20 px-3 py-2.5">
                         <p className="text-[11px] text-muted-foreground">{label}</p>
@@ -249,7 +271,7 @@ function ValidateStep<TRow>({ importer, config }: { importer: ReturnType<typeof 
                     {s.totalErrors > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-destructive">
                             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                            {s.totalErrors} error{s.totalErrors > 1 ? "s" : ""} in {s.rowsWithErrors} row{s.rowsWithErrors > 1 ? "s" : ""} — will be skipped
+                            {s.totalErrors} error{s.totalErrors > 1 ? "s" : ""} in {s.rowsWithErrors} row{s.rowsWithErrors > 1 ? "s" : ""}
                         </div>
                     )}
                     {s.totalWarnings > 0 && (
@@ -262,12 +284,14 @@ function ValidateStep<TRow>({ importer, config }: { importer: ReturnType<typeof 
             )}
 
             <div className="rounded-md border overflow-hidden">
-                <ScrollArea className="h-[200px]">
+                <ScrollArea className="h-[240px]">
                     <Table>
                         <TableHeader className="sticky top-0 z-10 bg-background">
                             <TableRow>
                                 <TableHead className="w-8 text-center text-xs">#</TableHead>
-                                {previewFields.map((f) => <TableHead key={f.key as string} className="text-xs">{f.label}</TableHead>)}
+                                {previewFields.map((f) => (
+                                    <TableHead key={f.key as string} className="text-xs">{f.label}</TableHead>
+                                ))}
                                 <TableHead className="text-xs">Status</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -299,7 +323,6 @@ function ValidateStep<TRow>({ importer, config }: { importer: ReturnType<typeof 
                 </ScrollArea>
             </div>
 
-            {/* Error list — always visible, no accordion */}
             {s.rowsWithErrors > 0 && (
                 <ScrollArea className="h-[72px] rounded-md border bg-muted/10 px-3 py-2">
                     <div className="space-y-0.5">
@@ -316,16 +339,17 @@ function ValidateStep<TRow>({ importer, config }: { importer: ReturnType<typeof 
             )}
 
             <div className="flex justify-between border-t pt-3">
-                <Button variant="outline" onClick={() => importer.setStep("map")}>← Back</Button>
+                <Button variant="outline" onClick={() => importer.setStep("map")}>Back</Button>
                 <Button disabled={s.ready === 0 || importer.isImporting} onClick={importer.runImport}>
-                    {importer.isImporting ? "Importing…" : `Import ${s.ready} ${config.label.toLowerCase()} →`}
+                    {importer.isImporting
+                        ? "Importing…"
+                        : `Import ${s.ready} ${config.label.toLowerCase()}`
+                    }
                 </Button>
             </div>
         </div>
     )
 }
-
-// ─── Done ─────────────────────────────────────────────────────────────────────
 
 function DoneStep<TRow>({ importer, config, onClose }: {
     importer: ReturnType<typeof useImporter<TRow>>
@@ -362,8 +386,8 @@ function DoneStep<TRow>({ importer, config, onClose }: {
             )}
 
             <div className="flex gap-2">
-                <Button variant="outline" onClick={importer.reset}>Import another</Button>
-                <Button onClick={onClose}>Done</Button>
+                <Button variant="outline" onClick={importer.reset}>Import another file</Button>
+                <Button onClick={onClose}>Close</Button>
             </div>
         </div>
     )

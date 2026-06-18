@@ -125,14 +125,14 @@ export function AcademicYearForm({
     startTransition(async () => {
       const result = academicYear
         ? await updateAcademicYear({
-            ...data,
-            id: academicYear.id,
-            organizationId,
-          })
+          ...data,
+          id: academicYear.id,
+          organizationId,
+        })
         : await createAcademicYear({
-            ...data,
-            organizationId,
-          });
+          ...data,
+          organizationId,
+        });
       if (result.success) {
         toast.success(
           `Academic year ${academicYear ? 'updated' : 'created'} successfully`

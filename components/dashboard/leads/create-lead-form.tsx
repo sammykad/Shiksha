@@ -87,7 +87,6 @@ export function CreateLeadForm({
         if (result.success) {
           toast.success('Lead created successfully.');
           router.push('/dashboard/leads');
-          router.refresh();
         } else {
           toast.error(
             result.message || 'Failed to create lead. Please try again.'

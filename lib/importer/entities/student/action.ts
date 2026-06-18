@@ -1,6 +1,6 @@
 "use server"
 
-import { Role, Gender, BloodGroup, StudentStatus } from "@/generated/prisma/enums"
+import { Role, Gender } from "@/generated/prisma/enums"
 import { auth } from "@/lib/auth"
 import {
     AppError,
@@ -13,6 +13,13 @@ import {
 import prisma from "@/lib/db"
 import { getOrganizationId } from "@/lib/organization"
 import { checkStudentLimit } from "@/lib/subscription-billing"
+import {
+    parseDate,
+    parseBloodGroup,
+    parseRelationship,
+    parseGender,
+    parseStudentStatus,
+} from "@/lib/importer/parsers"
 import type {
     ImportContext,
     ImportHandlerResult,
@@ -20,35 +27,6 @@ import type {
 import type { StudentCsvRow } from "./types"
 
 type StudentImportRow = StudentCsvRow & { __rowNumber?: number }
-
-const VALID_GENDERS: string[] = Object.values(Gender)
-const VALID_STATUSES: string[] = Object.values(StudentStatus)
-const VALID_RELATIONSHIPS = ["FATHER", "MOTHER", "GUARDIAN", "OTHER"]
-const VALID_BLOOD_GROUPS = Object.values(BloodGroup)
-
-function parseDate(val: string): Date | null {
-    if (!val) return null
-    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-        const d = new Date(val)
-        return isNaN(d.getTime()) ? null : d
-    }
-    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(val)
-    if (m) {
-        const d = new Date(`${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`)
-        return isNaN(d.getTime()) ? null : d
-    }
-    return null
-}
-
-function parseBloodGroup(val: string): BloodGroup | undefined {
-    if (!val) return undefined
-    const normalized = val.trim().toUpperCase().replace("+", "_POSITIVE").replace("-", "_NEGATIVE") as BloodGroup
-    return VALID_BLOOD_GROUPS.includes(normalized) ? normalized : undefined
-}
-
-function parseRelationship(value: string) {
-    return (VALID_RELATIONSHIPS.includes(value as any) ? value : "GUARDIAN") as "FATHER" | "MOTHER" | "GUARDIAN" | "OTHER"
-}
 
 export async function bulkImportStudents(
     rows: StudentImportRow[],
@@ -117,6 +95,7 @@ export async function bulkImportStudents(
                 continue
             }
             const admissionDate = row.admissionDate ? parseDate(row.admissionDate) : null
+
             const inviteTargets = dedupeInviteTargets([
                 { email: row.email, role: Role.STUDENT },
                 ...(row.parentEmail && row.parentFirstName
@@ -166,16 +145,14 @@ export async function bulkImportStudents(
                         phoneNumber: row.phoneNumber,
                         whatsAppNumber: row.whatsAppNumber || row.phoneNumber,
                         emergencyContact: row.emergencyContact || row.phoneNumber,
-                        gender: (VALID_GENDERS.includes(row.gender) ? row.gender : "MALE") as Gender,
+                        gender: parseGender(row.gender) ?? Gender.MALE,
                         dateOfBirth: dob,
                         admissionDate: admissionDate ?? undefined,
                         bloodGroup: parseBloodGroup(row.bloodGroup),
                         address: row.address || null,
                         caste: row.caste || null,
                         subCaste: row.subCaste || null,
-                        status: (VALID_STATUSES.includes(row.status)
-                            ? row.status
-                            : "ACTIVE") as StudentStatus,
+                        status: parseStudentStatus(row.status),
                         gradeId: gradeRecord.id,
                         sectionId: sectionRecord.id,
                     },
@@ -193,13 +170,14 @@ export async function bulkImportStudents(
                         createMembership: false,
                     })
 
+                    const relationship = parseRelationship(row.relationship)
                     const parent = await upsertParentRecord(tx, parentUser.id, organizationId, {
                         firstName: row.parentFirstName,
                         lastName: row.parentLastName,
                         email: row.parentEmail,
                         phoneNumber: row.parentPhone || row.phoneNumber,
                         whatsAppNumber: row.parentWhatsApp || row.parentPhone || row.phoneNumber,
-                        relationship: parseRelationship(row.relationship),
+                        relationship,
                         isPrimary: true,
                     })
 
@@ -207,7 +185,7 @@ export async function bulkImportStudents(
                         data: {
                             studentId: student.id,
                             parentId: parent.id,
-                            relationship: parseRelationship(row.relationship),
+                            relationship,
                             isPrimary: true,
                         },
                     })

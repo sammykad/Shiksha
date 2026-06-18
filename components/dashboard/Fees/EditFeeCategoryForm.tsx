@@ -54,7 +54,6 @@ export function EditFeeCategoryForm({ category }: EditFeeCategoryFormProps) {
         await updateFeeCategory(category.id, data);
         toast.success('Fee category updated successfully');
         router.push('/dashboard/fees/admin/fee-categories');
-        router.refresh();
       } catch (error) {
         toast.error('Failed to create fee category');
       }

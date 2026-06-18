@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getInitials, capitalizeName } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -287,13 +288,12 @@ export default function TeachingAssignmentsTable({
                         <Avatar className="h-9 w-9 border border-border">
                           <AvatarImage src={assignment.teacher.user.profileImage ?? undefined} />
                           <AvatarFallback className="bg-primary/5 text-primary text-xs">
-                            {assignment.teacher.user.firstName[0]}
-                            {assignment.teacher.user.lastName[0]}
+                            {getInitials(`${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
                           <span className="font-medium text-sm">
-                            {assignment.teacher.user.firstName} {assignment.teacher.user.lastName}
+                            {capitalizeName(assignment.teacher.user.firstName)} {capitalizeName(assignment.teacher.user.lastName)}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {assignment.teacher.employeeCode || assignment.teacher.user.email}

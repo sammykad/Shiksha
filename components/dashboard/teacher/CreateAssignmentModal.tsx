@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { cn, getInitials, capitalizeName } from "@/lib/utils";
 import { toast } from "sonner";
 
 import {
@@ -849,12 +849,12 @@ export function CreateAssignmentModal({
                                     <Avatar className="h-7 w-7 border border-border shrink-0">
                                       <AvatarImage src={selected.profileImage ?? undefined} />
                                       <AvatarFallback className="bg-primary/5 text-primary text-[10px]">
-                                        {selected.name.split(" ").map((n) => n[0]).join("")}
+                                        {getInitials(selected.name)}
                                       </AvatarFallback>
                                     </Avatar>
                                     <div className="flex flex-col min-w-0 flex-1">
                                       <span className="text-sm font-medium leading-tight truncate">
-                                        {selected.name}
+                                        {capitalizeName(selected.name)}
                                       </span>
                                       <span className="text-[11px] text-muted-foreground leading-tight">
                                         {selected.role
@@ -879,12 +879,12 @@ export function CreateAssignmentModal({
                                     <Avatar className="h-7 w-7 border border-border shrink-0">
                                       <AvatarImage src={t.profileImage ?? undefined} />
                                       <AvatarFallback className="bg-primary/5 text-primary text-[10px]">
-                                        {t.name.split(" ").map((n) => n[0]).join("")}
+                                        {getInitials(t.name)}
                                       </AvatarFallback>
                                     </Avatar>
                                     <div className="flex flex-col min-w-0">
                                       <span className="text-sm font-medium leading-tight truncate">
-                                        {t.name}
+                                        {capitalizeName(t.name)}
                                       </span>
                                       <span className="text-[11px] text-muted-foreground leading-tight">
                                         {t.role
@@ -918,12 +918,12 @@ export function CreateAssignmentModal({
                         <Avatar className="h-9 w-9 border border-border shrink-0">
                           <AvatarImage src={selectedTeacher.profileImage ?? undefined} />
                           <AvatarFallback className="bg-primary/5 text-primary text-xs">
-                            {selectedTeacher.name.split(" ").map((n) => n[0]).join("")}
+                            {getInitials(selectedTeacher.name)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-foreground truncate">
-                            {selectedTeacher.name}
+                            {capitalizeName(selectedTeacher.name)}
                           </p>
                           <p className="text-xs text-muted-foreground">Active Teacher</p>
                         </div>
@@ -985,11 +985,11 @@ export function CreateAssignmentModal({
                       <Avatar className="h-6 w-6 shrink-0 border border-border">
                         <AvatarImage src={selectedTeacher.profileImage ?? undefined} />
                         <AvatarFallback className="bg-primary/5 text-primary text-[9px]">
-                          {selectedTeacher.name.split(" ").map((n) => n[0]).join("")}
+                          {getInitials(selectedTeacher.name)}
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-xs font-medium text-foreground truncate flex-1">
-                        {selectedTeacher.name}
+                        {capitalizeName(selectedTeacher.name)}
                       </span>
                       <span className="shrink-0 tabular-nums text-[11px] text-muted-foreground">
                         {periodsUsed}/30 periods

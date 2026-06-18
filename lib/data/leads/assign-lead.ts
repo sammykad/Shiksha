@@ -5,8 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { AssignLeadFormData, assignLeadSchema } from '@/lib/schemas';
 import { getCurrentUserId } from '@/lib/user';
+import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
-import { getOrganizationId } from '@/lib/organization';
+import { Role } from '@/generated/prisma/enums';
 
 export async function assignLead(data: AssignLeadFormData) {
   try {
@@ -142,19 +143,24 @@ export async function unassignLead(leadId: string) {
   }
 }
 
-// Get available users for assignment (excluding current user if needed)
-export async function getAvailableUsersForLeads() {
+export async function getAvailableMembers() {
   try {
-    const organizationId = await getOrganizationId();
+    const { orgRole, orgId } = await auth();
+
+    if (!orgId) {
+      return { success: false, error: 'No organization selected' };
+    }
+
+    if (orgRole !== Role.ADMIN && orgRole !== Role.TEACHER) {
+      return { success: false, error: 'Only admins and teachers can assign leads' };
+    }
 
     const memberships = await prisma.membership.findMany({
       where: {
-        organizationId,
-        status: "ACTIVE",
+        organizationId: orgId,
+        status: 'ACTIVE',
         role: { in: ['ADMIN', 'TEACHER'] },
-        user: {
-          isActive: true,
-        },
+        user: { isActive: true },
       },
       select: {
         role: true,
@@ -182,13 +188,12 @@ export async function getAvailableUsersForLeads() {
         role: m.role,
       }));
 
-    console.log(mappedUsers);
     return { success: true, data: mappedUsers };
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error fetching members:', error);
     return {
       success: false,
-      error: 'Failed to fetch users',
+      error: 'Failed to fetch members',
     };
   }
 }

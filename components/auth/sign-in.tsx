@@ -79,7 +79,6 @@ export function BetterAuthSignIn({
 
       toast.success("Signed in successfully.");
       router.push(afterSignInUrl);
-      router.refresh();
     } finally {
       setIsEmailSubmitting(false);
     }

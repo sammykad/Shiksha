@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getInitials, capitalizeName } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -324,14 +325,13 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
                                     src={teacher.user.profileImage || '/placeholder.svg'}
                                   />
                                   <AvatarFallback className="text-xs">
-                                    {teacher.user.firstName[0]}
-                                    {teacher.user.lastName[0]}
+                                    {getInitials(`${teacher.user.firstName} ${teacher.user.lastName}`)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="min-w-0">
-                                  <div className="font-medium text-sm truncate">
-                                    {teacher.user.firstName} {teacher.user.lastName}
-                                  </div>
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm truncate">
+                                  {capitalizeName(teacher.user.firstName)} {capitalizeName(teacher.user.lastName)}
+                                </div>
                                   <div className="text-xs text-muted-foreground truncate max-w-[180px]">
                                     {teacher.user.email}
                                   </div>
@@ -495,8 +495,7 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
                               src={member.profileImage || '/placeholder.svg'}
                             />
                             <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-orange-400 to-amber-500 text-white">
-                              {member.firstName[0]}
-                              {member.lastName[0]}
+                              {getInitials(`${member.firstName} ${member.lastName}`)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-orange-400 border-2 border-background" />
@@ -504,7 +503,7 @@ const TeachersTable = ({ teachers, staff }: TeachersProps) => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm">
-                              {member.firstName} {member.lastName}
+                              {capitalizeName(member.firstName)} {capitalizeName(member.lastName)}
                             </span>
                             <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal capitalize">
                               {member.role.toLowerCase()}

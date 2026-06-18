@@ -8,6 +8,21 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function getInitials(name: string, max = 2) {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .join('')
+    .toUpperCase()
+    .slice(0, max);
+}
+
+export function capitalizeName(name: string | null | undefined) {
+  if (!name) return '';
+  return name.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const naturalCollator = new Intl.Collator('en-IN', {
   numeric: true,
   sensitivity: 'base',

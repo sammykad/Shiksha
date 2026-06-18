@@ -1,274 +1,179 @@
-// lib/importer/entities/student/config.ts
-//
-// ✅ NO "use server" — this file is safe to import in client components.
-// Contains only plain data: field definitions, validation rules, template rows.
-// The server action (bulkImportStudents) lives in student.action.ts and is
-// referenced here only as a type-compatible function reference.
-
 import {
-  ImportFieldDef,
-  ImporterConfig,
-  ValidationRule,
+    ImportFieldDef,
+    ImporterConfig,
+    ValidationRule,
 } from "@/types/importer"
-import { BloodGroup, Gender, StudentStatus } from "@/generated/prisma/enums"
-
+import { Gender, StudentStatus } from "@/generated/prisma/enums"
 import { bulkImportStudents } from "./action"
-
 import { StudentCsvRow } from "./types"
-
-// ─── Field definitions (plain data — no server deps) ─────────────────────────
+import { BLOOD_GROUP_DISPLAY_VALUES, parseDate } from "@/lib/importer/parsers"
 
 export const STUDENT_FIELDS: ImportFieldDef<StudentCsvRow>[] = [
-  // identity
-  { key: "firstName", label: "First name", group: "identity", required: true },
-  { key: "lastName", label: "Last name", group: "identity", required: true },
-  { key: "middleName", label: "Middle name", group: "identity" },
-  { key: "motherName", label: "Mother name", group: "identity" },
-  {
-    key: "rollNumber", label: "Roll number", group: "identity", required: true,
-    hint: "Unique per organization",
-  },
-  {
-    key: "dateOfBirth", label: "Date of birth", group: "identity", required: true,
-    hint: "YYYY-MM-DD or DD/MM/YYYY",
-    transform: (v) => v.trim(),
-  },
-  {
-    key: "gender", label: "Gender", group: "identity", required: true,
-    hint: "MALE | FEMALE | OTHER",
-    transform: (v) => v.toUpperCase().trim(),
-  },
-  { key: "bloodGroup", label: "Blood group", group: "identity", hint: "A+ A- B+ B- AB+ AB- O+ O-" },
-  { key: "admissionDate", label: "Admission date", group: "identity", hint: "YYYY-MM-DD" },
-  // contact
-  {
-    key: "email", label: "Email", group: "contact", required: true,
-    transform: (v) => v.toLowerCase().trim(),
-  },
-  { key: "phoneNumber", label: "Phone", group: "contact", required: true },
-  { key: "whatsAppNumber", label: "WhatsApp", group: "contact", required: true },
-  { key: "emergencyContact", label: "Emergency contact", group: "contact" },
-  { key: "address", label: "Address", group: "contact" },
-  // academic
-  {
-    key: "grade", label: "Grade / class", group: "academic", required: true,
-    hint: "Must match existing grade name",
-  },
-  {
-    key: "section", label: "Section", group: "academic", required: true,
-    hint: "Must match section name in that grade",
-  },
-  {
-    key: "status", label: "Status", group: "academic",
-    hint: "ACTIVE | INACTIVE | SUSPENDED | TRANSFERRED | DROPPED | GRADUATED",
-    transform: (v) => v.toUpperCase().trim(),
-  },
-  { key: "caste", label: "Caste", group: "academic" },
-  { key: "subCaste", label: "Sub caste", group: "academic" },
-  // parent
-  { key: "parentFirstName", label: "Parent first name", group: "parent" },
-  { key: "parentLastName", label: "Parent last name", group: "parent" },
-  {
-    key: "parentEmail", label: "Parent email", group: "parent",
-    transform: (v) => v.toLowerCase().trim(),
-  },
-  { key: "parentPhone", label: "Parent phone", group: "parent" },
-  { key: "parentWhatsApp", label: "Parent WhatsApp", group: "parent" },
-  {
-    key: "relationship", label: "Relationship", group: "parent",
-    hint: "FATHER | MOTHER | GUARDIAN | OTHER",
-    transform: (v) => v.toUpperCase().trim(),
-  },
+    // identity
+    { key: "firstName", label: "First name", group: "identity", required: true },
+    { key: "lastName", label: "Last name", group: "identity", required: true },
+    { key: "middleName", label: "Middle name", group: "identity" },
+    { key: "motherName", label: "Mother name", group: "identity" },
+    {
+        key: "rollNumber", label: "Roll number", group: "identity", required: true,
+        hint: "Unique per organization",
+    },
+    {
+        key: "dateOfBirth", label: "Date of birth", group: "identity", required: true,
+        hint: "YYYY-MM-DD or DD/MM/YYYY",
+        transform: (v) => v.trim(),
+    },
+    {
+        key: "gender", label: "Gender", group: "identity", required: true,
+        hint: "MALE | FEMALE | OTHER",
+        transform: (v) => v.toUpperCase().trim(),
+    },
+    { key: "bloodGroup", label: "Blood group", group: "identity", hint: "A+ A- B+ B- AB+ AB- O+ O-" },
+    { key: "admissionDate", label: "Admission date", group: "identity", hint: "YYYY-MM-DD" },
+    // contact
+    {
+        key: "email", label: "Email", group: "contact", required: true,
+        transform: (v) => v.toLowerCase().trim(),
+    },
+    { key: "phoneNumber", label: "Phone", group: "contact", required: true },
+    { key: "whatsAppNumber", label: "WhatsApp", group: "contact", required: true },
+    { key: "emergencyContact", label: "Emergency contact", group: "contact" },
+    { key: "address", label: "Address", group: "contact" },
+    // academic
+    {
+        key: "grade", label: "Grade / class", group: "academic", required: true,
+        hint: "Must match existing grade name",
+    },
+    {
+        key: "section", label: "Section", group: "academic", required: true,
+        hint: "Must match section name in that grade",
+    },
+    {
+        key: "status", label: "Status", group: "academic",
+        hint: "ACTIVE | INACTIVE | SUSPENDED | TRANSFERRED | DROPPED | GRADUATED",
+        transform: (v) => v.toUpperCase().trim(),
+    },
+    { key: "caste", label: "Caste", group: "academic" },
+    { key: "subCaste", label: "Sub caste", group: "academic" },
+    // parent
+    { key: "parentFirstName", label: "Parent first name", group: "parent" },
+    { key: "parentLastName", label: "Parent last name", group: "parent" },
+    {
+        key: "parentEmail", label: "Parent email", group: "parent",
+        transform: (v) => v.toLowerCase().trim(),
+    },
+    { key: "parentPhone", label: "Parent phone", group: "parent" },
+    { key: "parentWhatsApp", label: "Parent WhatsApp", group: "parent" },
+    {
+        key: "relationship", label: "Relationship", group: "parent",
+        hint: "FATHER | MOTHER | GUARDIAN | OTHER",
+        transform: (v) => v.toUpperCase().trim(),
+    },
 ]
-
-// ─── Validation rules (pure functions — no server deps) ───────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const VALID_GENDERS: string[] = Object.values(Gender)
 const VALID_STATUSES: string[] = [...Object.values(StudentStatus), ""]
-const VALID_BLOOD = [...Object.values(BloodGroup).map(formatBloodGroup), ""]
-
-function formatBloodGroup(value: BloodGroup): string {
-  return value.replace("_POSITIVE", "+").replace("_NEGATIVE", "-")
-}
-
-function parseDate(val: string): Date | null {
-  if (!val) return null
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    const d = new Date(val)
-    return isNaN(d.getTime()) ? null : d
-  }
-  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(val)
-  if (m) {
-    const d = new Date(`${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`)
-    return isNaN(d.getTime()) ? null : d
-  }
-  return null
-}
 
 export const STUDENT_RULES: ValidationRule<StudentCsvRow>[] = [
-  {
-    field: "email",
-    validate: (v) => (v && !EMAIL_RE.test(v) ? "Invalid email format" : null),
-  },
-  {
-    field: "parentEmail",
-    validate: (v) => (v && !EMAIL_RE.test(v) ? "Invalid parent email format" : null),
-  },
-  {
-    field: "gender",
-    validate: (v) =>
-      v && !VALID_GENDERS.includes(v)
-        ? `Gender must be one of: ${VALID_GENDERS.join(", ")}`
-        : null,
-  },
-  {
-    field: "status",
-    validate: (v) =>
-      v && !VALID_STATUSES.includes(v)
-        ? `warn: Status "${v}" not recognised — defaulting to ACTIVE`
-        : null,
-  },
-  {
-    field: "bloodGroup",
-    validate: (v) =>
-      v && !VALID_BLOOD.includes(v)
-        ? `Blood group must be one of: ${VALID_BLOOD.filter(Boolean).join(", ")}`
-        : null,
-  },
-  {
-    field: "dateOfBirth",
-    validate: (v) =>
-      v && !parseDate(v) ? "Invalid date — use YYYY-MM-DD or DD/MM/YYYY" : null,
-  },
-  {
-    field: "admissionDate",
-    validate: (v) =>
-      v && !parseDate(v) ? "warn: Admission date invalid — will be skipped" : null,
-  },
-  {
-    field: "rollNumber",
-    validate: (v, _row, allRows) => {
-      if (!v) return null
-      const count = allRows.filter((r) => r.rollNumber === v).length
-      return count > 1 ? `Duplicate roll number "${v}" within this file` : null
+    {
+        field: "email",
+        validate: (v) => (v && !EMAIL_RE.test(v) ? "Invalid email format" : null),
     },
-  },
+    {
+        field: "parentEmail",
+        validate: (v) => (v && !EMAIL_RE.test(v) ? "Invalid parent email format" : null),
+    },
+    {
+        field: "gender",
+        validate: (v) =>
+            v && !VALID_GENDERS.includes(v)
+                ? `Gender must be one of: ${VALID_GENDERS.join(", ")}`
+                : null,
+    },
+    {
+        field: "status",
+        validate: (v) =>
+            v && !VALID_STATUSES.includes(v)
+                ? `warn: Status "${v}" not recognised — defaulting to ACTIVE`
+                : null,
+    },
+    {
+        field: "bloodGroup",
+        validate: (v) =>
+            v && !BLOOD_GROUP_DISPLAY_VALUES.includes(v)
+                ? `Blood group must be one of: ${BLOOD_GROUP_DISPLAY_VALUES.filter(Boolean).join(", ")}`
+                : null,
+    },
+    {
+        field: "dateOfBirth",
+        validate: (v) =>
+            v && !parseDate(v) ? "Invalid date — use YYYY-MM-DD or DD/MM/YYYY" : null,
+    },
+    {
+        field: "admissionDate",
+        validate: (v) =>
+            v && !parseDate(v) ? "warn: Admission date invalid — will be skipped" : null,
+    },
+    {
+        field: "rollNumber",
+        validate: (v, _row, allRows) => {
+            if (!v) return null
+            const count = allRows.filter((r) => r.rollNumber === v).length
+            return count > 1 ? `Duplicate roll number "${v}" within this file` : null
+        },
+    },
 ]
-
-// ─── Template example rows ────────────────────────────────────────────────────
 
 export const STUDENT_TEMPLATE_ROWS: Partial<StudentCsvRow>[] = [
-  {
-    firstName: "Aarav", lastName: "Patel", rollNumber: "111",
-    dateOfBirth: "2012-05-10", gender: "MALE",
-    email: "aarav.patel@example.com", phoneNumber: "9876543210",
-    whatsAppNumber: "9876543210", grade: "1st", section: "A",
-    admissionDate: "2023-06-01", bloodGroup: "A+", status: "ACTIVE",
-    parentFirstName: "Raj", parentLastName: "Patel",
-    parentEmail: "raj.patel@example.com", parentPhone: "9876543211",
-    relationship: "FATHER",
-  },
-  {
-    firstName: "Ananya", lastName: "Iyer", rollNumber: "102",
-    dateOfBirth: "2012-08-22", gender: "FEMALE",
-    email: "ananya.iyer@example.com", phoneNumber: "9876543212",
-    whatsAppNumber: "9876543212", grade: "1st", section: "A",
-    admissionDate: "2023-06-01", bloodGroup: "B+", status: "ACTIVE",
-    parentFirstName: "Lata", parentLastName: "Iyer",
-    parentEmail: "lata.iyer@example.com", parentPhone: "9876543213",
-    relationship: "MOTHER",
-  },
-  {
-    firstName: "Ishaan", lastName: "Sharma", rollNumber: "103",
-    dateOfBirth: "2013-01-15", gender: "MALE",
-    email: "ishaan.sharma@example.com", phoneNumber: "9876543214",
-    whatsAppNumber: "9876543214", grade: "1st", section: "A",
-    admissionDate: "2023-06-01", bloodGroup: "O+", status: "ACTIVE",
-    parentFirstName: "Amit", parentLastName: "Sharma",
-    parentEmail: "amit.sharma@example.com", parentPhone: "9876543215",
-    relationship: "FATHER",
-  },
-  {
-    firstName: "Saanvi", lastName: "Reddy", rollNumber: "104",
-    dateOfBirth: "2012-11-30", gender: "FEMALE",
-    email: "saanvi.reddy@example.com", phoneNumber: "9876543216",
-    whatsAppNumber: "9876543216", grade: "1st", section: "A",
-    admissionDate: "2023-06-01", bloodGroup: "AB+", status: "ACTIVE",
-    parentFirstName: "Kiran", parentLastName: "Reddy",
-    parentEmail: "kiran.reddy@example.com", parentPhone: "9876543217",
-    relationship: "MOTHER",
-  },
-  {
-    firstName: "Vivaan", lastName: "Gupta", rollNumber: "105",
-    dateOfBirth: "2012-03-05", gender: "MALE",
-    email: "vivaan.gupta@example.com", phoneNumber: "9876543218",
-    whatsAppNumber: "9876543218", grade: "1st", section: "B",
-    admissionDate: "2023-06-01", bloodGroup: "A-", status: "ACTIVE",
-    parentFirstName: "Sanjay", parentLastName: "Gupta",
-    parentEmail: "sanjay.gupta@example.com", parentPhone: "9876543219",
-    relationship: "FATHER",
-  },
-  {
-    firstName: "Diya", lastName: "Khan", rollNumber: "106",
-    dateOfBirth: "2012-07-14", gender: "FEMALE",
-    email: "diya.khan@example.com", phoneNumber: "9876543220",
-    whatsAppNumber: "9876543220", grade: "1st", section: "B",
-    admissionDate: "2023-06-01", bloodGroup: "B-", status: "ACTIVE",
-    parentFirstName: "Farah", parentLastName: "Khan",
-    parentEmail: "farah.khan@example.com", parentPhone: "9876543221",
-    relationship: "MOTHER",
-  },
-  {
-    firstName: "Kabir", lastName: "Singh", rollNumber: "107",
-    dateOfBirth: "2013-02-28", gender: "MALE",
-    email: "kabir.singh@example.com", phoneNumber: "9876543222",
-    whatsAppNumber: "9876543222", grade: "1st", section: "B",
-    admissionDate: "2023-06-01", bloodGroup: "O-", status: "ACTIVE",
-    parentFirstName: "Arjun", parentLastName: "Singh",
-    parentEmail: "arjun.singh@example.com", parentPhone: "9876543223",
-    relationship: "FATHER",
-  },
-  {
-    firstName: "Myra", lastName: "Deshmukh", rollNumber: "108",
-    dateOfBirth: "2012-09-12", gender: "FEMALE",
-    email: "myra.deshmukh@example.com", phoneNumber: "9876543224",
-    whatsAppNumber: "9876543224", grade: "1st", section: "B",
-    admissionDate: "2023-06-01", bloodGroup: "A+", status: "ACTIVE",
-    parentFirstName: "Pooja", parentLastName: "Deshmukh",
-    parentEmail: "pooja.deshmukh@example.com", parentPhone: "9876543225",
-    relationship: "MOTHER",
-  },
-  {
-    firstName: "Reyansh", lastName: "Verma", rollNumber: "109",
-    dateOfBirth: "2012-06-20", gender: "MALE",
-    email: "reyansh.verma@example.com", phoneNumber: "9876543226",
-    whatsAppNumber: "9876543226", grade: "1st", section: "B",
-    admissionDate: "2023-06-01", bloodGroup: "B+", status: "ACTIVE",
-    parentFirstName: "Vikram", parentLastName: "Verma",
-    parentEmail: "vikram.verma@example.com", parentPhone: "9876543227",
-    relationship: "FATHER",
-  },
-  {
-    firstName: "Zoya", lastName: "Mehta", rollNumber: "110",
-    dateOfBirth: "2013-04-01", gender: "FEMALE",
-    email: "zoya.mehta@example.com", phoneNumber: "9876543228",
-    whatsAppNumber: "9876543228", grade: "1st", section: "B",
-    admissionDate: "2023-06-01", bloodGroup: "O+", status: "ACTIVE",
-    parentFirstName: "Neelam", parentLastName: "Mehta",
-    parentEmail: "neelam.mehta@example.com", parentPhone: "9876543229",
-    relationship: "MOTHER",
-  },
+    {
+        firstName: "Aarav", lastName: "Patel", rollNumber: "101",
+        dateOfBirth: "2012-05-10", gender: "MALE",
+        email: "aarav.patel@example.com", phoneNumber: "9876543210",
+        whatsAppNumber: "9876543210", grade: "1st", section: "A",
+        admissionDate: "2023-06-01", bloodGroup: "A+", status: "ACTIVE",
+        parentFirstName: "Raj", parentLastName: "Patel",
+        parentEmail: "raj.patel@example.com", parentPhone: "9876543211",
+        relationship: "FATHER",
+    },
+    {
+        firstName: "Ananya", lastName: "Iyer", rollNumber: "102",
+        dateOfBirth: "2012-08-22", gender: "FEMALE",
+        email: "ananya.iyer@example.com", phoneNumber: "9876543212",
+        whatsAppNumber: "9876543212", grade: "1st", section: "A",
+        admissionDate: "2023-06-01", bloodGroup: "B+", status: "ACTIVE",
+        parentFirstName: "Lata", parentLastName: "Iyer",
+        parentEmail: "lata.iyer@example.com", parentPhone: "9876543213",
+        relationship: "MOTHER",
+    },
+    {
+        firstName: "Ishaan", lastName: "Sharma", rollNumber: "103",
+        dateOfBirth: "2013-01-15", gender: "MALE",
+        email: "ishaan.sharma@example.com", phoneNumber: "9876543214",
+        whatsAppNumber: "9876543214", grade: "1st", section: "B",
+        admissionDate: "2023-06-01", bloodGroup: "O+", status: "ACTIVE",
+        parentFirstName: "Amit", parentLastName: "Sharma",
+        parentEmail: "amit.sharma@example.com", parentPhone: "9876543215",
+        relationship: "FATHER",
+    },
+    {
+        firstName: "Priya", lastName: "Singh", rollNumber: "104",
+        dateOfBirth: "2012-11-30", gender: "FEMALE",
+        email: "priya.singh@example.com", phoneNumber: "9876543216",
+        whatsAppNumber: "9876543216", grade: "1st", section: "B",
+        admissionDate: "2023-06-01", bloodGroup: "AB+", status: "ACTIVE",
+        parentFirstName: "Neelam", parentLastName: "Singh",
+        parentEmail: "neelam.singh@example.com", parentPhone: "9876543217",
+        relationship: "MOTHER",
+    },
 ]
 
-// ─── Config — safe to import anywhere including client components ──────────────
-
 export const studentImporterConfig: ImporterConfig<StudentCsvRow> = {
-  entity: "student",
-  label: "Students",
-  fields: STUDENT_FIELDS,
-  rules: STUDENT_RULES,
-  handler: bulkImportStudents,  // server action reference — Next.js serialises this safely
-  maxRows: 1000,
-  templateRows: STUDENT_TEMPLATE_ROWS,
+    entity: "student",
+    label: "Students",
+    fields: STUDENT_FIELDS,
+    rules: STUDENT_RULES,
+    handler: bulkImportStudents,
+    maxRows: 1000,
+    templateRows: STUDENT_TEMPLATE_ROWS,
 }
