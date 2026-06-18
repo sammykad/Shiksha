@@ -18,7 +18,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { subDays } from 'date-fns';
-import { Role, } from '@/generated/prisma/enums';
+import { Role } from '@/generated/prisma/enums';
 import { getCurrentUser, getCurrentUserId } from '@/lib/user';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';

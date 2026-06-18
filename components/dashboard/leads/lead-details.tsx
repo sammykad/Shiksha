@@ -37,7 +37,7 @@ import {
   Save,
 } from 'lucide-react';
 import { Prisma } from '@/generated/prisma/client';
-import { formatDateIN } from '@/lib/utils';
+import { formatDateIN, getInitials, capitalizeName } from '@/lib/utils';
 import { LeadActivityTimeline } from './lead-activity-timeline';
 import { AssignLeadDialog } from './assign-lead-dialog';
 import { deleteLead } from '@/lib/data/leads/delete-lead';
@@ -535,13 +535,12 @@ export default function LeadDetails({ lead }: LeadDetailProps) {
                     <Avatar className="w-12 h-12 ring-2 ring-white shrink-0">
                       <AvatarImage src={lead.assignedTo.profileImage || ''} />
                       <AvatarFallback className="bg-blue-500 text-white font-semibold text-sm">
-                        {lead.assignedTo.firstName.charAt(0)}
-                        {lead.assignedTo.lastName.charAt(0)}
+                        {getInitials(`${lead.assignedTo.firstName} ${lead.assignedTo.lastName}`)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm text-gray-900 truncate">
-                        {lead.assignedTo.firstName} {lead.assignedTo.lastName}
+                        {capitalizeName(lead.assignedTo.firstName)} {capitalizeName(lead.assignedTo.lastName)}
                       </p>
                       <p className="text-xs text-gray-600 mt-0.5">
                         Assigned {formatDateIN(lead.assignedAt)}

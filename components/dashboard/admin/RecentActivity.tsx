@@ -334,9 +334,13 @@ export default function AdminRecentActivity({
                   <Activity className="w-8 h-8 text-muted-foreground/50" />
                 </div>
                 <div className="max-w-[280px]">
-                  <p className="text-base font-semibold text-foreground tracking-tight">No activities found</p>
+                  <p className="text-base font-semibold text-foreground tracking-tight">
+                    {activities.length === 0 ? "No activities yet" : "No matching activities"}
+                  </p>
                   <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                    No recent activities match your current filter. Try selecting a different category.
+                    {activities.length === 0
+                      ? "Activities like payments, attendance, and notices will appear here automatically as you use the system."
+                      : "No recent activities match your current filter. Try selecting a different category."}
                   </p>
                 </div>
               </div>

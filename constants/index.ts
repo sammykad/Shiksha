@@ -15,6 +15,12 @@ import {
 
 export const PLATFORM_FEE_PERCENT = 0.025;
 
+export const BILLING_CONTACT = {
+  name: "Sameer Kad",
+  phone: "8459324821",
+  email: "support@shiksha.cloud",
+} as const;
+
 export const ID_CARD_MOTTO: Record<string, string> = {
   STUDENT: 'Inspire  •  Learn  •  Grow',
   TEACHER: 'Empower  •  Educate  •  Excel',

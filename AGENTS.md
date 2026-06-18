@@ -150,41 +150,33 @@ Understand these before touching any business logic:
 
 ## Pricing & Billing Logic
 
+**Never hardcode a price. Always read from `lib/constants/pricing.ts` — that is the single source of truth.**
+
 Billing is **per active student per month**. Parents, teachers, and admins are always free.
 
-### Student-Based Slabs
+### Pricing Model: MRP + Seasonal Offer
 
-| Students | Price/Student/Month |
+| Concept | Value |
 |---|---|
-| 0–50 | ₹54 |
-| 51–300 | ₹49 |
-| 301–500 | ₹44 |
-| 501–1,000 | ₹33 |
-| 1,001–2,000 | ₹24 |
+| **Standard price (MRP)** | ₹79/student/month — defined in `lib/constants/pricing.ts:STANDARD_PRICE_PER_STUDENT` |
+| **Current offer** | School Opening Season discount — prices vary by tier; defined in `PRICING_TIERS[].currentOfferPrice` |
+| **Annual discount** | 20% off monthly rate |
 
-<!-- ### User-Based Plans
+### Current Plans (School Opening Season)
 
-| Users | Price/User/Month |
-|---|---|
-| 100 | ₹55 |
-| 500 | ₹45 |
-| 1,500 | ₹35 | -->
+| Plan | Code | MRP | Offer Price | Discount | Student Limit |
+|---|---|---|---|---|---|
+| Starter | STARTER | ₹79 | ₹29 | 63% off | Up to 100 |
+| Growth | GROWTH | ₹79 | ₹49 | 38% off | Up to 500 |
+| Scale | SCALE | ₹79 | ₹21 | 73% off | Up to 3,000 |
 
-### Org/Institution Plans (Annual)
-
-| Plan | Users |
-|---|---|
-| ₹40,000/year | Up to 2,000 |
-| ₹70,000/year | Up to 4,000 |
-| ₹1,90,000/year | Up to 10,000 |
+The billing engine (`PLAN_CATALOG` in `lib/subscription-billing.ts`) uses `currentOfferPrice` for all invoice calculations. When the seasonal offer ends, change `currentOfferPrice` to `standardPrice` in `lib/constants/pricing.ts` and everything updates.
 
 ### Additional Costs
 - **Notification credits** — tracked in org wallet (paise)
 - **Payment gateway** — 2.5–3% charged to parent on online payments only
 - **Storage** — charged only beyond 1 GB
 - **Onboarding balance** — ₹10,000 paise given by Shiksha.cloud on signup
-
-**Never hardcode a price. Always read from billing config / constants.**
 
 ---
 
@@ -263,6 +255,16 @@ Use this before touching any module. Do not build, enable, or expose features ma
 - Student count changes → only through billing module
 - Academic year is always a required scope on year-sensitive queries
 
+### Accessibility
+- Every `DialogContent` / `SheetContent` must contain a `DialogTitle` / `SheetTitle` for screen readers (Radix UI requirement)
+- When hiding the title visually, wrap it with `<VisuallyHidden>` from `@radix-ui/react-visually-hidden`:
+  ```tsx
+  <VisuallyHidden>
+    <DialogTitle>Actual title</DialogTitle>
+    <DialogDescription>Optional description</DialogDescription>
+  </VisuallyHidden>
+  ```
+
 ### Security
 - Never log PII: student names, phone numbers, Aadhaar, fee amounts — no plaintext logs
 - Anonymous complaint data: never store anything that can identify the reporter
@@ -306,6 +308,8 @@ These are real tasks from the team. Use this to understand what's in progress:
 - [ ] PhonePe: move to production
 - [ ] Meta/Facebook lead sync: complete testing
 - [ ] Exam module: full testing of hall tickets, results, grading, report cards
+- [ ] Code cleanup: remove ~26 redundant `: Record<string, string>` / `: Type[]` annotations across lib/ and components/ (listed in conversation history)
+- [ ] Inngest setup + pre-expiry trial reminders (7 days, 1 day before) + recurring invoice generation
 
 ---
 
@@ -321,6 +325,7 @@ avoid API Route so use server actions
 8. **No lorem ipsum** — use realistic Indian school names, common Indian student names (Arjun, Priya, Rahul, Sneha…), and ₹ amounts in all placeholders
 9. **Exam module is untested** — treat it as fragile. Do not modify exam results, grading, or hall ticket logic without careful review and explicit instruction.
 10. **Anonymous complaints = no traceability** — never add any logging, metadata, or DB field that could link a complaint to the reporter
+11. **Zero enforcement until 20 schools** — no student limit enforcement until we hit 20 onboarded orgs. Dashboard reminders/notifications are fine for visibility, but nothing should block or error. After 20 orgs, flip to full enforcement (payment + student limits). `createCustomDeal`, `recordManualSubscriptionPayment`, and `POST /api/billing/generate-invoice` are Shiksha Admin only (password-gated). `getManageableOrganizations`, PDF invoice download, and `changePlan` are org-admin accessible via session auth.
 
 ---
 

@@ -16,7 +16,7 @@
  */
 
 import type { NotificationTemplate, NotificationTemplateId, TemplateVariablesMap } from "@/lib/notifications/template";
-import { formatCurrencyIN, formatCurrencyINWithSymbol, formatDateIN, formatTimeIN } from "@/lib/utils";
+import { formatCurrencyINWithSymbol, formatDateIN } from "@/lib/utils";
 
 // ── React email components ────────────────────────────────────────────────────
 import StudentAbsentEmail from "@/emails/templates/STUDENT_ABSENT";

@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/card';
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { getSession, resolveDefaultOrganizationId } from '@/lib/auth';
+import { getSession, type SessionData } from '@/lib/auth';
 import { OrganizationList } from '@/components/auth/organization-list';
 import { CreateOrganization } from '@/components/auth/create-organization';
 import prisma from '@/lib/db';
@@ -21,64 +21,28 @@ export const metadata: Metadata = {
 export default async function SelectOrganizationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnUrl?: string | string[]; switch?: string | string[] }>;
+  searchParams: Promise<{ returnUrl?: string }>;
 }) {
-  let session;
-  try {
-    session = await getSession();
-  } catch {
-    redirect('/sign-in');
-  }
+  const session = await getSession();
+  if (!session) redirect('/sign-in');
 
-  const params = await searchParams;
-  const requestedReturnUrl = Array.isArray(params.returnUrl)
-    ? params.returnUrl[0]
-    : params.returnUrl;
-  const returnUrl = getReturnUrl(requestedReturnUrl);
-  const shouldForcePicker = getBooleanParam(params.switch);
-  const activeOrganizationId = (session.session as { activeOrganizationId?: string | null })
-    .activeOrganizationId;
+  const { returnUrl = '/dashboard' } = await searchParams;
 
-  if (activeOrganizationId && !shouldForcePicker) {
-    redirect(returnUrl);
-  }
+  const activeOrganizationId = (session.session as SessionData).activeOrganizationId;
+
+  if (activeOrganizationId) redirect(returnUrl);
 
   const memberships = await prisma.membership.findMany({
+
     where: {
       userId: session.user.id,
       status: 'ACTIVE',
-      organization: {
-        isActive: true,
-      },
+      organization: { isActive: true },
     },
-    select: {
-      organizationId: true,
-      updatedAt: true,
-    },
-    orderBy: {
-      updatedAt: 'desc',
-    },
+    select: { organizationId: true },
   });
 
   const hasOrganizations = memberships.length > 0;
-
-  if (hasOrganizations && !shouldForcePicker) {
-    const defaultOrganizationId = await resolveDefaultOrganizationId(
-      session.user.id,
-      memberships.map((membership) => membership.organizationId)
-    );
-
-    await prisma.session.update({
-      where: {
-        id: session.session.id,
-      },
-      data: {
-        activeOrganizationId: defaultOrganizationId ?? memberships[0].organizationId,
-      },
-    });
-
-    redirect(returnUrl);
-  }
 
   const title = hasOrganizations
     ? 'Select an organization'
@@ -123,14 +87,4 @@ export default async function SelectOrganizationPage({
       </Card>
     </div>
   );
-}
-
-function getBooleanParam(value: string | string[] | undefined) {
-  const raw = Array.isArray(value) ? value[0] : value;
-  return raw === 'true' || raw === '1' || raw === '';
-}
-
-function getReturnUrl(returnUrl: string | undefined) {
-  if (returnUrl?.startsWith('/') && !returnUrl.startsWith('//')) return returnUrl;
-  return '/dashboard';
 }

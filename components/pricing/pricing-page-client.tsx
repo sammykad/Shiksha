@@ -318,7 +318,7 @@ function PlanCard({
   showAllFeatures,
   className,
 }: PlanCardProps) {
-  const isLimitedOffer = plan.id === "free" || plan.id === "starter"
+  const isLimitedOffer = plan.id === "starter"
   const effectivePrice =
     plan.pricePerStudent !== undefined
       ? getEffectivePrice(plan.pricePerStudent, billing)
@@ -364,13 +364,31 @@ function PlanCard({
             <span className="text-4xl font-semibold tracking-tight">Free</span>
           ) : (
             <>
-              <span className="text-4xl font-semibold tracking-tight tabular-nums">
-                ₹{effectivePrice}
-              </span>
-              <span className="text-sm text-muted-foreground">/student/mo</span>
+              <div className="flex flex-col items-start">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-semibold tracking-tight tabular-nums">
+                    ₹{effectivePrice}
+                  </span>
+                  <span className="text-sm text-muted-foreground">/student/mo</span>
+                </div>
+                {plan.standardPrice && plan.discountPercent && plan.discountPercent > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="text-[11px] line-through">₹{plan.standardPrice}</span>
+                    <span className="font-medium text-emerald-600">
+                      Save {plan.discountPercent}%
+                    </span>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
+
+        {plan.studentLimit && (
+          <p className="text-xs text-muted-foreground">
+            Up to {plan.studentLimit.toLocaleString("en-IN")} students
+          </p>
+        )}
 
         <CardDescription className="text-sm leading-relaxed">
           {plan.description}

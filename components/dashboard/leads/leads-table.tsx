@@ -35,7 +35,7 @@ import {
   User,
 } from 'lucide-react';
 
-import { cn, formatDateIN } from '@/lib/utils';
+import { cn, formatDateIN, getInitials, capitalizeName } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -381,13 +381,12 @@ const columns: ColumnDef<LeaveWithAssignTo>[] = [
               className='object-cover'
             />
             <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-              {assignTo?.firstName?.[0]}
-              {assignTo?.lastName?.[0]}
+              {getInitials(`${assignTo?.firstName ?? ''} ${assignTo?.lastName ?? ''}`)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-sm font-medium text-foreground truncate">
-              {assignTo.firstName} {assignTo.lastName}
+              {capitalizeName(assignTo.firstName)} {capitalizeName(assignTo.lastName)}
             </span>
             <span className="text-xs text-muted-foreground truncate">
               {assignTo.email}

@@ -1,4 +1,6 @@
 import type { Metadata } from "next"
+import Script from "next/script"
+import { PRICING_TIERS, STANDARD_PRICE_PER_STUDENT, formatPricingAmount } from "@/lib/constants/pricing"
 import { PricingPageClient } from "@/components/pricing/pricing-page-client"
 
 // Previous pricing implementation kept for reference:
@@ -24,6 +26,34 @@ export const metadata: Metadata = {
   },
 }
 
+function pricingSchema() {
+  const starter = PRICING_TIERS[0];
+  const discountPct = Math.round((1 - starter.currentOfferPrice / starter.standardPrice) * 100);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "Shiksha.cloud School Management Software",
+    description: `School management platform starting at ${formatPricingAmount(starter.currentOfferPrice)}/student/month. Early Bird Offer — save ${discountPct}%.`,
+    offers: PRICING_TIERS.map((tier) => ({
+      "@type": "Offer",
+      name: `${tier.name} Plan`,
+      price: tier.currentOfferPrice,
+      priceCurrency: "INR",
+      priceValidUntil: "2026-09-30",
+      description: `${tier.name}: ${formatPricingAmount(tier.currentOfferPrice)}/student/month (MRP ${formatPricingAmount(tier.standardPrice)}/student/month). Up to ${tier.studentLimit.toLocaleString("en-IN")} students.`,
+      eligibleCustomerType: { "@type": "BusinessEntityType", name: "EducationalInstitution" },
+    })),
+  };
+}
+
 export default function PricingPage() {
-  return <PricingPageClient />
+  return (
+    <>
+      <Script id="pricing-schema" type="application/ld+json" strategy="lazyOnload">
+        {JSON.stringify(pricingSchema())}
+      </Script>
+      <PricingPageClient />
+    </>
+  )
 }

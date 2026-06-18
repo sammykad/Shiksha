@@ -429,3 +429,36 @@ export function numberToWords(amount: number): string {
 
   return words
 }
+
+/**
+ * Normalizes a string into a URL-safe slug.
+ *
+ * - Converts accented Latin chars (é, ü, ñ) to ASCII equivalents
+ * - Strips non-ASCII characters (Devanagari, Arabic, CJK, etc.)
+ * - Collapses whitespace and hyphens
+ * - Returns a timestamp-based fallback if the result is empty
+ *   (handles Indian-language school names like शिक्षा विद्यालय)
+ */
+export function normalizeSlug(value: string): string {
+  if (!value?.trim()) return `school-${Date.now().toString(36)}`;
+
+  let slug = value
+    .toLowerCase()
+    .trim()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  if (!slug || slug.length < 2) {
+    slug = `school-${Date.now().toString(36)}`;
+  }
+
+  if (slug.length > 100) {
+    slug = slug.slice(0, 100).replace(/-+$/, "");
+  }
+
+  return slug;
+}
