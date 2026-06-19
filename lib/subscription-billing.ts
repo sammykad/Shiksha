@@ -1134,8 +1134,7 @@ export async function getBillingSummary(
 
   for (const row of channelRows) {
     const units = row._sum.units ?? 0;
-    const costPaise = row._sum.cost ?? 0;
-    const cost = costPaise / 100;
+    const cost = row._sum.cost ?? 0;
     channelSummary[row.channel] = { units, cost };
     totalCost += cost;
     totalMessages += units;

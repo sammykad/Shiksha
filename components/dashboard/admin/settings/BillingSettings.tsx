@@ -3,8 +3,6 @@
 import { useMemo, useState } from "react";
 import {
     AlertTriangle,
-    ArrowRight,
-    CheckCircle2,
     CreditCard,
     Download,
     GraduationCap,
@@ -29,9 +27,10 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn, formatCostINR, formatCurrencyINWithSymbol, formatDateIN } from "@/lib/utils";
+import { formatCostINR, formatCurrencyINWithSymbol, formatDateIN } from "@/lib/utils";
+import { BILLING_CONTACT } from "@/constants";
+import { BillingCycle, InvoiceStatus, SubscriptionPaymentStatus, SubscriptionStatus } from "@/generated/prisma/enums";
 import BillingSummary, { type BillingSummaryData } from "./BillingSummary";
 
 export type BillingPlanOption = {
@@ -49,10 +48,9 @@ interface BillingSettingsProps {
 }
 
 type BillingDialog = "plan" | "top-up" | "invoice" | null;
-type BillingCycleChoice = "MONTHLY" | "ANNUAL";
 
 const formatBillingStatus = (status: string) => {
-    if (status === "TRIALING") return "Trial";
+    if (status === SubscriptionStatus.TRIALING) return "Trial";
     return status
         .toLowerCase()
         .split("_")
@@ -61,47 +59,15 @@ const formatBillingStatus = (status: string) => {
 };
 
 const STATUS_VARIANTS: Record<string, "pending" | "secondary" | "outline" | "destructive"> = {
-    TRIALING: "pending",
-    ACTIVE: "secondary",
-    PAST_DUE: "destructive",
-    PAUSED: "outline",
-    CANCELLED: "outline",
-    EXPIRED: "destructive",
+    [SubscriptionStatus.TRIALING]: "pending",
+    [SubscriptionStatus.ACTIVE]: "secondary",
+    [SubscriptionStatus.PAST_DUE]: "destructive",
+    [SubscriptionStatus.PAUSED]: "outline",
+    [SubscriptionStatus.CANCELLED]: "outline",
+    [SubscriptionStatus.EXPIRED]: "destructive",
 };
 
-const CONTACT_PHONE = "8459324821";
 const WALLET_LOW_BALANCE_THRESHOLD = 20;
-
-const topUpAmounts = [100, 1000, 2500, 5000];
-
-function TimelineItem({
-    title,
-    description,
-    status,
-}: {
-    title: string;
-    description: string;
-    status: "done" | "current" | "pending";
-}) {
-    return (
-        <div className="flex gap-3">
-            <div
-                className={cn(
-                    "mt-0.5 flex size-6 items-center justify-center rounded-full border",
-                    status === "done" && "border-primary bg-primary text-primary-foreground",
-                    status === "current" && "border-primary bg-background text-primary",
-                    status === "pending" && "border-border bg-muted text-muted-foreground"
-                )}
-            >
-                {status === "done" ? <CheckCircle2 className="size-3.5" /> : <span className="size-1.5 rounded-full bg-current" />}
-            </div>
-            <div>
-                <p className="text-sm font-medium">{title}</p>
-                <p className="text-xs text-muted-foreground">{description}</p>
-            </div>
-        </div>
-    );
-}
 
 function EmptyBillingRow({ label }: { label: string }) {
     return (
@@ -113,14 +79,6 @@ function EmptyBillingRow({ label }: { label: string }) {
 
 export default function BillingSettings({ billingSummary, plans }: BillingSettingsProps) {
     const [activeDialog, setActiveDialog] = useState<BillingDialog>(null);
-    const [selectedPlanCode, setSelectedPlanCode] = useState(
-        billingSummary.subscription?.planCode ?? plans[0]?.code ?? ""
-    );
-    const [billingCycle, setBillingCycle] = useState<BillingCycleChoice>(
-        billingSummary.subscription?.billingCycle === "ANNUAL" ? "ANNUAL" : "MONTHLY"
-    );
-    const [autoRecharge, setAutoRecharge] = useState(false);
-    const [selectedTopUp, setSelectedTopUp] = useState(topUpAmounts[1]);
 
     const walletBalance = billingSummary.walletBalance;
     const lowBalance = walletBalance < WALLET_LOW_BALANCE_THRESHOLD;
@@ -130,47 +88,35 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
     const studentCount = subscription?.studentCount ?? 0;
     const usagePercent = studentLimit > 0 ? Math.min(100, Math.round((studentCount / studentLimit) * 100)) : 0;
 
-    const selectedPlan = useMemo(
-        () => plans.find((plan) => plan.code === selectedPlanCode) ?? plans[0],
-        [plans, selectedPlanCode]
+    const activePlan = useMemo(
+        () => plans.find((plan) => plan.code === subscription?.planCode),
+        [plans, subscription?.planCode]
     );
 
-    const planPrice = selectedPlan
-        ? billingCycle === "ANNUAL"
-            ? selectedPlan.annualPrice
-            : selectedPlan.monthlyPrice
+    const subscriptionCycle = subscription?.billingCycle ?? BillingCycle.MONTHLY;
+    const activePlanPrice = activePlan
+        ? (subscriptionCycle === BillingCycle.ANNUAL ? activePlan.annualPrice : activePlan.monthlyPrice)
         : 0;
 
-    const hasPendingPlanChange =
-        Boolean(selectedPlan) &&
-        (selectedPlan?.code !== subscription?.planCode || billingCycle !== subscription?.billingCycle);
+    const subscriptionPricingMode = subscription?.pricingMode;
+    const subscriptionBillingMetric = subscription?.billingMetric;
 
-    const currentCycleLabel = subscription?.billingCycle === "ANNUAL" ? "Billed annually" : "Billed monthly";
+    const unitLabel = subscriptionBillingMetric === "STUDENT"
+        ? "/student/"
+        : subscriptionPricingMode === "CUSTOM_PER_USER"
+            ? "/user/"
+            : "/";
 
-    const openPhone = () => {
-        toast.info("Connecting you to Shiksha.cloud billing", {
-            description: `Call ${CONTACT_PHONE} for wallet top-up, plan change, or invoice help.`,
-            duration: 8000,
-        });
-        window.location.href = `tel:${CONTACT_PHONE}`;
-    };
+    const cycleSuffix = subscriptionCycle === BillingCycle.ANNUAL ? "year" : "month";
 
-    const requestPlanChange = () => {
-        if (!selectedPlan) return;
+    const displayPrice = activePlan
+        ? activePlanPrice
+        : (subscription?.unitPrice ?? subscription?.customPrice ?? subscription?.price ?? 0);
 
-        toast.success("Plan change request submitted", {
-            description: `${selectedPlan.name} on ${billingCycle.toLowerCase()} billing — processing will begin shortly.`,
-            duration: 5000,
-        });
-        setActiveDialog(null);
-    };
+    const currentCycleLabel = subscription?.billingCycle === BillingCycle.ANNUAL ? "Billed annually" : "Billed monthly";
 
-    const requestTopUp = () => {
-        toast.success("Top-up initiated", {
-            description: `${formatCurrencyINWithSymbol(selectedTopUp)} credits will be added to your wallet.`,
-            duration: 5000,
-        });
-        setActiveDialog(null);
+    const callBilling = () => {
+        window.open(`tel:${BILLING_CONTACT.phone}`);
     };
 
     return (
@@ -198,62 +144,56 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
 
             <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
                 <section className="flex flex-col gap-5 rounded-lg border bg-card p-5">
-                    {subscription ? (() => {
-                        const activePlan = plans.find(p => p.code === subscription.planCode);
-                        const price = billingCycle === "ANNUAL"
-                            ? (activePlan?.annualPrice ?? 0)
-                            : (activePlan?.monthlyPrice ?? 0);
-                        return (
-                            <>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Badge variant={STATUS_VARIANTS[subscription.status] ?? "secondary"}>
-                                        {formatBillingStatus(subscription.status)}
-                                    </Badge>
-                                    {subscription.offerName ? <Badge variant="secondary">{subscription.offerName}</Badge> : null}
-                                    <Badge variant={subscription.billingCycle === "ANNUAL" ? "premium" : "secondary"}>
-                                        {subscription.billingCycle === "ANNUAL" ? "20% off" : "Billed monthly"}
-                                    </Badge>
-                                </div>
+                    {subscription ? (
+                        <>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant={STATUS_VARIANTS[subscription.status] ?? "secondary"}>
+                                    {formatBillingStatus(subscription.status)}
+                                </Badge>
+                                {subscription.offerName ? <Badge variant="secondary">{subscription.offerName}</Badge> : null}
+                                <Badge variant={subscription.billingCycle === BillingCycle.ANNUAL ? "premium" : "secondary"}>
+                                    {subscription.billingCycle === BillingCycle.ANNUAL && activePlan ? "20% off" : subscription.billingCycle === BillingCycle.ANNUAL ? "Annual" : "Billed monthly"}
+                                </Badge>
+                            </div>
 
-                                <div>
-                                    <h3 className="text-xl font-semibold">{subscription.planName}</h3>
-                                    {activePlan ? (
-                                        <p className="text-sm text-muted-foreground">{activePlan.description}</p>
-                                    ) : null}
-                                </div>
+                            <div>
+                                <h3 className="text-xl font-semibold">{subscription.planName}</h3>
+                                {activePlan ? (
+                                    <p className="text-sm text-muted-foreground">{activePlan.description}</p>
+                                ) : null}
+                            </div>
 
-                                <div className="flex items-baseline gap-1.5">
-                                    <span className="text-3xl font-bold tabular-nums">
-                                        {formatCurrencyINWithSymbol(price)}
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">
-                                        /{billingCycle === "ANNUAL" ? "year" : "month"}
-                                    </span>
-                                </div>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl font-bold tabular-nums">
+                                    {formatCurrencyINWithSymbol(displayPrice)}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                    {unitLabel}{cycleSuffix}
+                                </span>
+                            </div>
 
-                                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                                    <span className="text-muted-foreground">Up to <strong>{subscription.studentLimit?.toLocaleString("en-IN") ?? "—"}</strong> students</span>
-                                    <span className="text-muted-foreground">
-                                        Next invoice: <strong>{formatCurrencyINWithSymbol(subscription.nextInvoiceAmount)}</strong>
-                                    </span>
-                                    <span className="text-muted-foreground">
-                                        Due <strong>{nextBillingDate ? formatDateIN(nextBillingDate) : "—"}</strong>
-                                    </span>
-                                </div>
+                            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                                <span className="text-muted-foreground">Up to <strong>{subscription.studentLimit?.toLocaleString("en-IN") ?? "-"}</strong> students</span>
+                                <span className="text-muted-foreground">
+                                    Next invoice: <strong>{formatCurrencyINWithSymbol(subscription.nextInvoiceAmount)}</strong>
+                                </span>
+                                <span className="text-muted-foreground">
+                                    Due <strong>{nextBillingDate ? formatDateIN(nextBillingDate) : "-"}</strong>
+                                </span>
+                            </div>
 
-                                <Separator />
+                            <Separator />
 
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <GraduationCap className="h-4 w-4" />
-                                        <span>{studentCount.toLocaleString("en-IN")} / {subscription.studentLimit?.toLocaleString("en-IN") ?? "—"} students</span>
-                                    </div>
-                                    <span className="text-sm font-medium tabular-nums">{usagePercent}%</span>
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <GraduationCap className="h-4 w-4" />
+                                    <span>{studentCount.toLocaleString("en-IN")} / {subscription.studentLimit?.toLocaleString("en-IN") ?? "-"} students</span>
                                 </div>
-                                <Progress value={usagePercent} className="h-1.5" />
-                            </>
-                        );
-                    })() : (
+                                <span className="text-sm font-medium tabular-nums">{usagePercent}%</span>
+                            </div>
+                            <Progress value={usagePercent} className="h-1.5" />
+                        </>
+                    ) : (
                         <>
                             <div className="flex flex-col gap-3">
                                 <Badge variant="outline">Inactive</Badge>
@@ -285,25 +225,9 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
 
                     <Separator />
 
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="text-sm font-medium">Auto recharge</p>
-                            <p className="text-xs text-muted-foreground">Trigger when wallet falls below ₹20.</p>
-                        </div>
-                        <Switch
-                            checked={autoRecharge}
-                            onCheckedChange={(checked) => {
-                                setAutoRecharge(checked);
-                                toast.success(checked ? "Auto recharge enabled" : "Auto recharge disabled", {
-                                    description: checked
-                                        ? "Wallet will auto-recharge when balance falls below the threshold."
-                                        : "Manual top-up will be required when wallet runs low.",
-                                    duration: 5000,
-                                });
-                            }}
-                            aria-label="Toggle auto recharge"
-                        />
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Top-ups are handled manually. Contact {BILLING_CONTACT.name} to add credits.
+                    </p>
 
                     <Button variant={lowBalance ? "destructive" : "secondary"} onClick={() => setActiveDialog("top-up")}>
                         <Wallet className="h-4 w-4" />
@@ -364,7 +288,7 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                                                     {formatDateIN(invoice.periodStart)} &ndash; {formatDateIN(invoice.periodEnd)}
                                                 </td>
                                                 <td className="py-2.5">
-                                                    <Badge variant={invoice.status === "PAID" ? "secondary" : "outline"}>
+                                                    <Badge variant={invoice.status === InvoiceStatus.PAID ? "secondary" : "outline"}>
                                                         {formatBillingStatus(invoice.status)}
                                                     </Badge>
                                                 </td>
@@ -372,12 +296,30 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                                                     {formatCurrencyINWithSymbol(invoice.total)}
                                                 </td>
                                                 <td className="py-2.5 text-right">
-                                                    <Button variant="ghost" size="sm" onClick={() =>
-                                                        toast.info("PDF download", {
-                                                            description: "Invoice PDF generation will be available once the template engine is finalized.",
-                                                            duration: 5000,
-                                                        })
-                                                    }>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={async () => {
+                                                            try {
+const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
+                                                                 if (!res.ok) {
+                                                                     const err = await res.json().catch(() => ({}));
+                                                                     throw new Error(err.error || "Download failed");
+                                                                 }
+                                                                const blob = await res.blob();
+                                                                const url = URL.createObjectURL(blob);
+                                                                const a = document.createElement("a");
+                                                                a.href = url;
+                                                                a.download = `${invoice.invoiceNumber ?? "invoice"}.pdf`;
+                                                                document.body.appendChild(a);
+                                                                a.click();
+                                                                document.body.removeChild(a);
+                                                                URL.revokeObjectURL(url);
+                                                            } catch {
+                                                                toast.error("Failed to download invoice PDF");
+                                                            }
+                                                        }}
+                                                    >
                                                         <Download className="h-4 w-4" />
                                                         PDF
                                                     </Button>
@@ -414,7 +356,7 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-semibold tabular-nums">{formatCurrencyINWithSymbol(payment.amount)}</p>
-                                            <Badge variant={payment.status === "SUCCESS" ? "secondary" : "outline"}>
+                                            <Badge variant={payment.status === SubscriptionPaymentStatus.SUCCESS ? "secondary" : "outline"}>
                                                 {formatBillingStatus(payment.status)}
                                             </Badge>
                                         </div>
@@ -440,7 +382,7 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                                     <Receipt className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-left">View invoices</span>
                                 </Button>
-                                <Button variant="outline" className="justify-start gap-2" onClick={openPhone}>
+                                <Button variant="outline" className="justify-start gap-2" onClick={callBilling}>
                                     <MessageCircle className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-left">Contact billing</span>
                                 </Button>
@@ -451,28 +393,28 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                             {subscription ? (
                                 <div className="flex flex-col gap-3">
                                     <h4 className="text-sm font-medium">Subscription timeline</h4>
-                                    <div className="flex flex-col gap-2">
-                                        <TimelineItem
-                                            title="Trial started"
-                                            description={subscription.trialEndsAt
-                                                ? `Started on ${formatDateIN(subscription.trialEndsAt)}`
-                                                : "Trial period is active."}
-                                            status="done"
-                                        />
-                                        <TimelineItem
-                                            title="Current period"
-                                            description={subscription.currentPeriodEnd
-                                                ? `Ends on ${formatDateIN(subscription.currentPeriodEnd)}`
-                                                : "No end date set."}
-                                            status="current"
-                                        />
-                                        <TimelineItem
-                                            title="Renewal"
-                                            description={subscription.status === "TRIALING"
-                                                ? "Plan will activate after trial ends."
-                                                : "Auto-renews at end of billing period."}
-                                            status="pending"
-                                        />
+                                    <div className="flex flex-col gap-2 text-sm">
+                                        {subscription.trialEndsAt ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className="size-2 rounded-full bg-primary" />
+                                            <span className="text-muted-foreground">Trial ends</span>
+                                            <span className="ml-auto">{formatDateIN(subscription.trialEndsAt)}</span>
+                                        </div>
+                                    ) : null}
+                                        <div className="flex items-center gap-2">
+                                            <span className="size-2 rounded-full bg-amber-500" />
+                                            <span className="text-muted-foreground">Current period ends</span>
+                                            <span className="ml-auto font-medium">
+                                                {subscription.currentPeriodEnd ? formatDateIN(subscription.currentPeriodEnd) : "—"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="size-2 rounded-full bg-muted-foreground" />
+                                            <span className="text-muted-foreground">Renewal</span>
+                                            <span className="ml-auto">
+                                                {subscription.status === SubscriptionStatus.TRIALING ? "After trial" : "Auto-renew"}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
@@ -485,7 +427,7 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                             <div className="flex flex-col gap-2 text-sm">
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="text-muted-foreground">Plan</span>
-                                    <span className="font-medium">{subscription?.planName ?? "&mdash;"}</span>
+                                    <span className="font-medium">{subscription?.planName ?? "-"}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="text-muted-foreground">Status</span>
@@ -510,132 +452,80 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
             </Tabs>
 
             <Dialog open={activeDialog === "plan"} onOpenChange={(open) => setActiveDialog(open ? "plan" : null)}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
                         <DialogTitle>Upgrade plan</DialogTitle>
                         <DialogDescription>
-                            Select a plan and billing cycle for your organization.
+                            Plan changes require manual processing. Get in touch with our billing team to discuss upgrading, downgrading, or custom pricing for your institution.
                         </DialogDescription>
                     </DialogHeader>
-
-                    <div className="flex flex-col gap-4">
-                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
+                    <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 text-sm">
+                        <div className="flex items-center gap-3">
+                            <Phone className="size-4 shrink-0 text-muted-foreground" />
                             <div>
-                                <p className="text-sm font-medium">Billing cycle</p>
-                                <p className="text-xs text-muted-foreground">Choose monthly or annual billing.</p>
-                            </div>
-                            <div className="flex rounded-md border bg-background p-1">
-                                {(["MONTHLY", "ANNUAL"] as const).map((cycle) => (
-                                    <Button
-                                        key={cycle}
-                                        variant={billingCycle === cycle ? "default" : "ghost"}
-                                        size="sm"
-                                        onClick={() => setBillingCycle(cycle)}
-                                    >
-                                        {cycle === "MONTHLY" ? "Monthly" : "Annual"}
-                                    </Button>
-                                ))}
+                                <p className="font-medium">{BILLING_CONTACT.name}</p>
+                                <p className="text-xs text-muted-foreground">Billing Specialist</p>
                             </div>
                         </div>
-
-                        <div className="grid gap-3 md:grid-cols-3">
-                            {plans.map((plan) => {
-                                const isSelected = plan.code === selectedPlanCode;
-                                const isCurrent = plan.code === subscription?.planCode;
-                                const price = billingCycle === "ANNUAL" ? plan.annualPrice : plan.monthlyPrice;
-
-                                return (
-                                    <button
-                                        key={plan.code}
-                                        type="button"
-                                        className={cn(
-                                            "flex min-h-[13rem] flex-col justify-between rounded-lg border bg-background p-4 text-left transition hover:border-primary/50",
-                                            isSelected && "border-primary ring-1 ring-primary"
-                                        )}
-                                        onClick={() => setSelectedPlanCode(plan.code)}
-                                    >
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <p className="font-semibold">{plan.name}</p>
-                                                {isCurrent ? <Badge variant="verified">Current</Badge> : null}
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{plan.description}</p>
-                                        </div>
-                                        <div className="mt-4">
-                                            <p className="text-2xl font-semibold tabular-nums">{formatCurrencyINWithSymbol(price)}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                per {billingCycle === "ANNUAL" ? "year" : "month"} up to{" "}
-                                                {plan.studentLimit.toLocaleString("en-IN")} students
-                                            </p>
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Phone</span>
+                            <a href={`tel:${BILLING_CONTACT.phone}`} className="font-medium tabular-nums text-primary hover:underline">
+                                {BILLING_CONTACT.phone}
+                            </a>
                         </div>
-
-                        {selectedPlan ? (
-                            <div className="rounded-lg border bg-muted/30 p-4">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium">Preview invoice</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {selectedPlan.name} on {billingCycle.toLowerCase()} billing.
-                                        </p>
-                                    </div>
-                                    <p className="text-2xl font-semibold tabular-nums">{formatCurrencyINWithSymbol(planPrice)}</p>
-                                </div>
-                            </div>
-                        ) : null}
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Email</span>
+                            <span className="font-medium">{BILLING_CONTACT.email}</span>
+                        </div>
                     </div>
-
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setActiveDialog(null)}>
-                            Cancel
+                            Close
                         </Button>
-                        <Button variant="default" disabled={!hasPendingPlanChange} onClick={requestPlanChange}>
-                            Request change
-                            <ArrowRight className="h-4 w-4" />
+                        <Button variant="default" onClick={callBilling}>
+                            <Phone className="size-4" />
+                            Call {BILLING_CONTACT.name}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={activeDialog === "top-up"} onOpenChange={(open) => setActiveDialog(open ? "top-up" : null)}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
                         <DialogTitle>Top-up wallet</DialogTitle>
                         <DialogDescription>
-                            Choose an amount to add notification credits to your wallet.
+                            Wallet top-ups require manual processing. Contact our billing team to add credits to your notification wallet.
                         </DialogDescription>
                     </DialogHeader>
-
-                    <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-2 gap-2">
-                            {topUpAmounts.map((amount) => (
-                                <button
-                                    key={amount}
-                                    type="button"
-                                    className={cn(
-                                        "rounded-lg border bg-background p-4 text-left transition hover:border-primary/50",
-                                        selectedTopUp === amount && "border-primary ring-1 ring-primary"
-                                    )}
-                                    onClick={() => setSelectedTopUp(amount)}
-                                >
-                                    <p className="text-lg font-semibold tabular-nums">{formatCurrencyINWithSymbol(amount)}</p>
-                                    <p className="text-xs text-muted-foreground">Notification credits</p>
-                                </button>
-                            ))}
+                    <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 text-sm">
+                        <div className="flex items-center gap-3">
+                            <Phone className="size-4 shrink-0 text-muted-foreground" />
+                            <div>
+                                <p className="font-medium">{BILLING_CONTACT.name}</p>
+                                <p className="text-xs text-muted-foreground">Billing Specialist</p>
+                            </div>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Phone</span>
+                            <a href={`tel:${BILLING_CONTACT.phone}`} className="font-medium tabular-nums text-primary hover:underline">
+                                {BILLING_CONTACT.phone}
+                            </a>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Email</span>
+                            <span className="font-medium">{BILLING_CONTACT.email}</span>
                         </div>
                     </div>
-
-                    <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={openPhone}>
-                            <PhoneIcon />
-                            Call billing
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setActiveDialog(null)}>
+                            Close
                         </Button>
-                        <Button variant="default" onClick={requestTopUp}>
-                            <Wallet className="h-4 w-4" />
-                            Add credits
+                        <Button variant="default" onClick={callBilling}>
+                            <Phone className="size-4" />
+                            Call {BILLING_CONTACT.name}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -650,17 +540,35 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex flex-col gap-3">
-                        <TimelineItem title="Sequential receipt numbering" description="Automated numbering is configured." status="done" />
-                        <TimelineItem title="PDF invoice export" description="Invoice PDF generation is in progress." status="current" />
-                        <TimelineItem title="Payment reconciliation" description="Automated reconciliation via payment gateway callbacks." status="current" />
+                    <div className="flex flex-col gap-3 text-sm">
+                        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                            <span className="size-2 rounded-full bg-primary" />
+                            <div>
+                                <p className="font-medium">Sequential receipt numbering</p>
+                                <p className="text-xs text-muted-foreground">Automated numbering is configured.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                            <span className="size-2 rounded-full bg-amber-500" />
+                            <div>
+                                <p className="font-medium">PDF invoice export</p>
+                                <p className="text-xs text-muted-foreground">Invoice PDF generation is in progress.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                            <span className="size-2 rounded-full bg-amber-500" />
+                            <div>
+                                <p className="font-medium">Payment reconciliation</p>
+                                <p className="text-xs text-muted-foreground">Automated reconciliation via payment gateway callbacks.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setActiveDialog(null)}>
                             Close
                         </Button>
-                        <Button variant="default" onClick={openPhone}>
+                        <Button variant="default" onClick={callBilling}>
                             <MessageCircle className="h-4 w-4" />
                             Contact billing
                         </Button>
@@ -671,6 +579,4 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
     );
 }
 
-function PhoneIcon() {
-    return <Phone className="h-4 w-4" />;
-}
+

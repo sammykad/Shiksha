@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Script from "next/script"
-import { PRICING_TIERS, STANDARD_PRICE_PER_STUDENT, formatPricingAmount } from "@/lib/constants/pricing"
+import { PRICING_TIERS, BASE_MONTHLY_PRICE_PER_STUDENT, formatPricingAmount } from "@/lib/constants/pricing"
 import { PricingPageClient } from "@/components/pricing/pricing-page-client"
 
 // Previous pricing implementation kept for reference:

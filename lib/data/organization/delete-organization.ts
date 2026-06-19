@@ -1,9 +1,8 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { Role } from '@/generated/prisma/enums';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma-base';
-import { Role } from '@/generated/prisma/enums';
 
 export type OrgDeleteSummary = {
   slug: string;
@@ -11,15 +10,14 @@ export type OrgDeleteSummary = {
   counts: Record<string, number>;
 };
 
-export async function getOrgDeleteSummary(orgId: string): Promise<OrgDeleteSummary> {
-  const session = await auth();
-  if (orgId !== session.orgId || session.orgRole !== Role.ADMIN) redirect('/dashboard');
-
+export async function getOrgDeleteSummary(orgId: string): Promise<OrgDeleteSummary | null> {
+  const { orgRole, orgId: sessionOrgId } = await auth();
+  if (orgRole !== Role.ADMIN || sessionOrgId !== orgId) return null;
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     select: { slug: true, name: true },
   });
-  if (!org) redirect('/dashboard');
+  if (!org) return null;
 
   const [
     studentCount,

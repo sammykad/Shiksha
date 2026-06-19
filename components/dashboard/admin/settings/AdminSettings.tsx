@@ -7,12 +7,15 @@ import { GradingSettings } from "@/components/dashboard/admin/settings/GradingSe
 import { NotificationSettings } from "@/components/dashboard/admin/settings/NotificationSettings"
 import RolePermissions from "@/components/dashboard/admin/settings/RolePermissions"
 import BillingSettings from "./BillingSettings"
+import { DeleteOrganizationModal } from "./DeleteOrganizationModal"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Settings2 } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Settings2, AlertTriangle } from "lucide-react"
 import { getBillingSummary, getPublicPlans } from "@/lib/subscription-billing"
 import { getOrganizationNotificationSettings } from "@/lib/notifications/organization-notification-settings"
 import { getAcademicYears, getCurrentAcademicYearIdSafe } from "@/lib/academicYear"
+import { getOrgDeleteSummary } from "@/lib/data/organization/delete-organization"
 import { Role } from "@/generated/prisma/enums"
 
 async function getStaffMembers(organizationId: string) {
@@ -56,12 +59,13 @@ export default async function AdminSettingsPage() {
   const organizationId = await getOrganizationId()
   const academicYearId = await getCurrentAcademicYearIdSafe()
 
-  const [organization, academicYears, notificationSettings, staffMembers, billingPlans] = await Promise.all([
+  const [organization, academicYears, notificationSettings, staffMembers, billingPlans, deleteSummary] = await Promise.all([
     getDatabaseOrganization(organizationId),
     getAcademicYears(organizationId),
     getOrganizationNotificationSettings(organizationId),
     getStaffMembers(organizationId),
     getPublicPlans(),
+    getOrgDeleteSummary(organizationId),
   ])
 
   const billingSummary = await getBillingSummary(organizationId, academicYearId)
@@ -105,6 +109,32 @@ export default async function AdminSettingsPage() {
               />
             ),
             permissions: <RolePermissions users={staffMembers} />,
+            danger: deleteSummary ? (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-medium">Danger Zone</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Irreversible actions that affect your entire organization.
+                  </p>
+                </div>
+                <Card className="border-destructive/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      <CardTitle className="text-base">Delete Organization</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Permanently delete {organization?.name} and all associated data. This action
+                      cannot be undone — all students, teachers, fees, exams, and records will be
+                      removed immediately.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <DeleteOrganizationModal orgId={organizationId} summary={deleteSummary} />
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null,
           }}
         />
       </div>

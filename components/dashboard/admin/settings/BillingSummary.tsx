@@ -21,20 +21,26 @@ export type BillingSummaryData = {
   subscription: {
     id: string;
     status: string;
+    pricingMode: string;
     planName: string;
-    planCode: string;
+    planCode: string | null;
     offerName: string | null;
     billingCycle: string;
     billingMetric: string;
     studentCount: number;
     studentLimit: number | null;
     price: number | null;
+    unitPrice: number | null;
+    customPrice: number | null;
+    contractReference: string | null;
     trialEndsAt: string | null;
     currentPeriodEnd: string | null;
     nextInvoiceAmount: number;
+    breakdown: string;
   } | null;
   recentInvoices: Array<{
     id: string;
+    invoiceNumber: string | null;
     status: string;
     total: number;
     periodStart: string;

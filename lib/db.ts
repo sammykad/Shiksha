@@ -31,14 +31,23 @@ const prisma = basePrisma
     name: 'withAcademicYear',
     query: {
       $allModels: {
-        async $allOperations({ model, operation, args, query }: any) {
+        async $allOperations({ model, operation, args, query }) {
           if (!model || !YEAR_SCOPED_MODELS.has(model)) {
             return query(args)
           }
 
           if (READ_OPS.has(operation)) {
+            // If caller already set a complex academicYearId filter (e.g. { in: [...] }),
+            // respect it instead of overriding — needed for multi-org queries
+            if ((args as Record<string, unknown>).where !== undefined &&
+              (args as Record<string, Record<string, unknown>>).where?.academicYearId !== undefined) {
+              return query(args)
+            }
             const academicYearId = await getActiveAcademicYearId()
-            args.where = { ...args.where, academicYearId }
+              ; (args as Record<string, unknown>).where = {
+                ...(args as Record<string, unknown>).where as object,
+                academicYearId,
+              }
             return query(args)
           }
 
@@ -46,30 +55,38 @@ const prisma = basePrisma
             const academicYearId = await getCurrentAcademicYearId()
 
             if (operation === 'create') {
-              args.data = {
-                ...args.data,
-                academicYearId: args.data.academicYearId ?? academicYearId,
-              }
+              const data = (args as Record<string, Record<string, unknown>>).data
+                ; (args as Record<string, unknown>).data = {
+                  ...data,
+                  academicYearId: data?.academicYearId ?? academicYearId,
+                }
             } else if (operation === 'createMany') {
-              if (Array.isArray(args.data)) {
-                args.data = args.data.map((item: any) => ({
-                  ...item,
-                  academicYearId: item.academicYearId ?? academicYearId,
-                }))
+              const data = (args as Record<string, unknown>).data
+              if (Array.isArray(data)) {
+                ; (args as Record<string, unknown>).data = data.map(
+                  (item: Record<string, unknown>) => ({
+                    ...item,
+                    academicYearId: item.academicYearId ?? academicYearId,
+                  })
+                )
               }
             } else if (operation === 'upsert') {
-              args.where = { ...args.where, academicYearId }
-              args.create = {
-                ...args.create,
-                academicYearId: args.create?.academicYearId ?? academicYearId,
+              const a = args as Record<string, Record<string, unknown>>
+              a.where = { ...a.where, academicYearId }
+              a.create = {
+                ...a.create,
+                academicYearId: a.create?.academicYearId ?? academicYearId,
               }
-              args.update = {                          // ← was missing
-                ...args.update,
-                academicYearId: args.update?.academicYearId ?? academicYearId,
+              a.update = {
+                ...a.update,
+                academicYearId: a.update?.academicYearId ?? academicYearId,
               }
             } else {
-              // update / updateMany / delete / deleteMany — scope to current year
-              args.where = { ...args.where, academicYearId }
+              // update / updateMany / delete / deleteMany
+              ; (args as Record<string, unknown>).where = {
+                ...(args as Record<string, unknown>).where as object,
+                academicYearId,
+              }
             }
 
             return query(args)

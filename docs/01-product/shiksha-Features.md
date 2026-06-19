@@ -399,8 +399,7 @@ Refrals
 
 Focus On Blogs Only : Anaylize The the Blog Human Touch , Real Issues, People should read it intrestingly based on Keyword Reasearch SEO, Use Topics like how to open own school in 2026 , Moto silenty promot own shiksha cloud system
 
-IMP : Find Best Sutable / Cheap Domain
-
+IMP : 
 - Preper Script for 3 Videos
 - Get AWS S3 Bucket
 - Add pagination to Students and Cheques 
@@ -418,7 +417,14 @@ IMP : Find Best Sutable / Cheap Domain
   - Works for all banks in banks.json, fallback to manual entry on failure
 
 
+# IMP Task : 
+- Find Best Sutable / Cheap Domain
+- Student Bulk Import should have Proper Validation , Clear Instructions, Mobile Friendly & CSV File 
+- Academic Year Fix while Onboarding 
+- Student Linking on inviting , or remove student role while invite flow 
 
+
+# SUPERADMIN RULES 
 
 Rules To Create Institution 
 Introduce New Role SuperAdmin

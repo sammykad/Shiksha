@@ -2,14 +2,14 @@
 
 import { useState, useMemo, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation"
-import { Settings, Sliders, GraduationCap, Bell, Shield, CreditCard, Search, Menu, X } from "lucide-react"
+import { Settings, Sliders, GraduationCap, Bell, Shield, CreditCard, Search, Menu, X, AlertTriangle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SectionId = "general" | "configurations" | "grading" | "notifications" | "billing" | "permissions"
+type SectionId = "general" | "configurations" | "grading" | "notifications" | "billing" | "permissions" | "danger"
 
 interface NavItem {
   id: SectionId
@@ -29,6 +29,7 @@ const NAV: NavItem[] = [
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "billing", label: "Billing", icon: CreditCard },
   { id: "permissions", label: "Permissions", icon: Shield, badge: "Beta" },
+  { id: "danger", label: "Danger Zone", icon: AlertTriangle },
 ]
 
 const SECTION_IDS = NAV.map((item) => item.id)
