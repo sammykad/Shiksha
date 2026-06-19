@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, FileText, CheckCircle2, ChevronRight, MessageSquareWarning } from 'lucide-react';
+import { AlertTriangle, Clock, FileText, CheckCircle2, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,17 +40,18 @@ export function ComplaintsWidget({ complaints, className }: { complaints: Anonym
         </Button>
       </CardHeader>
 
-      <ScrollArea className="flex-1 min-h-0">
-        {complaints.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
-            <EmptyState
-              title="No complaints"
-              description="No complaints have been reported yet."
-              icons={[MessageSquareWarning]}
-              className="border-none p-6"
-            />
-          </div>
-        ) : (
+      {complaints.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 min-h-[300px] w-full">
+          <EmptyState
+            title="No complaints"
+            description="No complaints have been reported yet."
+            image="/complaint-emptystate.svg"
+            compact
+            className="border-none p-6"
+          />
+        </div>
+      ) : (
+        <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col">
             {complaints.map((complaint) => {
               const StatusIcon = STATUS_ICONS[complaint.currentStatus as keyof typeof STATUS_ICONS] || Clock;
@@ -95,8 +96,8 @@ export function ComplaintsWidget({ complaints, className }: { complaints: Anonym
               );
             })}
           </div>
-        )}
-      </ScrollArea>
+        </ScrollArea>
+      )}
     </Card>
   );
 }

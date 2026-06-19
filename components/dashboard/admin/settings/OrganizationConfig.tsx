@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Settings, Building2 } from 'lucide-react';
 
+import { formatEnumLabel } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -49,7 +50,10 @@ interface Organization {
   organizationType: OrganizationType | null;
 }
 
-const organizationTypeOptions = Object.values(OrganizationType);
+const organizationTypeOptions = Object.values(OrganizationType).map((type) => ({
+  value: type,
+  label: formatEnumLabel(type),
+}));
 
 export default function OrganizationConfig({
   organization,
@@ -214,11 +218,11 @@ export default function OrganizationConfig({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {organizationTypeOptions.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
+                                    {organizationTypeOptions.map(({ value, label }) => (
+                                      <SelectItem key={value} value={value}>
+                                        {label}
+                                      </SelectItem>
+                                    ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

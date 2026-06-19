@@ -31,6 +31,7 @@ import { OrganizationFormData, organizationSchema } from '@/lib/schemas';
 import { updateOrganization } from '@/lib/data/organization/update-organization';
 import { Organization } from '@/generated/prisma/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatEnumLabel } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import TerminologySettings from './TerminologySettings';
@@ -226,7 +227,7 @@ export default function GeneralSettings({ organization }: GeneralSettingsProps) 
                                                     <SelectContent>
                                                         {Object.values(OrganizationType).map((type) => (
                                                             <SelectItem key={type} value={type}>
-                                                                {type}
+                                                                {formatEnumLabel(type)}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>

@@ -41,6 +41,7 @@ import {
   LeadSource,
 } from '@/generated/prisma/enums';
 import { useRouter } from 'next/navigation';
+import { formatEnumLabel } from '@/lib/utils';
 import { createLead } from '@/lib/data/leads/create-lead';
 
 export function CreateLeadForm({
@@ -409,7 +410,7 @@ export function CreateLeadForm({
                         <SelectContent>
                           {Object.values(LeadSource).map((source) => (
                             <SelectItem key={source} value={source}>
-                              {source}
+                              {formatEnumLabel(source)}
                             </SelectItem>
                           ))}
                         </SelectContent>

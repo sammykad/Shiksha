@@ -1,6 +1,6 @@
 "use server"
 
-import prisma from '@/lib/db';
+import basePrisma from '@/lib/prisma-base';
 import { getOrganizationId } from '@/lib/organization';
 import { getCurrentAcademicYearIdSafe } from '@/lib/academicYear';
 import type { WizardData } from '@/components/onboarding/types';
@@ -31,7 +31,7 @@ export async function getOnboardingProgress(): Promise<WizardData> {
         assignmentsCount,
         feeAssignmentsCount
     ] = await Promise.all([
-        prisma.organization.findUnique({
+        basePrisma.organization.findUnique({
             where: { id: organizationId },
             select: {
                 id: true,
@@ -41,7 +41,7 @@ export async function getOnboardingProgress(): Promise<WizardData> {
                 contactPhone: true,
             },
         }),
-        prisma.grade.findMany({
+        basePrisma.grade.findMany({
             where: { organizationId },
             select: {
                 id: true,
@@ -50,18 +50,18 @@ export async function getOnboardingProgress(): Promise<WizardData> {
             },
             orderBy: { createdAt: 'asc' },
         }),
-        prisma.academicYear.findFirst({
+        basePrisma.academicYear.findFirst({
             where: { organizationId, isCurrent: true },
             select: { id: true },
         }),
-        prisma.student.count({ where: { organizationId } }),
-        prisma.teacher.count({ where: { organizationId } }),
-        prisma.subject.count({ where: { organizationId } }),
-        prisma.feeCategory.count({ where: { organizationId } }),
-        prisma.parentStudent.count({ where: { student: { organizationId } } }),
-        prisma.studentDocument.count({ where: { organizationId } }),
-        prisma.teachingAssignment.count({ where: { organizationId } }),
-        prisma.fee.count({ where: { organizationId } }),
+        basePrisma.student.count({ where: { organizationId } }),
+        basePrisma.teacher.count({ where: { organizationId } }),
+        basePrisma.subject.count({ where: { organizationId } }),
+        basePrisma.feeCategory.count({ where: { organizationId } }),
+        basePrisma.parentStudent.count({ where: { student: { organizationId } } }),
+        basePrisma.studentDocument.count({ where: { organizationId } }),
+        basePrisma.teachingAssignment.count({ where: { organizationId } }),
+        basePrisma.fee.count({ where: { organizationId } }),
     ]);
 
     return {

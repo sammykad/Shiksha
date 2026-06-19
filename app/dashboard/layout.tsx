@@ -5,14 +5,14 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { TerminologyProvider } from "@/context/terminology";
 import { AcademicYearProvider } from "@/context/AcademicYearContext";
-import { getAcademicYears, getActiveAcademicYearId } from "@/lib/academicYear";
+import { getAcademicYears } from "@/lib/academicYear";
 import { getOrganizationType } from "@/lib/organization";
 import RoleLayoutWrapper from "@/components/dashboard-layout/role-layout-wrapper";
 import { getOnboardingStatus } from "@/lib/onboarding";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { Role } from "@/generated/prisma/enums";
-import { getRequiredRoles, isAllowed, ROLE_HOMEPAGE, type AppRole } from "@/lib/rbac";
+import { getRequiredRoles, isAllowed, ROLE_HOMEPAGE } from "@/lib/rbac";
 
 export const metadata: Metadata = {
   robots: {
@@ -30,35 +30,29 @@ export default async function DashboardLayout({
 
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") || "/dashboard";
-  const appRole = orgRole.toLowerCase() as AppRole;
   const requiredRoles = getRequiredRoles(pathname);
 
-  if (requiredRoles && !isAllowed(appRole, requiredRoles)) {
-    redirect(ROLE_HOMEPAGE[appRole] ?? "/dashboard");
+  if (requiredRoles && !isAllowed(orgRole, requiredRoles)) {
+    redirect(ROLE_HOMEPAGE[orgRole] ?? "/dashboard");
   }
 
   if (
     orgRole === "ADMIN" &&
-    !pathname.includes("/onboarding") &&
-    !pathname.includes("/settings")
+    !pathname.includes("/onboarding")
   ) {
     const { needsOnboarding } = await getOnboardingStatus();
     if (needsOnboarding) redirect("/dashboard/onboarding");
   }
 
-  const [organizationType, academicYears, activeYearId] = await Promise.all([
+  const [organizationType, academicYears] = await Promise.all([
     getOrganizationType(orgId),
     getAcademicYears(orgId),
-    getActiveAcademicYearId(),
   ]);
 
 
   return (
     <TerminologyProvider organizationType={organizationType}>
-      <AcademicYearProvider
-        years={academicYears}
-        initialActiveYearId={activeYearId}
-      >
+      <AcademicYearProvider years={academicYears} organizationId={orgId}>
         <RoleLayoutWrapper role={orgRole as Role} userId={userId}>
           <AdminPanelLayout role={orgRole as Role}>
             <Navbar />

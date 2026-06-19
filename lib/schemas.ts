@@ -15,8 +15,11 @@ import {
   LeaveType,
   NoticePriority,
   NoticeType,
+  NotificationChannel,
+  OrganizationType,
   PaymentMethod,
   Role,
+  YearType,
 } from '@/generated/prisma/enums';
 // const ACCEPTED_IMAGE_TYPES = [
 //   'image/jpeg',
@@ -186,7 +189,7 @@ export const goggleImportHolidayFormSchema = z.array(
     name: z.string().min(1, { message: 'Holiday name is required' }),
     startDate: z.date(),
     endDate: z.date(),
-    type: z.enum(['PLANNED', 'EMERGENCY', 'INSTITUTION_SPECIFIC']),
+    type: z.nativeEnum(CalendarEventType),
     reason: z.string().min(1, { message: 'Reason is required' }),
     isRecurring: z.boolean().default(false),
   })
@@ -210,7 +213,7 @@ export const studentProfileSchema = z.object({
   address: z.string().optional(),
   caste: z.string().optional(),
   subCaste: z.string().optional(),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER'], {
+  gender: z.nativeEnum(Gender, {
     required_error: 'Please select a gender',
   }),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
@@ -250,17 +253,7 @@ export const organizationSchema = z.object({
     .url('Please enter a valid URL')
     .optional()
     .or(z.literal('')),
-  organizationType: z
-    .enum([
-      'SCHOOL',
-      'COLLEGE',
-      'COACHING_CLASS',
-      'UNIVERSITY',
-      'KINDERGARTEN',
-      'TRAINING_INSTITUTE',
-      'OTHER',
-    ])
-    .optional(),
+  organizationType: z.nativeEnum(OrganizationType, { required_error: "Organization type is required." }),
   logo: z.string().optional().or(z.literal('')),
   establishedYear: z.coerce
     .number()
@@ -415,7 +408,7 @@ export const academicYearSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
   startDate: z.date({ required_error: 'Start date is required' }),
   endDate: z.date({ required_error: 'End date is required' }),
-  type: z.enum(['ANNUAL', 'SEMESTER', 'TRIMESTER', 'BATCH']),
+  type: z.nativeEnum(YearType).default('ANNUAL'),
   description: z.string().optional(),
   isCurrent: z.boolean().default(false),
   organizationId: z.string().min(1, 'Organization ID is required'),
@@ -435,7 +428,7 @@ export type AcademicYearUpdateFormData = z.infer<
 export const reminderFormSchema = z.object({
   recipients: z.array(z.string()).min(1, 'Select at least one recipient'),
   channels: z
-    .array(z.enum(['EMAIL', 'SMS', 'WHATSAPP', 'PUSH']))
+    .array(z.nativeEnum(NotificationChannel))
     .optional(),
   templateId: z.string().min(1, 'Please select a template'),
   templateType: z.enum([
@@ -626,10 +619,10 @@ export const bulkExamSchema = z.object({
       endDate: z.string().min(1, 'End date/time is required'),
       max: z.coerce.number().min(1).max(1000),
       pass: z.coerce.number().min(0),
-      mode: z.enum(Object.values(ExamMode) as [string, ...string[]]),
+      mode: z.nativeEnum(ExamMode),
       weightage: z.coerce.number().min(0).optional().default(0),
       evaluationType: z
-        .enum(Object.values(EvaluationType) as [string, ...string[]])
+        .nativeEnum(EvaluationType)
         .optional()
         .default(EvaluationType.EXAM),
       venue: z.string().optional().default(''),

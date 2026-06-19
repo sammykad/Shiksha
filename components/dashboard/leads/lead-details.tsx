@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -80,6 +81,7 @@ interface LeadDetailProps {
 }
 
 export default function LeadDetails({ lead }: LeadDetailProps) {
+  const router = useRouter();
   const [notes, setNotes] = useState(lead.notes);
   const [notesChanged, setNotesChanged] = useState(false);
   const [isConverting, startConvertTransition] = useTransition();
@@ -91,7 +93,7 @@ export default function LeadDetails({ lead }: LeadDetailProps) {
   };
 
   const handleConvertLead = (leadId: string) => {
-    window.location.href = `/dashboard/students/create?leadId=${leadId}`;
+    router.push(`/dashboard/students/create?leadId=${leadId}`);
   };
 
   const handleDeleteLead = async (leadId: string) => {
@@ -100,7 +102,7 @@ export default function LeadDetails({ lead }: LeadDetailProps) {
         const result = await deleteLead(leadId);
         if (result.success) {
           toast.success('Lead deleted successfully.');
-          window.location.href = '/dashboard/leads';
+          router.push('/dashboard/leads');
         } else {
           toast.error(result.message || 'Failed to delete lead. Please try again.');
         }

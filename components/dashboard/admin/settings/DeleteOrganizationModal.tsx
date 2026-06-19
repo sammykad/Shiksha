@@ -8,6 +8,16 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +40,7 @@ export function DeleteOrganizationModal({ orgId, summary }: DeleteOrganizationMo
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirmText, setConfirmText] = useState("")
+  const [showFinalConfirm, setShowFinalConfirm] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const expectedText = `delete-${summary.slug}`
@@ -58,6 +69,11 @@ export function DeleteOrganizationModal({ orgId, summary }: DeleteOrganizationMo
 
   function handleDelete() {
     if (!isMatch) return
+    setShowFinalConfirm(true)
+  }
+
+  function handleFinalConfirm() {
+    setShowFinalConfirm(false)
     startTransition(async () => {
       const result = await deleteOrganizationAction(orgId)
       if (result.success) {
@@ -146,6 +162,40 @@ export function DeleteOrganizationModal({ orgId, summary }: DeleteOrganizationMo
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={showFinalConfirm} onOpenChange={setShowFinalConfirm}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle className="text-lg">Are you absolutely sure?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="pt-2">
+              This is your <strong>last chance</strong>. <strong>{summary.name}</strong> and all associated
+              data will be <strong>permanently deleted</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleFinalConfirm}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
+            >
+              {isPending ? (
+                <>Deleting...</>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Yes, delete permanently
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

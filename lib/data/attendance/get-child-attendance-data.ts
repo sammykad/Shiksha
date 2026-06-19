@@ -4,6 +4,7 @@ import prisma from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { getSelectedChildId } from '@/lib/data/parent/selected-child';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { CalendarEventType } from '@/generated/prisma/enums';
 import { toISTDate, getStartOfMonthIST, getStartOfYearIST, isSameDayIST } from '@/lib/utils';
 import { calcStats, calcCurrentStreak, type AttendanceStats } from './attendance-utils';
 
@@ -26,7 +27,7 @@ export type AcademicCalendarEvent = {
   name: string;
   startDate: Date;
   endDate: Date;
-  type: 'PLANNED' | 'EMERGENCY' | 'INSTITUTION_SPECIFIC';
+  type: CalendarEventType;
   reason: string | null;
   isRecurring: boolean;
 };

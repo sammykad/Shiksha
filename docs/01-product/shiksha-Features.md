@@ -424,6 +424,9 @@ IMP :
 - Student Linking on inviting , or remove student role while invite flow 
 
 
+# Decide 
+- @organizaitonconfig or genralsetting ? which one is correct or why look same ?
+
 # SUPERADMIN RULES 
 
 Rules To Create Institution 

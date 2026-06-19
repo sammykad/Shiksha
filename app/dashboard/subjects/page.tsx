@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { SubjectsTable } from '@/components/dashboard/subject/SubjectsTable';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import {
   Dialog,
@@ -34,14 +35,24 @@ export default async function SubjectsPage() {
                 Add Subject
               </Button>
             </DialogTrigger>
-            <AddSubjectDialog subjects={subjects} />
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add New Subject</DialogTitle>
+                <DialogDescription>
+                  Create a new subject with the required details.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex-1 overflow-y-auto px-1">
+                <AddSubjectFormModal subjects={subjects} />
+              </div>
+            </DialogContent>
           </Dialog>
         }
       />
 
       <Card>
         <CardContent className="pt-6">
-          <Suspense fallback={<div>Loading subjects...</div>}>
+          <Suspense fallback={<SubjectsSkeleton />}>
             <SubjectsTable initialSubjects={subjects} />
           </Suspense>
         </CardContent>
@@ -50,22 +61,18 @@ export default async function SubjectsPage() {
   );
 }
 
-function AddSubjectDialog({
-  subjects,
-}: {
-  subjects: Awaited<ReturnType<typeof getAllSubjectsByOrganizationId>>;
-}) {
+function SubjectsSkeleton() {
   return (
-    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>Add New Subject</DialogTitle>
-        <DialogDescription>
-          Create a new subject with the required details.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="flex-1 overflow-y-auto px-1">
-        <AddSubjectFormModal subjects={subjects} />
-      </div>
-    </DialogContent>
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 py-3">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+          <Skeleton className="h-4 flex-1 max-w-xs hidden md:block" />
+          <Skeleton className="h-4 w-24 hidden lg:block" />
+          <Skeleton className="h-8 w-8 rounded-md ml-auto" />
+        </div>
+      ))}
+    </div>
   );
 }

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AcceptInvitation, SwitchInvitationAccountButton } from "@/components/auth/accept-invitation";
-import { getSessionOrNull } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -20,14 +20,10 @@ export default async function AcceptInvitationPage({
     searchParams,
 }: {
     params: Promise<{ id: string }>;
-    searchParams: Promise<{ returnUrl?: string | string[] }>;
+    searchParams: Promise<{ returnUrl?: string }>;
 }) {
     const { id } = await params;
-    const session = await getSessionOrNull();
-
-    if (!session) {
-        redirect("/sign-in");
-    }
+    const session = await getSession();
 
     const invitation = await prisma.invitation.findUnique({
         where: { id },
@@ -43,11 +39,7 @@ export default async function AcceptInvitationPage({
         },
     });
 
-    const paramsValue = await searchParams;
-    const requestedReturnUrl = Array.isArray(paramsValue.returnUrl)
-        ? paramsValue.returnUrl[0]
-        : paramsValue.returnUrl;
-    const returnUrl = getReturnUrl(requestedReturnUrl);
+    const { returnUrl = '/dashboard' } = await searchParams;
 
     if (!invitation) {
         return (
@@ -133,11 +125,6 @@ export default async function AcceptInvitationPage({
             />
         </main>
     );
-}
-
-function getReturnUrl(returnUrl: string | undefined) {
-    if (returnUrl?.startsWith("/") && !returnUrl.startsWith("//")) return returnUrl;
-    return "/dashboard";
 }
 
 function InvitationMessage({

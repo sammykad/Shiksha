@@ -35,6 +35,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 import { cn } from '@/lib/utils';
+import { YearType } from '@/generated/prisma/enums';
 import { AcademicYearFormData, academicYearSchema } from '@/lib/schemas';
 import { createAcademicYear, updateAcademicYear } from '@/app/actions';
 
@@ -43,7 +44,7 @@ interface AcademicYear {
   name: string;
   startDate: Date;
   endDate: Date;
-  type: 'ANNUAL' | 'SEMESTER' | 'TRIMESTER' | 'BATCH';
+  type: YearType;
   isCurrent: boolean;
   description?: string | null;
 }
@@ -67,7 +68,7 @@ export function AcademicYearForm({
       name: academicYear?.name || '',
       startDate: academicYear?.startDate || undefined,
       endDate: academicYear?.endDate || undefined,
-      type: academicYear?.type || undefined,
+      type: academicYear?.type || 'ANNUAL',
       description: academicYear?.description || '',
       isCurrent: academicYear ? academicYear.isCurrent : true, // Default to true for new creations
       organizationId,
@@ -104,8 +105,8 @@ export function AcademicYearForm({
     }
   };
 
-  const handleTypeChange = (type: string) => {
-    form.setValue('type', type as any, {
+  const handleTypeChange = (type: YearType) => {
+    form.setValue('type', type, {
       shouldValidate: true,
       shouldDirty: true,
     });

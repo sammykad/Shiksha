@@ -178,6 +178,29 @@ The billing engine (`PLAN_CATALOG` in `lib/subscription-billing.ts`) uses `curre
 - **Storage** — charged only beyond 1 GB
 - **Onboarding balance** — ₹10,000 paise given by Shiksha.cloud on signup
 
+### UI Pricing Display Matrix
+
+All prices are stored in **rupees** (not paise). Wallet is the only paise field. The price display in `BillingSettings.tsx` handles 5 pricing modes × 2 billing cycles:
+
+```
+                      Label           Price           Example
+──────────────────────────────────────────────────────────────
+PLAN_BASED  MONTHLY   /student/month  catalogMPrice   ₹49/student/month
+PLAN_BASED  ANNUAL    /student/year   catalogAPrice   ₹470/student/year
+CUSTOM_FLAT MONTHLY   /month          customPrice     ₹1000/month
+CUSTOM_FLAT ANNUAL    /year           customPrice     ₹1000/year
+CUSTOM_PER_STUDENT M  /student/month  unitPrice       ₹25/student/month
+CUSTOM_PER_STUDENT A  /student/year   unitPrice       ₹25/student/year
+CUSTOM_PER_USER  M    /user/month     unitPrice       ₹20/user/month
+CUSTOM_PER_USER  A    /user/year      unitPrice       ₹20/user/year
+CUSTOM_SLAB     M    /student/month   unitPrice       ₹15/student/month
+CUSTOM_SLAB     A    /student/year    unitPrice       ₹15/student/year
+```
+
+**Public pricing page** (`app/(website)/pricing/`) only shows PLAN_BASED + STUDENT (Starter/Growth/Scale). The 4 custom modes are private platform-admin deals, never advertised.
+
+**Annual badge logic**: standard plan + annual → "20% off"; custom + annual → "Annual"; monthly → "Billed monthly".
+
 ---
 
 ## Module Status Reference

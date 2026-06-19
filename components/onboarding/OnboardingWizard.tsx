@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import {
-  Users, Users2, FileText, GraduationCap as TeacherIcon,
-  Link2, Receipt, Building2, CalendarDays, ListOrdered,
-  Layout, BookOpen, Menu, LayoutGrid, LayoutDashboard, ChevronRight,
+  Menu, Users, Users2, FileText, GraduationCap as TeacherIcon,
+  Link2, Receipt, ListOrdered, LayoutGrid, BookOpen, Layout,
+  ChevronRight,
 } from 'lucide-react';
 import { type WizardData, type StepId, STEPS, PHASE_MESSAGES } from './types';
 import StepsSidebar from './StepsSidebar';
@@ -18,7 +18,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { getOnboardingProgress } from '@/lib/onboarding';
-import { AcademicYearForm } from '@/components/dashboard/admin/settings/AcademicYearForm';
 import { useTerminology } from '@/context/terminology';
 
 interface Props {
@@ -26,39 +25,33 @@ interface Props {
   startStep: StepId;
 }
 
-// ─── Fix 1: add step 11 ───────────────────────────────────────
 function resolveCompletedSteps(data: WizardData): Set<number> {
   const completed = new Set<number>();
-  if (data.hasOrg) completed.add(0);
-  if (data.academicYearId) completed.add(1);
-  if (data.grades.length > 0) completed.add(2);
-  if (data.grades.some((g) => g.sections.length > 0)) completed.add(3);
-  if (data.studentsCount > 0) completed.add(4);
-  if (data.parentsCount > 0) completed.add(5);
-  completed.add(6); // Documents - always marked complete (optional step)
-  if (data.teachersCount > 0) completed.add(7);
-  if (data.subjectsCount > 0) completed.add(8);
-  if (data.feeCategoriesCount > 0) completed.add(9);
-  if (data.teachingAssignmentsCount > 0) completed.add(10);
-  if (data.feeAssignmentsCount > 0) completed.add(11); // ← added
+  if (data.grades.length > 0) completed.add(0);
+  if (data.grades.some((g) => g.sections.length > 0)) completed.add(1);
+  if (data.studentsCount > 0) completed.add(2);
+  if (data.parentsCount > 0) completed.add(3);
+  completed.add(4); // Documents - always marked complete (optional step)
+  if (data.teachersCount > 0) completed.add(5);
+  if (data.subjectsCount > 0) completed.add(6);
+  if (data.feeCategoriesCount > 0) completed.add(7);
+  if (data.teachingAssignmentsCount > 0) completed.add(8);
+  if (data.feeAssignmentsCount > 0) completed.add(9);
   return completed;
 }
 
-// ─── Fix 2: add case 11 ──────────────────────────────────────
 function getCount(step: number, data: WizardData): number {
   switch (step) {
-    case 0: return data.hasOrg ? 1 : 0;
-    case 1: return data.academicYearId ? 1 : 0;
-    case 2: return data.grades.length;
-    case 3: return data.grades.reduce((acc, g) => acc + g.sections.length, 0);
-    case 4: return data.studentsCount;
-    case 5: return data.parentsCount;
-    case 6: return data.documentsCount;
-    case 7: return data.teachersCount;
-    case 8: return data.subjectsCount;
-    case 9: return data.feeCategoriesCount;
-    case 10: return data.teachingAssignmentsCount;
-    case 11: return data.feeAssignmentsCount; // ← added
+    case 0: return data.grades.length;
+    case 1: return data.grades.reduce((acc, g) => acc + g.sections.length, 0);
+    case 2: return data.studentsCount;
+    case 3: return data.parentsCount;
+    case 4: return data.documentsCount;
+    case 5: return data.teachersCount;
+    case 6: return data.subjectsCount;
+    case 7: return data.feeCategoriesCount;
+    case 8: return data.teachingAssignmentsCount;
+    case 9: return data.feeAssignmentsCount;
     default: return 0;
   }
 }
@@ -76,7 +69,6 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
   const [direction, setDirection] = useState<1 | -1>(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // ─── Fix 3: persist maxStepReached to localStorage ───────────
   const [maxStepReached, setMaxStepReached] = useState<number>(() => {
     if (typeof window === 'undefined') return startStep;
     const saved = localStorage.getItem(`onboarding-max-step-${initialData.orgId}`);
@@ -90,13 +82,12 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
     );
   }, [maxStepReached, data.orgId]);
 
-  // ─── Fix 4: refresh data when admin tabs back (Throttled) ─────────
-  const lastRefreshRef = typeof window !== 'undefined' ? { current: Date.now() } : { current: 0 };
+  const lastRefreshRef = useRef(0);
 
   const refreshData = useCallback(async () => {
-    // Throttle: don't refresh more than once every 10 seconds on focus
-    if (Date.now() - lastRefreshRef.current < 10000) return;
-    lastRefreshRef.current = Date.now();
+    const now = Date.now();
+    if (now - lastRefreshRef.current < 10000) return;
+    lastRefreshRef.current = now;
 
     try {
       const fresh = await getOnboardingProgress();
@@ -113,16 +104,13 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
     return () => window.removeEventListener('focus', handleFocus);
   }, [refreshData]);
 
-  const canGoDashboard = !!data.academicYearId && data.hasOrg;
   const progressPct = Math.round((completedSteps.size / STEPS.length) * 100);
 
   const markComplete = useCallback(
-    (step: number, updatedData?: Partial<WizardData>) => {
+    (step: number) => {
       setCompletedSteps((prev) => new Set([...prev, step]));
-      if (updatedData) setData((prev) => ({ ...prev, ...updatedData }));
       if (step === 1) setPhaseMsg(PHASE_MESSAGES[1]);
-      else if (step === 3) setPhaseMsg(PHASE_MESSAGES[3]);
-      else if (step === 6) setPhaseMsg(PHASE_MESSAGES[6]);
+      else if (step === 4) setPhaseMsg(PHASE_MESSAGES[4]);
     },
     []
   );
@@ -134,8 +122,8 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
     if (step > maxStepReached) setMaxStepReached(step);
   }
 
-  function advance(updatedData?: Partial<WizardData>) {
-    markComplete(currentStep, updatedData);
+  function advance() {
+    markComplete(currentStep);
     if (currentStep < STEPS.length - 1) {
       goToStep((currentStep + 1) as StepId);
     } else {
@@ -161,24 +149,6 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
   };
 
   const STEP_CONFIG = [
-    {
-      icon: Building2,
-      title: 'Organization Setup',
-      description: "Configure your institution's name, logo, contact details and other basic information in our core settings.",
-      fields: [{ label: 'Name' }, { label: 'Type' }, { label: 'Logo' }, { label: 'Contact Info' }],
-      href: '/dashboard/settings',
-      linkLabel: 'Go to General Settings',
-      countLabel: 'organization details',
-    },
-    {
-      icon: CalendarDays,
-      title: 'Academic Year',
-      description: 'Define your current session and dates. This is used to organize all your data, fees and reports.',
-      fields: [{ label: 'Session Name' }, { label: 'Start Date' }, { label: 'End Date' }, { label: 'Type' }],
-      href: '/dashboard/settings',
-      linkLabel: 'Setup in Configurations',
-      countLabel: 'academic year',
-    },
     {
       icon: ListOrdered,
       title: `Create ${terms.grades}`,
@@ -253,7 +223,7 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
     {
       icon: Layout,
       title: 'Fee Categories',
-      description: `Define fee types like tuition, exam, sports, etc.`,
+      description: 'Define fee types like tuition, exam, sports, etc.',
       fields: [{ label: 'Category Name' }, { label: 'Description' }],
       href: '/dashboard/fees',
       linkLabel: 'Go to Fees',
@@ -284,16 +254,13 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
 
   const stepCfg = STEP_CONFIG[currentStep];
   const stepDef = STEPS[currentStep];
-  const isLastStep = currentStep === STEPS.length - 1;
-
   return (
-    <div className="flex flex-col md:flex-row h-auto rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+    <div className="flex flex-col md:flex-row h-auto rounded-2xl border border-border bg-card overflow-hidden shadow-sm max-w-7xl mx-auto w-full">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex md:flex-col w-64 shrink-0">
         <StepsSidebar
           currentStep={currentStep}
           completedSteps={completedSteps}
-          canGoDashboard={canGoDashboard}
           onStepClick={goToStep}
           maxStepReached={maxStepReached}
         />
@@ -319,7 +286,6 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
                 <StepsSidebar
                   currentStep={currentStep}
                   completedSteps={completedSteps}
-                  canGoDashboard={canGoDashboard}
                   onStepClick={goToStep}
                   maxStepReached={maxStepReached}
                 />
@@ -355,17 +321,14 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
             <div className="md:hidden w-20">
               <Progress value={progressPct} className="h-1.5" />
             </div>
-            {canGoDashboard && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-                className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground h-7 px-2"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                Skip to Dashboard
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/dashboard')}
+              className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground h-7 px-2"
+            >
+              Skip to Dashboard
+            </Button>
           </div>
         </div>
 
@@ -388,50 +351,20 @@ export default function OnboardingWizard({ initialData, startStep }: Props) {
                 transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                 className="flex-1 flex flex-col"
               >
-                {currentStep === 1 && !data.academicYearId ? (
-                  <div className="flex flex-col gap-6">
-                    <div className="flex items-start gap-4">
-                      <div className="mt-0.5 w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ring-1 bg-primary/5 ring-primary/15">
-                        <CalendarDays className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h2 className="text-[15px] font-semibold tracking-tight text-foreground leading-snug">
-                          Setup Academic Year
-                        </h2>
-                        <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                          Define your current session dates to organize data, fees, and reports.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-1">
-                      <AcademicYearForm
-                        organizationId={data.orgId}
-                        onSuccess={async () => {
-                          await refreshData();
-                          advance();
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <GuideStep
-                    icon={<stepCfg.icon className="w-5 h-5 text-primary" />}
-                    title={currentStep === 1 && data.academicYearId ? 'Academic Year Added' : stepCfg.title}
-                    description={stepCfg.description}
-                    fields={[...stepCfg.fields]}
-                    href={stepCfg.href}
-                    linkLabel={stepCfg.linkLabel}
-                    count={getCount(currentStep, data)}
-                    countLabel={stepCfg.countLabel}
-                    optional={'optional' in stepCfg ? stepCfg.optional : undefined}
-                    onRefresh={refreshData}
-                    onContinue={() =>
-                      isLastStep ? router.push('/dashboard') : advance()
-                    }
-                    onSkip={'skippable' in stepCfg ? skip : undefined}
-                  />
-                )}
+                <GuideStep
+                  icon={<stepCfg.icon className="w-5 h-5 text-primary" />}
+                  title={stepCfg.title}
+                  description={stepCfg.description}
+                  fields={[...stepCfg.fields]}
+                  href={stepCfg.href}
+                  linkLabel={stepCfg.linkLabel}
+                  count={getCount(currentStep, data)}
+                  countLabel={stepCfg.countLabel}
+                  optional={'optional' in stepCfg ? stepCfg.optional : undefined}
+                  onRefresh={refreshData}
+                  onContinue={advance}
+                  onSkip={'skippable' in stepCfg ? skip : undefined}
+                />
               </motion.div>
             </AnimatePresence>
           </div>

@@ -24,6 +24,7 @@ import {
   CardDescription,
   CardTitle,
 } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useTerminology } from '@/context/terminology';
 
 // ---------------------------------------------------------------------------
@@ -329,20 +330,16 @@ export default function AdminRecentActivity({
             </div>
 
             {filteredActivities.length === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 py-12 px-6 text-center animate-in fade-in zoom-in duration-500">
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center border border-border/50 shadow-inner">
-                  <Activity className="w-8 h-8 text-muted-foreground/50" />
-                </div>
-                <div className="max-w-[280px]">
-                  <p className="text-base font-semibold text-foreground tracking-tight">
-                    {activities.length === 0 ? "No activities yet" : "No matching activities"}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                    {activities.length === 0
-                      ? "Activities like payments, attendance, and notices will appear here automatically as you use the system."
-                      : "No recent activities match your current filter. Try selecting a different category."}
-                  </p>
-                </div>
+              <div className="flex-1 flex flex-col items-center justify-center" style={{ minHeight: 'max(100%,380px)' }}>
+                <EmptyState
+                  title={activities.length === 0 ? "No activities yet" : "No matching activities"}
+                  description={activities.length === 0
+                    ? "Activities will appear here as you use the system."
+                    : "No recent activities match your current filter."}
+                  image="/activity-emptystate.svg"
+                  compact
+                  className="border-none p-6"
+                />
               </div>
             )}
           </div>

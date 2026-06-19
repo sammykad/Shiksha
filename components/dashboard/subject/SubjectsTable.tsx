@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Subject } from '@/generated/prisma/client';
 import { deleteSubject, importCSVSubjects } from '@/lib/data/subjects/subject-action';
+import { useRouter } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import {
   AlertDialog,
@@ -42,7 +43,12 @@ interface SubjectsClientProps {
 }
 
 export function SubjectsTable({ initialSubjects }: SubjectsClientProps) {
+  const router = useRouter();
   const [subjects, setSubjects] = useState(initialSubjects);
+
+  useEffect(() => {
+    setSubjects(initialSubjects);
+  }, [initialSubjects]);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -96,9 +102,7 @@ export function SubjectsTable({ initialSubjects }: SubjectsClientProps) {
       const result = await importCSVSubjects(rows);
       if (result.success) {
         toast.success(result.message);
-        // We trigger a refresh or update local state
-        // Since it's a client component with state, we might want to fetch again or just refresh the page
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error(result.message);
       }
@@ -205,6 +209,7 @@ export function SubjectsTable({ initialSubjects }: SubjectsClientProps) {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <Button
+                            variant={'destructive'}
                             onClick={() => handleSubjectDeleted(subject.id)}
                           >
                             Delete Subject
