@@ -68,6 +68,12 @@ enum SubscriptionPaymentStatus {
   CANCELLED
 }
 
+enum PaymentProvider {
+  MANUAL
+  PHONEPE
+  EASEBUZZ
+}
+
 enum MembershipStatus {
   ACTIVE
   INVITED
@@ -246,7 +252,7 @@ model Organization {
   website      String?
 
   isActive         Boolean           @default(true)
-  walletBalance    Int               @default(10000) // Paise  (100?)
+  walletBalance    Int               @default(10000) // Paise (₹100 onboarding credit)
   organizationType OrganizationType?
 
   notices              Notice[]
@@ -435,7 +441,7 @@ model SubscriptionPayment {
   invoiceId      String?
   invoice        Invoice?     @relation(fields: [invoiceId], references: [id])
 
-  provider          String
+  provider          PaymentProvider
   providerOrderId   String?
   providerPaymentId String?
   amount            Int

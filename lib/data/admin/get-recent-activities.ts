@@ -1,7 +1,7 @@
 'use server';
 
 import prisma from '@/lib/db';
-import { getCurrentAcademicYearId } from '@/lib/academicYear';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { getOrganizationId } from '@/lib/organization';
 import { getRelativeTime } from '@/lib/utils';
 import { ActivityItem } from '@/components/dashboard/admin/RecentActivity';
@@ -20,7 +20,7 @@ const severityToPriority = (s?: string): ActivityItem['priority'] => {
 export const getRecentAdminActivities = async (): Promise<ActivityItem[]> => {
   try {
     const [academicYearId, organizationId] = await Promise.all([
-      getCurrentAcademicYearId(),
+      getActiveAcademicYearId(),
       getOrganizationId(),
     ]);
 

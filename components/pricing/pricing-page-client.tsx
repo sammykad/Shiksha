@@ -31,6 +31,7 @@ import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CallToAction } from "@/components/website/shared/CallToAction"
+import { BillingCycle } from '@/generated/prisma/enums'
 import {
   ADD_ONS,
   ANNUAL_DISCOUNT,
@@ -42,16 +43,13 @@ import {
   TRUSTED_SCHOOLS,
   formatINR,
   formatStudentLabel,
-  getEffectivePrice,
-  type BillingCycle,
   type CellValue,
   type ComparisonRow,
   type Plan,
   type StudentStep,
 } from "@/lib/pricing-data"
+import { getEffectiveMonthlyPrice } from "@/lib/constants/pricing"
 import { cn } from "@/lib/utils"
-
-const PLAN_HEADERS = ["Starter", "Growth", "Scale"] as const
 
 const addonMeta = {
   notifications: {
@@ -132,7 +130,7 @@ function PricingHero() {
 }
 
 function PlansGrid() {
-  const [billing, setBilling] = useState<BillingCycle>("monthly")
+  const [billing, setBilling] = useState<BillingCycle>(BillingCycle.MONTHLY)
   const [studentCount, setStudentCount] = useState<StudentStep>(STUDENT_STEPS[2])
   const [showAllFeatures, setShowAllFeatures] = useState(false)
 
@@ -211,7 +209,7 @@ function BillingToggle({ value, onChange }: BillingToggleProps) {
   const discountPct = Math.round(ANNUAL_DISCOUNT * 100)
 
   return (
-    <Tabs value={value} onValueChange={(v) => onChange(v as BillingCycle)}>
+    <Tabs value={value === BillingCycle.ANNUAL ? "annual" : "monthly"} onValueChange={(v) => onChange(v === "annual" ? BillingCycle.ANNUAL : BillingCycle.MONTHLY)}>
       <TabsList className="h-10 rounded-full border border-border bg-muted/50 px-1">
         <TabsTrigger
           value="monthly"
@@ -321,7 +319,7 @@ function PlanCard({
   const isLimitedOffer = plan.id === "starter"
   const effectivePrice =
     plan.pricePerStudent !== undefined
-      ? getEffectivePrice(plan.pricePerStudent, billing)
+      ? getEffectiveMonthlyPrice(plan.pricePerStudent, billing)
       : null
 
   const visibleFeatures = showAllFeatures
@@ -367,7 +365,7 @@ function PlanCard({
               <div className="flex flex-col items-start">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-4xl font-semibold tracking-tight tabular-nums">
-                    ₹{effectivePrice}
+                    ₹{Math.round(effectivePrice ?? 0)}
                   </span>
                   <span className="text-sm text-muted-foreground">/student/mo</span>
                 </div>
@@ -397,15 +395,15 @@ function PlanCard({
         {plan.pricePerStudent && plan.pricePerStudent > 0 && studentCount < 5000 && (
           <div className="space-y-1 pt-2 pb-1">
             <p className="text-xs font-medium text-primary">
-              Estimated {billing === "annual" ? "annual" : "monthly"} bill:{" "}
+              Estimated {billing === BillingCycle.ANNUAL ? "annual" : "monthly"} bill:{" "}
               {formatINR(
                 studentCount *
                 (effectivePrice ?? 0) *
-                (billing === "annual" ? 12 : 1)
+                (billing === BillingCycle.ANNUAL ? 12 : 1)
               )}{" "}
               for {formatStudentLabel(studentCount)}
             </p>
-            {billing === "annual" && (
+            {billing === BillingCycle.ANNUAL && (
               <p className="text-xs text-emerald-600 dark:text-emerald-400">
                 You save{" "}
                 {formatINR(
@@ -585,9 +583,9 @@ function FeatureTable() {
                 <th className="w-[38%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Feature
                 </th>
-                {PLAN_HEADERS.map((header, i) => (
+                {PLANS.map((plan, i) => (
                   <th
-                    key={header}
+                    key={plan.id}
                     className={cn(
                       "whitespace-nowrap px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em]",
                       i === 1
@@ -595,7 +593,7 @@ function FeatureTable() {
                         : "text-muted-foreground"
                     )}
                   >
-                    {header}
+                    {plan.name}
                     {i === 1 && (
                       <Badge
                         variant="secondary"

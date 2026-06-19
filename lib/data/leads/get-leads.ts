@@ -1,12 +1,12 @@
 'use server';
 
-import { getCurrentAcademicYearId } from '@/lib/academicYear';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 
 export async function getLeads() {
   const organizationId = await getOrganizationId();
-  const academicYearId = await getCurrentAcademicYearId();
+  const academicYearId = await getActiveAcademicYearId();
 
   const leads = await prisma.lead.findMany({
     where: {

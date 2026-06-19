@@ -146,55 +146,7 @@ export type Feature =
   | 'multi-tenant' | 'sso'
 
 // ─────────────────────────────────────────────────────────────
-// 4. PLAN / SUBSCRIPTION TIERS
-// ─────────────────────────────────────────────────────────────
-
-export type Plan = 'free' | 'standard' | 'premium' | 'enterprise'
-
-export const PLAN_HIERARCHY: Readonly<Record<Plan, number>> = {
-  free: 1, standard: 2, premium: 3, enterprise: 4,
-} as const
-
-export const PLAN_META: Readonly<Record<Plan, { label: string; price: number }>> = {
-  free: { label: 'Free', price: 0 },
-  standard: { label: 'Standard', price: 999 },
-  premium: { label: 'Premium', price: 2499 },
-  enterprise: { label: 'Enterprise', price: 0 }, // custom pricing
-} as const
-
-export const PLAN_FEATURES: Readonly<Record<Plan, readonly Feature[]>> = {
-  free: [
-    'email-notifications', 'exam-hall-tickets',
-  ],
-  standard: [
-    'email-notifications', 'sms-notifications',
-    'online-payment', 'ai-attendance',
-    'exam-hall-tickets', 'report-cards', 'bulk-import',
-  ],
-  premium: [
-    'email-notifications', 'sms-notifications', 'whatsapp-notifications', 'push-notifications',
-    'online-payment',
-    'ai-agent', 'ai-reports', 'ai-attendance',
-    'bus-tracking', 'biometric-attendance',
-    'certificate-generator',
-    'exam-hall-tickets', 'report-cards', 'bulk-import',
-    'api-access',
-  ],
-  enterprise: [
-    'email-notifications', 'sms-notifications', 'whatsapp-notifications', 'push-notifications',
-    'online-payment',
-    'ai-agent', 'ai-reports', 'ai-attendance',
-    'bus-tracking', 'biometric-attendance',
-    'certificate-generator',
-    'exam-hall-tickets', 'report-cards', 'bulk-import',
-    'api-access',
-    'custom-domain', 'white-label',
-    'multi-tenant', 'sso',
-  ],
-} as const
-
-// ─────────────────────────────────────────────────────────────
-// 5. REVERIFICATION
+// 4. REVERIFICATION
 // ─────────────────────────────────────────────────────────────
 
 export type ReverificationLevel = 'first_factor' | 'second_factor' | 'multi_factor'
@@ -217,7 +169,7 @@ export const REVERIFICATION_LEVELS: Readonly<Record<ReverificationLevel, { minFa
 } as const
 
 // ─────────────────────────────────────────────────────────────
-// 6. AUTH CONTEXT
+// 5. AUTH CONTEXT
 // ─────────────────────────────────────────────────────────────
 
 export interface AuthContext {
@@ -228,28 +180,26 @@ export interface AuthContext {
   orgSlug: string | null
   permissions: Permission[]
   features: Feature[]
-  plan: Plan
   factorVerificationCount: number
   lastVerifiedAt: number | null
   tokenType: 'session' | 'api_key' | 'oauth_token' | 'm2m_token'
 }
 
 // ─────────────────────────────────────────────────────────────
-// 7. HAS() TYPES
+// 6. HAS() TYPES
 // ─────────────────────────────────────────────────────────────
 
 export interface HasParams {
   role?: Role | `min:${Role}`
   permission?: Permission
   feature?: Feature
-  plan?: Plan
   reverification?: ReverificationConfig
 }
 
 export type HasFunction = (params: HasParams) => boolean
 
 // ─────────────────────────────────────────────────────────────
-// 8. createHas() — CORE ENGINE
+// 7. createHas() — CORE ENGINE
 // ─────────────────────────────────────────────────────────────
 
 export function createHas(ctx: Partial<AuthContext>): HasFunction {
@@ -257,7 +207,7 @@ export function createHas(ctx: Partial<AuthContext>): HasFunction {
     // Machine tokens are not allowed for user/org access control
     if (ctx.tokenType && ctx.tokenType !== 'session') return false
 
-    const { role, permission, feature, plan, reverification } = params
+    const { role, permission, feature, reverification } = params
     let result = true
 
     // Role check
@@ -283,18 +233,12 @@ export function createHas(ctx: Partial<AuthContext>): HasFunction {
       }
     }
 
-    // Feature check — use ctx.features if set, otherwise derive from plan
+    // Feature check — use ctx.features if set
     if (feature !== undefined) {
-      const features = ctx.features?.length ? ctx.features : PLAN_FEATURES[ctx.plan ?? 'free']
-      result = result && (features as readonly string[]).includes(feature)
-    }
-
-    // Plan check — hierarchical (premium satisfies standard check)
-    if (plan !== undefined) {
-      if (!ctx.plan) {
+      if (!ctx.features || !ctx.features.length) {
         result = false
       } else {
-        result = result && (PLAN_HIERARCHY[ctx.plan] ?? 0) >= (PLAN_HIERARCHY[plan] ?? 0)
+        result = result && (ctx.features as readonly string[]).includes(feature)
       }
     }
 
@@ -326,7 +270,7 @@ export function createHas(ctx: Partial<AuthContext>): HasFunction {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 9. createTypedHas() — ERGONOMIC WRAPPER
+// 8. createTypedHas() — ERGONOMIC WRAPPER
 // ─────────────────────────────────────────────────────────────
 
 export function createTypedHas(ctx: Partial<AuthContext>) {
@@ -341,8 +285,6 @@ export function createTypedHas(ctx: Partial<AuthContext>) {
     hasPermission: (permission: Permission) => has({ permission }),
     /** Check feature flag */
     hasFeature: (feature: Feature) => has({ feature }),
-    /** Check plan tier (hierarchical) */
-    hasPlan: (plan: Plan) => has({ plan }),
     /** True if user has ANY of the given roles */
     hasAnyRole: (...roles: Role[]) => roles.some(r => has({ role: r })),
     /** True if user has ALL of the given permissions */
@@ -353,7 +295,7 @@ export function createTypedHas(ctx: Partial<AuthContext>) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 10. requireAuth() / checkAuth() — SERVER GUARDS
+// 9. requireAuth() / checkAuth() — SERVER GUARDS
 // ─────────────────────────────────────────────────────────────
 
 /** Throws if the check fails. Use in server actions. */
@@ -362,7 +304,7 @@ export function requireAuth(ctx: Partial<AuthContext>, params: HasParams): void 
     throw new Error(
       `[permissions] Authorization failed.\n` +
       `Required: ${JSON.stringify(params)}\n` +
-      `Context: role=${ctx.role}, plan=${ctx.plan}`
+      `Context: role=${ctx.role}`
     )
   }
 }
@@ -378,18 +320,13 @@ export function checkAuth(
   if (params.role) reasons.push(`role: need "${params.role}", have "${ctx.role}"`)
   if (params.permission) reasons.push(`permission: "${params.permission}" not granted`)
   if (params.feature) reasons.push(`feature: "${params.feature}" not enabled`)
-  if (params.plan) {
-    const have = PLAN_HIERARCHY[ctx.plan ?? 'free']
-    const need = PLAN_HIERARCHY[params.plan]
-    if (have < need) reasons.push(`plan: "${ctx.plan}" < "${params.plan}"`)
-  }
   if (params.reverification) reasons.push('reverification required')
 
   return { ok: false, reason: reasons.join('; ') || 'unauthorized' }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 11. createAuthContext() — BUILD FROM MINIMAL INPUT
+// 10. createAuthContext() — BUILD FROM MINIMAL INPUT
 // ─────────────────────────────────────────────────────────────
 
 export function createAuthContext(options: {
@@ -397,11 +334,9 @@ export function createAuthContext(options: {
   role: Role | null
   orgId?: string | null
   orgSlug?: string | null
-  plan?: Plan
   features?: Feature[]
   permissions?: Permission[]
 }): AuthContext {
-  const plan = options.plan ?? 'free'
   return {
     userId: options.userId,
     sessionId: null,
@@ -409,8 +344,7 @@ export function createAuthContext(options: {
     orgId: options.orgId ?? null,
     orgSlug: options.orgSlug ?? null,
     permissions: options.permissions ?? [],
-    features: options.features ?? (PLAN_FEATURES[plan] as Feature[]),
-    plan,
+    features: options.features ?? [],
     factorVerificationCount: 1,
     lastVerifiedAt: Date.now(),
     tokenType: 'session',

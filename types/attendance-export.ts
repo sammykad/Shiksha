@@ -1,3 +1,5 @@
+import type { AttendanceStatus, CalendarEventType, OrganizationType } from "@/generated/prisma/enums";
+
 export interface Organization {
     id: string;
     name: string;
@@ -6,7 +8,7 @@ export interface Organization {
     contactEmail?: string | null;
     contactPhone?: string | null;
     website?: string | null;
-    organizationType?: 'SCHOOL' | 'COLLEGE' | 'COACHING_CLASS' | 'UNIVERSITY' | 'KINDERGARTEN' | 'TRAINING_INSTITUTE' | 'OTHER' | null;
+    organizationType?: OrganizationType | null;
     plan?: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE' | null;
     planStartedAt?: Date | null;
     planExpiresAt?: Date | null;
@@ -19,7 +21,7 @@ export interface Organization {
 export interface StudentAttendance {
     id: string;
     date: Date;
-    status: 'PRESENT' | 'ABSENT' | 'LATE';
+    status: AttendanceStatus;
     note?: string | null;
     recordedBy: string;
     studentId: string;
@@ -35,7 +37,7 @@ export interface AcademicCalendar {
     name: string;
     startDate: Date;
     endDate: Date;
-    type: 'PLANNED' | 'EMERGENCY' | 'INSTITUTION_SPECIFIC';
+    type: CalendarEventType;
     reason?: string | null;
     isRecurring: boolean;
     createdBy: string;

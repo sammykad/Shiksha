@@ -59,7 +59,6 @@ export function AcceptInvitation({
             setAccepted(true);
             window.setTimeout(() => {
                 router.push(afterAcceptUrl);
-                router.refresh();
             }, 900);
         } catch {
             toast.error("Something went wrong.");
@@ -142,7 +141,6 @@ export function SwitchInvitationAccountButton({
                 }
 
                 router.push("/sign-in");
-                router.refresh();
             } catch {
                 toast.error("Could not switch accounts. Please try again.");
             }

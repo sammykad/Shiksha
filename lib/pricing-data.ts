@@ -1,6 +1,7 @@
-export type BillingCycle = "monthly" | "annual"
+import { PRICING_TIERS, ANNUAL_DISCOUNT_PERCENT, getDiscountPercent, formatPricingAmount, getAnnualPrice, getEffectiveMonthlyPrice } from "@/lib/constants/pricing"
+import { BillingCycle } from '@/generated/prisma/enums'
 
-export const ANNUAL_DISCOUNT = 0.2
+export const ANNUAL_DISCOUNT = ANNUAL_DISCOUNT_PERCENT / 100
 
 export const STUDENT_STEPS = [50, 100, 300, 500, 1000, 2000, 5000, 10000] as const
 export type StudentStep = (typeof STUDENT_STEPS)[number]
@@ -14,13 +15,16 @@ export interface Plan {
   id: string
   name: string
   badge?: string
+  standardPrice?: number
   pricePerStudent?: number
+  discountPercent?: number
   description: string
   ctaLabel: string
   ctaVariant: "default" | "outline"
   featured?: boolean
   features: PlanFeature[]
   footnote?: string
+  studentLimit?: number
 }
 
 const SHARED_FEATURES: PlanFeature[] = [
@@ -57,45 +61,20 @@ const SHARED_FEATURES: PlanFeature[] = [
   { label: "Future core modules — always included", included: true },
 ]
 
-export const PLANS: Plan[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    badge: "Early Bird Offer",
-    pricePerStudent: 29,
-    description:
-      "Start with every core module included. First 50 institutions can lock this launch offer.",
-    ctaLabel: "Start free trial",
-    ctaVariant: "default",
-    footnote: "Limited to first 50 institutions.",
-    features: SHARED_FEATURES,
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    badge: "Early Bird Offer",
-    pricePerStudent: 49,
-    description:
-      "For growing institutions that need automation, analytics, and stronger operations.",
-    ctaLabel: "Start free trial",
-    ctaVariant: "default",
-    featured: true,
-    footnote: "Best fit around 500 students.",
-    features: SHARED_FEATURES,
-  },
-  {
-    id: "scale",
-    name: "Scale",
-    badge: "Early Bird Offer",
-    pricePerStudent: 21,
-    description:
-      "For colleges, trusts, coaching chains, and large multi-branch groups.",
-    ctaLabel: "Contact sales",
-    ctaVariant: "outline",
-    footnote: "For 1500+ students. Lowest per-student rate.",
-    features: SHARED_FEATURES,
-  },
-]
+export const PLANS: Plan[] = PRICING_TIERS.map((tier, i) => ({
+  id: tier.id,
+  name: tier.name,
+  badge: "Early Bird Offer",
+  standardPrice: tier.standardPrice,
+  pricePerStudent: tier.currentOfferPrice,
+  discountPercent: getDiscountPercent(tier.standardPrice, tier.currentOfferPrice),
+  description: tier.description,
+  ctaLabel: i === 2 ? "Contact sales" : "Start free trial",
+  ctaVariant: (i === 2 ? "outline" : "default") as "default" | "outline",
+  featured: i === 1,
+  studentLimit: tier.studentLimit,
+  features: SHARED_FEATURES,
+}))
 
 export interface AddOn {
   id: string
@@ -278,16 +257,12 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "AI summaries highlight what needs attention",
         note: "Monthly fee, attendance and operations summaries help management act earlier.",
-        starter: "Basic",
-        growth: true,
-        scale: true,
+        ...included,
       },
       {
         label: "Low attendance and fee risk are easier to spot",
         note: "See warning signs before they become dropout, complaint or collection problems.",
-        starter: "Basic",
-        growth: true,
-        scale: true,
+        ...included,
       },
       {
         label: "One login can manage multiple institutions",
@@ -297,9 +272,7 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "Multi-branch reporting for education groups",
         note: "Compare branches on fee collection, attendance and admissions from one command view.",
-        starter: false,
-        growth: false,
-        scale: true,
+        ...included,
       },
     ],
   },
@@ -446,7 +419,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: "faq-9",
     question: "How is Shiksha.cloud cheaper than buying separate tools?",
     answer:
-      "Most schools pay for fee software (₹500/mo), attendance (₹300/mo), CRM (₹400/mo), exam management (₹300/mo), and a communication tool (₹400/mo) — totalling ₹2,100+/mo. Shiksha.cloud replaces all of them starting at ₹999/mo. No integration costs, no multiple logins, no separate vendor support.",
+      `Most schools pay for fee software (₹500/mo), attendance (₹300/mo), CRM (₹400/mo), exam management (₹300/mo), and a communication tool (₹400/mo) — totalling ₹2,100+/mo. Shiksha.cloud replaces all of them starting at ${formatPricingAmount(PRICING_TIERS[0].currentOfferPrice)}/student/mo (MRP ${formatPricingAmount(PRICING_TIERS[0].standardPrice)}/student/mo). No integration costs, no multiple logins, no separate vendor support.`,
   },
   {
     id: "faq-10",
@@ -485,15 +458,6 @@ export const TOTAL_STANDALONE_COST = COST_COMPARISON_ITEMS.reduce(
   0
 )
 
-export function getEffectivePrice(
-  pricePerStudent: number,
-  billing: BillingCycle
-): number {
-  return billing === "annual"
-    ? Math.round(pricePerStudent * (1 - ANNUAL_DISCOUNT))
-    : pricePerStudent
-}
-
 export function formatINR(amount: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -503,7 +467,7 @@ export function formatINR(amount: number): string {
 }
 
 export function formatStudentLabel(count: number): string {
-  return count >= 1000 ? `${count / 1000}K students` : `${count} students`
+  return `${count.toLocaleString("en-IN")} students`
 }
 
 export function computeMonthlyTotal(
@@ -512,6 +476,6 @@ export function computeMonthlyTotal(
   billing: BillingCycle
 ): string {
   if (count >= 5000) return "Contact us for organization pricing"
-  const price = getEffectivePrice(pricePerStudent, billing)
+  const price = getEffectiveMonthlyPrice(pricePerStudent, billing)
   return `~ ${formatINR(count * price)} / month for ${formatStudentLabel(count)}`
 }

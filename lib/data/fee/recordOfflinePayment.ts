@@ -3,7 +3,7 @@
 import prisma from '@/lib/db';
 import { FeeStatus, PaymentStatus } from '@/generated/prisma/enums';
 import { getOrganizationId } from '@/lib/organization';
-import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import { offlinePaymentFormData, offlinePaymentSchema } from '@/lib/schemas';
 import { getCurrentUserId } from '@/lib/user';
 import { formatCurrencyIN } from '@/lib/utils';
@@ -16,7 +16,7 @@ import { getFeeBalance, syncFeeBalance } from './fee-balance';
 export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
   const userId = await getCurrentUserId();
   const organizationId = await getOrganizationId();
-  const academicYearId = await getActiveAcademicYearId();
+  const academicYearId = await getCurrentAcademicYearId();
 
   const validatedData = offlinePaymentSchema.parse(data);
 

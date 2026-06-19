@@ -3,7 +3,7 @@
 
 import prisma from "@/lib/db";
 import { getOrganizationId } from "@/lib/organization";
-import { getCurrentAcademicYearId } from "@/lib/academicYear";
+import { getActiveAcademicYearId } from "@/lib/academicYear";
 import { Prisma } from "@/generated/prisma/client";
 import { getFeeBalance } from "@/lib/data/fee/fee-balance";
 
@@ -125,7 +125,7 @@ export const getStudentReport = async ({
 }: GetStudentReportOptions) => {
 
   const organizationId = await getOrganizationId();
-  const academicYearId = providedAcademicYearId || await getCurrentAcademicYearId();
+  const academicYearId = providedAcademicYearId || await getActiveAcademicYearId();
 
   // Base queries that are always needed
   const organizationQuery = prisma.organization.findUnique({

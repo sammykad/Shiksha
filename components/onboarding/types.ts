@@ -1,3 +1,5 @@
+import type { OrganizationType } from "@/generated/prisma/enums";
+
 export interface WizardGrade {
   id: string;
   name: string;
@@ -7,14 +9,7 @@ export interface WizardGrade {
 export interface WizardData {
   orgId: string;
   orgName: string;
-  orgType?:
-  | 'SCHOOL'
-  | 'COLLEGE'
-  | 'COACHING_CLASS'
-  | 'UNIVERSITY'
-  | 'KINDERGARTEN'
-  | 'TRAINING_INSTITUTE'
-  | 'OTHER';
+  orgType?: OrganizationType;
   orgEmail?: string;
   orgPhone?: string;
   hasOrg: boolean;
@@ -137,7 +132,7 @@ export const STEPS: StepDefinition[] = [
 ];
 
 export const PHASE_MESSAGES: Record<number, string> = {
-  1: "Great! Your foundation is set. Now let's build the school structure—grades and sections.",
+  1: "Foundation complete! Your dashboard is now accessible. You can head to the dashboard or continue setting up grades, sections, and more.",
   3: "Structure ready! Now let's add your people—students, parents, and documents.",
   6: "Excellent! People are in. Now let's configure the academic side—teachers, subjects, and fees.",
 };

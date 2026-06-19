@@ -158,7 +158,7 @@ Billing is **per active student per month**. Parents, teachers, and admins are a
 
 | Concept | Value |
 |---|---|
-| **Standard price (MRP)** | ₹79/student/month — defined in `lib/constants/pricing.ts:STANDARD_PRICE_PER_STUDENT` |
+| **Standard price (MRP)** | ₹79/student/month — defined in `lib/constants/pricing.ts:BASE_MONTHLY_PRICE_PER_STUDENT` |
 | **Current offer** | School Opening Season discount — prices vary by tier; defined in `PRICING_TIERS[].currentOfferPrice` |
 | **Annual discount** | 20% off monthly rate |
 

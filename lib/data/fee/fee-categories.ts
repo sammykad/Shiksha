@@ -1,10 +1,10 @@
-import { getCurrentAcademicYearId } from '@/lib/academicYear';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 
 export async function getFeeCategories() {
   const organizationId = await getOrganizationId();
-  const academicYearId = await getCurrentAcademicYearId();
+  const academicYearId = await getActiveAcademicYearId();
   try {
     const categories = await prisma.feeCategory.findMany({
       where: {

@@ -1,6 +1,6 @@
 "use server"
 
-import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import { createNoticeFormData, createNoticeSchema } from '@/lib/schemas';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
@@ -15,7 +15,7 @@ export const createNotice = async (data: createNoticeFormData) => {
       getCurrentUser(),
     ]);
 
-    const academicYearId = await getActiveAcademicYearId();
+    const academicYearId = await getCurrentAcademicYearId();
 
     const notice = await prisma.notice.create({
       data: {

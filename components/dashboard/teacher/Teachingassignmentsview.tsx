@@ -6,11 +6,10 @@ import { useTerminology } from "@/context/terminology";
 import { BookOpen, ChevronDown, GraduationCap, Users, Search, LayoutGrid } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn, getInitials, capitalizeName } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
+import { AssignmentStatus } from "@/generated/prisma/enums";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type AssignmentStatus = "PENDING" | "ASSIGNED" | "COMPLETED" | "INACTIVE";
 
 interface Assignment {
   id: string;
