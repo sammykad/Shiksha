@@ -154,8 +154,8 @@ export function LeadActivityTimeline({
   };
 
   return (
-    <Card className={cn("w-full flex flex-col", className)}>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className={cn("w-full flex min-h-0 flex-col", className)}>
+      <CardHeader className="flex shrink-0 flex-row items-center justify-between">
         <div>
           <CardTitle>
             Activity Timeline
@@ -219,8 +219,8 @@ export function LeadActivityTimeline({
               </p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col min-h-0">
-              <ScrollArea className="flex-1 h-full min-h-[300px] pr-4">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <ScrollArea className="h-full min-h-0 pr-4">
                 {filteredActivities.map((activity, index) => {
                   const isExpanded = expandedId === activity.id;
                   const colorClass =

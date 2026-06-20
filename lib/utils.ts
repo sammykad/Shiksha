@@ -478,6 +478,17 @@ export function normalizeSlug(value: string): string {
   return slug;
 }
 
+/**
+ * Parse a raw string of comma/semicolon/space-separated emails into a
+ * cleaned, lowercased, non-empty array.
+ */
+export function parseEmails(raw: string): string[] {
+  return raw
+    .split(/[\s,;]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function formatEnumLabel(value: string): string {
   return value
     .split("_")

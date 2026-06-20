@@ -19,6 +19,7 @@ import {
   Phone,
   Mail,
   MessageCircle,
+  Smartphone,
   Edit2,
   Trash2,
   Clock,
@@ -38,12 +39,14 @@ import {
   Save,
 } from 'lucide-react';
 import { Prisma } from '@/generated/prisma/client';
-import { formatDateIN, getInitials, capitalizeName } from '@/lib/utils';
+import { formatDateIN, getInitials, capitalizeName, cn } from '@/lib/utils';
 import { LeadActivityTimeline } from './lead-activity-timeline';
 import { AssignLeadDialog } from './assign-lead-dialog';
 import { deleteLead } from '@/lib/data/leads/delete-lead';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { WhatsApp } from '@/components/website/Icons';
+import { LeadCommunicationPreference } from '@/generated/prisma/enums';
 
 type LeadWithActivities = Prisma.LeadGetPayload<{
   include: {
@@ -79,6 +82,42 @@ type LeadWithActivities = Prisma.LeadGetPayload<{
 interface LeadDetailProps {
   lead: LeadWithActivities;
 }
+
+const PREFERENCE_CONFIG: Record<
+  LeadCommunicationPreference,
+  { label: string; icon: React.ReactNode; bgClass: string; textClass: string }
+> = {
+  [LeadCommunicationPreference.EMAIL]: {
+    label: 'Email',
+    icon: <Mail className="h-3.5 w-3.5" />,
+    bgClass: 'bg-rose-100 dark:bg-rose-950/50',
+    textClass: 'text-rose-700 dark:text-rose-300',
+  },
+  [LeadCommunicationPreference.SMS]: {
+    label: 'SMS',
+    icon: <Smartphone className="h-3.5 w-3.5" />,
+    bgClass: 'bg-blue-100 dark:bg-blue-950/50',
+    textClass: 'text-blue-700 dark:text-blue-300',
+  },
+  [LeadCommunicationPreference.WHATSAPP]: {
+    label: 'WhatsApp',
+    icon: <WhatsApp className="h-3.5 w-3.5" />,
+    bgClass: 'bg-green-100 dark:bg-green-950/50',
+    textClass: 'text-green-700 dark:text-green-300',
+  },
+  [LeadCommunicationPreference.PHONE_CALL]: {
+    label: 'Call',
+    icon: <Phone className="h-3.5 w-3.5" />,
+    bgClass: 'bg-indigo-100 dark:bg-indigo-950/50',
+    textClass: 'text-indigo-700 dark:text-indigo-300',
+  },
+  [LeadCommunicationPreference.NO_CONTACT]: {
+    label: 'No Contact',
+    icon: <AlertCircle className="h-3.5 w-3.5" />,
+    bgClass: 'bg-muted',
+    textClass: 'text-muted-foreground',
+  },
+};
 
 export default function LeadDetails({ lead }: LeadDetailProps) {
   const router = useRouter();
@@ -340,7 +379,7 @@ export default function LeadDetails({ lead }: LeadDetailProps) {
       </div>
 
       {/* Main Content — two columns at lg+ */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
 
         {/* Left column */}
         <div className="lg:col-span-8 flex flex-col gap-6">
@@ -486,7 +525,7 @@ export default function LeadDetails({ lead }: LeadDetailProps) {
           </Card>
 
           {/* Notes */}
-          <Card className="shadow-sm flex-1 flex flex-col">
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -501,12 +540,12 @@ export default function LeadDetails({ lead }: LeadDetailProps) {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="pb-4 flex-1 flex flex-col">
+            <CardContent className="pb-4">
               <Textarea
                 value={notes || ''}
                 onChange={(e) => handleNotesChange(e.target.value)}
                 placeholder="Add your notes here..."
-                className="resize-none flex-1 min-h-[96px]"
+                className="min-h-[180px] resize-none"
               />
               {notesChanged && (
                 <div className="flex items-center gap-2 text-xs text-orange-600 font-medium mt-2">
@@ -565,11 +604,50 @@ export default function LeadDetails({ lead }: LeadDetailProps) {
             </CardContent>
           </Card>
 
+          {/* Notification Preferences */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Notification Preferences</CardTitle>
+              <CardDescription>Preferred contact channels for this lead</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {lead.communicationPreference && lead.communicationPreference.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {lead.communicationPreference.map((pref) => {
+                    const config = PREFERENCE_CONFIG[pref];
+                    return (
+                      <Badge
+                        key={pref}
+                        variant="secondary"
+                        className={cn(
+                          'gap-1.5 px-2.5 py-1 font-medium border-0',
+                          config.bgClass,
+                          config.textClass
+                        )}
+                      >
+                        {config.icon}
+                        {config.label}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 border-2 border-dashed rounded-xl bg-gray-50">
+                  <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm font-medium">No preferences set</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Edit the lead to choose how to contact them
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Activity Timeline — self-contained Card */}
           <LeadActivityTimeline
             activities={lead.activities}
             leadId={lead.id}
-            className="flex-1"
+            className="h-[420px]"
           />
         </div>
       </div>

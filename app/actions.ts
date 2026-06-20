@@ -24,7 +24,7 @@ import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { redis } from '@/lib/redis';
 import { notify } from '@/lib/notifications/engine';
-import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { getActiveAcademicYearId, setActiveAcademicYearId } from '@/lib/academicYear';
 import { sortByNaturalText, toISTDate } from '@/lib/utils';
 import { SupportFormData } from '@/components/website/support/SupportPopup';
 import { DOCUMENT_TYPE_LABELS } from '@/types/document';
@@ -1090,7 +1090,7 @@ export async function createAcademicYear(data: AcademicYearFormData) {
       });
     }
 
-    await prisma.academicYear.create({
+    const createdYear = await prisma.academicYear.create({
       data: {
         ...validatedData,
         isCurrent: isActuallyCurrent,
@@ -1102,6 +1102,7 @@ export async function createAcademicYear(data: AcademicYearFormData) {
       },
     });
 
+    await setActiveAcademicYearId(createdYear.id);
     revalidatePath('/dashboard/settings');
     return { success: true };
   } catch (error) {
@@ -1214,6 +1215,10 @@ export async function updateAcademicYear(data: AcademicYearUpdateFormData) {
         isCurrent: validatedData.isCurrent,
       },
     });
+
+    if (validatedData.isCurrent) {
+      await setActiveAcademicYearId(validatedData.id);
+    }
 
     revalidatePath('/dashboard/settings');
 
@@ -1349,4 +1354,43 @@ export async function submitSupportForm(data: SupportFormData) {
   await redis.rpush('support-submissions', JSON.stringify(submission));
 
   return { success: true, submission };
+}
+
+/**
+ * Auto-create a default academic year (ANNUAL, April–March) for a brand-new
+ * organization during onboarding. Skips overlap checks since there are none.
+ */
+export async function createDefaultAcademicYear(organizationId: string) {
+  try {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed, 3 = April
+
+    const startYear = currentMonth >= 3 ? currentYear : currentYear - 1;
+    const endYear = startYear + 1;
+
+    const startDate = new Date(startYear, 3, 1);
+    const endDate = new Date(endYear, 2, 31);
+
+    const name = `${startYear}-${endYear.toString().slice(2)}`;
+
+    const createdYear = await prisma.academicYear.create({
+      data: {
+        name,
+        startDate,
+        endDate,
+        type: 'ANNUAL',
+        isCurrent: true,
+        organizationId,
+        createdBy: 'SYSTEM',
+      },
+    });
+
+    await setActiveAcademicYearId(createdYear.id);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to create default academic year:', error);
+    return { success: false, error: 'Failed to create default academic year.' };
+  }
 }

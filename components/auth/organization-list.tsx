@@ -65,7 +65,7 @@ export function OrganizationList({
     const router = useRouter();
     const { data: session } = authClient.useSession();
     const { data: activeOrg } = authClient.useActiveOrganization();
-    const { data: orgs } = authClient.useListOrganizations();
+    const { data: orgs, refetch: refetchOrgs } = authClient.useListOrganizations();
 
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [orgRoles, setOrgRoles] = useState<Record<string, string>>({});
@@ -131,10 +131,8 @@ export function OrganizationList({
                 toast.error("Failed to switch organization.");
                 return;
             }
-            fetchMemberships();
             if (afterSelectOrganizationUrl) {
                 router.push(afterSelectOrganizationUrl);
-                router.refresh();
             }
         } catch {
             toast.error("Something went wrong.");
@@ -170,6 +168,7 @@ export function OrganizationList({
             } else {
                 toast.success("Invitation accepted!");
                 setInvitations((current) => current.filter((invitation) => invitation.id !== invitationId));
+                await refetchOrgs();
                 router.refresh();
             }
         } catch {

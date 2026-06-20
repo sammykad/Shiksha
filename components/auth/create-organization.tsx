@@ -21,12 +21,16 @@ import { toast } from "sonner";
 import { Building2, X, Loader2 } from "lucide-react";
 
 import { Role } from "@/generated/prisma/enums";
-import { cn } from "@/lib/utils";
+import { cn, normalizeSlug, parseEmails } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { useUploadFile } from "@/hooks/use-upload-file";
+import { ORGANIZATION_LIMIT } from "@/lib/constants/pricing";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import { BrandAuthHeader } from "./_components/brand";
+import { createDefaultAcademicYear } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
     Form,
     FormControl,
@@ -47,24 +51,10 @@ import {
 
 const MAX_LOGO_BYTES = 3 * 1024 * 1024; // 3 MB
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function toSlug(name: string): string {
-    return name
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-}
-
-function parseEmails(raw: string): string[] {
-    return raw
-        .split(/[\s,;]+/)
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-}
+const ORG_ERROR = {
+  LIMIT_REACHED: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
+  SLUG_TAKEN: "ORGANIZATION_SLUG_ALREADY_TAKEN",
+} as const;
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -108,8 +98,6 @@ type InviteValues = z.infer<typeof inviteSchema>;
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface CreateOrganizationProps {
-    /** Redirect after the full wizard completes. */
-    afterCreateOrganizationUrl?: string;
     /** Called once org is created AND invite step is done / skipped. */
     onSuccess?: (org: { id: string; name: string; slug: string }) => void;
     /**
@@ -149,13 +137,13 @@ function Card({ children }: { children: React.ReactNode }) {
  */
 const fieldCls = (hasError?: boolean) =>
     cn(
-        "w-full rounded-md border bg-white px-3 py-[7px]",
-        "text-[13.5px] text-[#212126] placeholder:text-[#b0acaa] leading-snug",
+        "w-full rounded-md border bg-background px-3 py-[7px]",
+        "text-[13.5px] text-foreground placeholder:text-muted-foreground leading-snug",
         "outline-none transition-shadow duration-100",
         "focus:outline-none focus:ring-[1.5px] focus:border-transparent",
         hasError
-            ? "border-red-400 focus:ring-red-400"
-            : "border-[#c4bfbb] focus:ring-[#4c6ef5]"
+            ? "border-destructive focus:ring-destructive"
+            : "border-input focus:ring-ring"
     );
 
 // ─── Step 1 — Create Org ──────────────────────────────────────────────────────
@@ -185,7 +173,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
     const handleNameChange = (value: string, onChange: (v: string) => void) => {
         onChange(value);
         if (!slugManualRef.current) {
-            form.setValue("slug", toSlug(value), { shouldValidate: false });
+            form.setValue("slug", normalizeSlug(value), { shouldValidate: false });
         }
     };
 
@@ -253,7 +241,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
         if (logo) {
             try {
                 const res = await onUpload([logo]);
-                logoUrl = res?.[0]?.url;
+                logoUrl = res?.[0]?.ufsUrl;
                 if (!logoUrl) {
                     toast.warning("Could not upload logo, proceeding without it.");
                 }
@@ -262,36 +250,36 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
             }
         }
 
-        try {
-            const { data, error } = await authClient.organization.create({
-                name: values.name.trim(),
-                slug: values.slug,
-                logo: logoUrl,
-            });
+        const { data, error } = await authClient.organization.create({
+            name: values.name.trim(),
+            slug: values.slug,
+            logo: logoUrl,
+        });
 
-            if (error) {
-                const message = error.message ?? "Failed to create organization. Please check the details and try again.";
-                const lowerMessage = message.toLowerCase();
-
-                if (lowerMessage.includes("slug")) {
-                    form.setError("slug", {
-                        message: "This slug is already taken. Please choose another.",
-                    });
-                } else if (lowerMessage.includes("name")) {
-                    form.setError("name", { message });
-                } else {
-                    toast.error(message);
-                }
+        if (error) {
+            if (error.code === ORG_ERROR.LIMIT_REACHED) {
+                toast.error(
+                    `You've reached the limit of ${ORGANIZATION_LIMIT} organizations. ` +
+                    "Contact Shiksha Cloud support at 8459324821 or support@shiksha.cloud to upgrade."
+                );
                 return;
             }
 
-            if (data) {
-                await authClient.organization.setActive({ organizationId: data.id });
-                onCreated({ id: data.id, name: data.name, slug: data.slug });
+            if (error.code === ORG_ERROR.SLUG_TAKEN) {
+                form.setError("slug", { message: error.message ?? "This slug is already taken." });
+                return;
             }
-        } catch {
-            toast.error("Something went wrong. Please try again.");
+
+            toast.error(error.message ?? "Failed to create organization.");
+            return;
         }
+
+        await authClient.organization.setActive({ organizationId: data.id });
+
+        // Auto-create default academic year so the user lands on a ready dashboard
+        await createDefaultAcademicYear(data.id);
+
+        onCreated({ id: data.id, name: data.name, slug: data.slug });
     };
 
     const isSubmitting = form.formState.isSubmitting || isUploading;
@@ -309,7 +297,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                     {/* Title */}
                     {/* Logo */}
                     <div className="space-y-1.5">
-                        <span className="block text-[12.5px] font-medium text-[#212126]">
+                        <span className="block text-xs font-medium text-foreground">
                             Organization logo
                         </span>
                         <div className="flex items-center gap-3">
@@ -333,8 +321,8 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                                     "border border-dashed flex items-center justify-center",
                                     "cursor-pointer select-none transition-colors",
                                     isDragging
-                                        ? "border-[#4c6ef5] bg-[#f5f7ff]"
-                                        : "border-[#ccc8c4] hover:border-[#aaa] bg-white"
+                                        ? "border-ring bg-accent"
+                                        : "border-border hover:border-muted-foreground bg-background"
                                 )}
                             >
                                 {logoPreview ? (
@@ -351,38 +339,39 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                                             type="button"
                                             onClick={removeLogo}
                                             aria-label="Remove logo"
-                                            className="absolute -top-0.5 -right-0.5 z-10 size-[15px] bg-[#333] text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
+                                            className="absolute -top-0.5 -right-0.5 z-10 size-[15px] bg-muted-foreground text-white rounded-full flex items-center justify-center hover:bg-destructive transition-colors"
                                         >
                                             <X className="size-[9px]" />
                                         </button>
                                     </>
                                 ) : (
-                                    <Building2 className="size-6 text-[#b0acaa]" strokeWidth={1.8} />
+                                    <Building2 className="size-6 text-muted-foreground" strokeWidth={1.8} />
                                 )}
                             </div>
 
                             {/* Upload button + hint */}
                             <div className="flex flex-col gap-[5px]">
-                                <button
+                                <Button
                                     type="button"
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="self-start px-3 py-[5px] text-[13px] font-medium text-[#212126] bg-white border border-[#c4bfbb] rounded-md hover:bg-[#fafafa] transition-colors"
                                 >
                                     {logo ? "Change" : "Upload logo"}
-                                </button>
-                                <p className="text-[11.5px] text-[#9c9896] leading-tight">
+                                </Button>
+                                <p className="text-xs text-muted-foreground leading-tight">
                                     Square PNG, JPG, or WebP. Max 3 MB.
                                 </p>
                                 {isUploading && logo && (
-                                    <div className="h-1.5 w-36 overflow-hidden rounded-full bg-[#eeeeef]">
+                                    <div className="h-1.5 w-36 overflow-hidden rounded-full bg-secondary">
                                         <div
-                                            className="h-full rounded-full bg-[#212126] transition-all"
+                                            className="h-full rounded-full bg-foreground transition-all"
                                             style={{ width: `${Math.max(8, logoProgress)}%` }}
                                         />
                                     </div>
                                 )}
                                 {logoError && (
-                                    <p className="text-[11.5px] text-red-500">{logoError}</p>
+                                    <p className="text-xs text-destructive">{logoError}</p>
                                 )}
                             </div>
 
@@ -407,7 +396,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                         name="name"
                         render={({ field }) => (
                             <FormItem className="space-y-1.5">
-                                <FormLabel className="text-[12.5px] font-medium text-[#212126]">
+                                <FormLabel className="text-xs font-medium text-foreground">
                                     Name
                                 </FormLabel>
                                 <FormControl>
@@ -434,7 +423,7 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                         name="slug"
                         render={({ field }) => (
                             <FormItem className="space-y-1.5">
-                                <FormLabel className="text-[12.5px] font-medium text-[#212126]">
+                                <FormLabel className="text-xs font-medium text-foreground">
                                     Slug
                                 </FormLabel>
                                 <FormControl>
@@ -466,9 +455,9 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                                 </FormControl>
                                 <FormMessage className="text-[11.5px]" />
                                 {!form.formState.errors.slug && field.value && (
-                                    <p className="text-[11.5px] text-[#9c9896]">
+                                    <p className="text-xs text-muted-foreground">
                                         Your organization URL:{" "}
-                                        <span className="font-medium text-[#555]">
+                                        <span className="font-medium text-foreground">
                                             {field.value}
                                         </span>
                                     </p>
@@ -479,36 +468,29 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
                 </div>
 
                 {/* ── Actions: Cancel  |  Create organization ── */}
-                <div className="flex items-center justify-end gap-1.5 border-t border-[rgba(0,0,0,0.055)] px-7 py-4">
-                    {/*
-                     * Cancel is always rendered because OrganizationList always
-                     * passes onCancel={() => setShowCreate(false)}.
-                     * We fall back gracefully when used standalone (onCancel undefined).
-                     */}
-                    <button
+                <Separator />
+                <div className="flex items-center justify-end gap-1.5 px-7 py-4">
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={handleCancel}
                         disabled={isSubmitting}
-                        className="px-3 py-[6px] text-[13px] font-[510] text-[#747686] hover:text-[#212126] hover:bg-[#f4f4f5] rounded-md transition-colors disabled:opacity-50"
                     >
                         Cancel
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                         type="submit"
+                        variant="default"
+                        size="sm"
                         disabled={isSubmitting}
-                        className={cn(
-                            "inline-flex items-center gap-1.5 px-3.5 py-[7px]",
-                            "text-[13px] font-[510] rounded-md transition-colors",
-                            "bg-[#1a1926] hover:bg-[#0f0f1a] text-white",
-                            "disabled:opacity-55 disabled:cursor-not-allowed"
-                        )}
                     >
                         {isSubmitting && (
                             <Loader2 className="size-3.5 animate-spin" />
                         )}
                         Create organization
-                    </button>
+                    </Button>
                 </div>
             </form>
         </Form>
@@ -631,7 +613,7 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
                 {/* Body */}
                 <div className="space-y-5 px-8 pb-6 pt-8 sm:px-9">
-                    <h2 className="text-xl font-semibold leading-7 text-[#212126]">
+                    <h2 className="text-xl font-semibold leading-7 text-foreground">
                         Invite new members
                     </h2>
 
@@ -648,14 +630,14 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                                         placeholder="example@email.com, example2@email.com"
                                         autoFocus
                                         className={cn(
-                                            "min-h-36 w-full rounded-md border bg-white px-3.5 py-3",
-                                            "text-[14px] text-[#212126] placeholder:text-[#b0acaa]",
+                                            "min-h-36 w-full rounded-md border bg-background px-3.5 py-3",
+                                            "text-sm text-foreground placeholder:text-muted-foreground",
                                             "resize-none leading-relaxed",
                                             "outline-none transition-shadow duration-100",
                                             "focus:outline-none focus:ring-[1.5px] focus:border-transparent",
                                             form.formState.errors.emails
-                                                ? "border-red-400 focus:ring-red-400"
-                                                : "border-[#c4bfbb] focus:ring-[#4c6ef5]"
+                                                ? "border-destructive focus:ring-destructive"
+                                                : "border-input focus:ring-ring"
                                         )}
                                     />
                                 </FormControl>
@@ -663,6 +645,9 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                             </FormItem>
                         )}
                     />
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        You can invite more members later from your organization profile.
+                    </div>
                 </div>
 
                 {/* Action row: Role pill | · | Skip | Send invitations */}
@@ -674,18 +659,18 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                             <FormItem className="flex-shrink-0 space-y-0">
                                 <Select
                                     onValueChange={field.onChange}
-                                    defaultValue={field.value}
+                                    value={field.value}
                                 >
                                     <FormControl>
                                         <SelectTrigger
                                             className={cn(
-                                                "h-9 rounded-md border border-[#c4bfbb] bg-white",
-                                                "text-[13px] font-[510] text-[#212126]",
+                                                "h-9 rounded-md border border-input bg-background",
+                                                "text-sm font-medium text-foreground",
                                                 "w-full gap-1 pl-3 pr-2 sm:w-auto",
-                                                "focus:ring-[1.5px] focus:ring-[#212126] focus:border-transparent"
+                                                "focus:ring-ring"
                                             )}
                                         >
-                                            <span className="text-[12.5px] font-normal text-[#747686]">
+                                            <span className="text-xs font-normal text-muted-foreground">
                                                 Role:
                                             </span>
                                             <SelectValue />
@@ -696,7 +681,7 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                                             <SelectItem
                                                 key={r}
                                                 value={r}
-                                                className="text-[13px]"
+                                                className="text-xs]"
                                             >
                                                 {r}
                                             </SelectItem>
@@ -709,30 +694,27 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
 
                     <div className="hidden flex-1 sm:block" />
 
-                    <button
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={handleSkip}
                         disabled={isSubmitting}
-                        className="h-9 rounded-md px-3 text-[13px] font-[510] text-[#747686] transition-colors hover:bg-[#f4f4f5] hover:text-[#212126] disabled:opacity-50"
                     >
                         Skip
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                         type="submit"
+                        variant="default"
+                        size="sm"
                         disabled={isSubmitting}
-                        className={cn(
-                            "inline-flex h-9 items-center justify-center gap-1.5 px-4",
-                            "text-[13px] font-[510] rounded-md transition-colors",
-                            "bg-[#1a1926] hover:bg-[#0f0f1a] text-white",
-                            "disabled:opacity-55 disabled:cursor-not-allowed"
-                        )}
                     >
                         {isSubmitting && (
                             <Loader2 className="size-3.5 animate-spin" />
                         )}
                         Send invitations
-                    </button>
+                    </Button>
                 </div>
             </form>
         </Form>
@@ -744,7 +726,6 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
 type Step = "create" | "invite";
 
 export function CreateOrganization({
-    afterCreateOrganizationUrl,
     onSuccess,
     onCancel,
 }: CreateOrganizationProps) {
@@ -765,10 +746,7 @@ export function CreateOrganization({
     const handleDone = () => {
         if (!createdOrg) return;
         onSuccess?.(createdOrg);
-        if (afterCreateOrganizationUrl) {
-            router.push(afterCreateOrganizationUrl);
-            router.refresh();
-        }
+        router.push("/dashboard");
     };
 
     const handleCancel = () => {
