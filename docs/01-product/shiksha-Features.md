@@ -320,32 +320,25 @@ Pending > All Below
 - Year Switching
 - Year-Wise Data Segregation
 
-
 ================================================================
-
 
 Core Feature
 Radio Button : School , Colleges & Universities , Institute , University, Goverment, Non-Profit, Education Chain
-Student / User 
+Student / User
 
+Model :
 
-Model : 
-
-Students Count : 
+Students Count :
 Max Student Count
-Pricing 
+Pricing
 
-
-# Pricing Rules : 
-
-
-
+# Pricing Rules :
 
 # Pricing Slabs
+
 <!-- Institution Type : Classes / School / College / University  -->
-Students Count : 
 
-
+Students Count :
 
 Create
 All Core Feature + Future Features
@@ -399,40 +392,82 @@ Refrals
 
 Focus On Blogs Only : Anaylize The the Blog Human Touch , Real Issues, People should read it intrestingly based on Keyword Reasearch SEO, Use Topics like how to open own school in 2026 , Moto silenty promot own shiksha cloud system
 
-IMP : 
+IMP :
+
 - Preper Script for 3 Videos
 - Get AWS S3 Bucket
-- Add pagination to Students and Cheques 
-- Single Source of truth For Fees / Payments :Added But not tested properly 
+- Add pagination to Students and Cheques
+- Single Source of truth For Fees / Payments :Added But not tested properly
 - ID Cards : RFID , Scanner , Parent Phone Numbers , Principal sign
-- ReSearch GST 
+- ReSearch GST
 - Fee Management : GST+ ,Strict Sequential Receipt Numbering, Discounts, Waivers, and Scholarships, fine & penalty
-- Holiday : Show the toggle to see dynamic calendar wise  Academic Calendar For all Users 
+- Holiday : Show the toggle to see dynamic calendar wise Academic Calendar For all Users
 - Student Bulk Import should Need Clarity and also responsive on mobile
 - If internet gown show proper message
-- Setup Modal To Track Activity Logs But Very Smartly 
+- Setup Modal To Track Activity Logs But Very Smartly
 - IFSC Auto-fill via Razorpay IFSC API: done in Recordpdcpaymentcard.tsx
   - Uses [BANKCODE] from API to match banks.json keys (not bank name string)
   - Debounced 500ms, auto-fills bank dropdown + branch + MICR
   - Works for all banks in banks.json, fallback to manual entry on failure
 
+# IMP Task :
 
-# IMP Task : 
 - Find Best Sutable / Cheap Domain
-- Student Bulk Import should have Proper Validation , Clear Instructions, Mobile Friendly & CSV File 
-- Academic Year Fix while Onboarding 
-- Student Linking on inviting , or remove student role while invite flow 
+- Student Bulk Import should have Proper Validation , Clear Instructions, Mobile Friendly & CSV File
+- Academic Year Fix while Onboarding
+- Student Linking on inviting , or remove student role while invite flow
 
+Plan is not passing correct when we are comes to pricing page
+Commit or Remove Organizaiton Type on -create-organziatoon in Auth its confusing and looks to many Data To fill
+Commit or Remove Academic Year Setup on -create-organziatoon in Auth its confusing and looks to many Data To fill
+check again ive invited as student but got as teacher or its my mistake on testing
+we can send invite and After click on join button from organization List, not refresh.
+i Think we should show the the AdminOnboardingGuide for mobile also cuz admin might using mobile or small screen device and cannot see the guide properly.
+When I'm admin Setting page. And we can see the notification building like any other section. And if I try to redirect from Setup Progress @adminOnboardingGuide http://localhost:3000/dashboard/settings?section=general to the this page, it's not possible. Why not possible? I don't know, but it's both I think. even i click any other section url stays http://localhost:3000/dashboard/settings?section=general same
 
-# Decide 
+permission section not scrolling properly
+
+function toSlug(name: string): string {
+return name
+.toLowerCase()
+.trim()
+.replace(/[^a-z0-9\s-]/g, "")
+.replace(/\s+/g, "-")
+.replace(/-+/g, "-")
+.replace(/^-|-$/g, "");
+}
+
+function parseEmails(raw: string): string[] {
+return raw
+.split(/[\s,;]+/)
+.map((e) => e.trim().toLowerCase())
+.filter(Boolean);
+}
+
+For those i think we have reuable function in utils and if not add there
+
+Can u see the @components\dashboard\notice\create-notice.tsx in perticular area for Notificaiton whatsap sms email i want exact same into @components\dashboard\leads\create-lead-form.tsx and edit form but now we have Call option insted of push
+And also I dont see in Lead Details UI for Notification Preferences
+
+Make Teacher Settings Like AdminSetting Clean and optimzie Ui Need TopNotch
+Setup Teacher Profile : Keep atleast 16 years back date picker for Date of Birth
+Salary & Payout Information ; Make schema and Bank add Like PDC Cheque Easy to Fill Details
+Focus on Edit Profile cuz many Details we are not adding in acttule backend just Dummy and also Documents & Certifications
+Certifications , Resume Upload
+ID Proof Upload (Aadhaar/PAN/Passport) Find solution to add and If pan is added in profile Just show the In Payout Details dont ask again cuz its redudant
+
+Share Recorded Session ; Need 100 Dyanmic and Delivery to whatsapp
+
+# Decide
+
 - @organizaitonconfig or genralsetting ? which one is correct or why look same ?
 
-# SUPERADMIN RULES 
+# SUPERADMIN RULES
 
-Rules To Create Institution 
+Rules To Create Institution
 Introduce New Role SuperAdmin
-Only Super Admin Can See /dashboard/institution 
-Other Role Can't See This page or Cant take any actions 
+Only Super Admin Can See /dashboard/institution
+Other Role Can't See This page or Cant take any actions
 Add Another Organzaiton Flow : CreateOrganization And Invite Flow keep Same
 If we introduce SUPERADMIN Then Many Pages Get Errors We have to fixed this
-Decide What they will See 
+Decide What they will See

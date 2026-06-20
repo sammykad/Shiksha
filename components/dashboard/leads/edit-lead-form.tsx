@@ -32,6 +32,9 @@ import {
   Settings,
   MessageSquare,
   FileText,
+  Smartphone,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { type editLeadFormData, editLeadSchema } from '@/lib/schemas';
@@ -43,9 +46,45 @@ import {
 } from '@/generated/prisma/enums';
 import { editLead } from '@/lib/data/leads/edit-lead';
 import { useRouter } from 'next/navigation';
-import { formatEnumLabel } from '@/lib/utils';
+import { cn, formatEnumLabel } from '@/lib/utils';
 import { Lead } from '@/generated/prisma/client';
+import { WhatsApp } from '@/components/website/Icons';
+import { Switch } from '@/components/ui/switch';
 
+const CHANNELS = [
+  {
+    name: LeadCommunicationPreference.EMAIL, // 'EMAIL'
+    label: 'Email',
+    description: 'Send via email',
+    icon: Mail,
+    iconBg: 'bg-rose-100 dark:bg-rose-950',
+    iconColor: 'text-rose-500',
+  },
+  {
+    name: LeadCommunicationPreference.PHONE_CALL, // 'PHONE_CALL'
+    label: 'Call',
+    description: 'Contact via phone call',
+    icon: Phone,
+    iconBg: 'bg-indigo-100 dark:bg-indigo-950',
+    iconColor: 'text-indigo-500',
+  },
+  {
+    name: LeadCommunicationPreference.WHATSAPP, // 'WHATSAPP'
+    label: 'WhatsApp',
+    description: 'Send via WhatsApp',
+    icon: null,
+    iconBg: 'bg-green-100 dark:bg-green-950',
+    iconColor: 'text-green-500',
+  },
+  {
+    name: LeadCommunicationPreference.SMS, // 'SMS'
+    label: 'SMS',
+    description: 'Send via SMS',
+    icon: Smartphone,
+    iconBg: 'bg-blue-100 dark:bg-blue-950',
+    iconColor: 'text-blue-500',
+  },
+] as const;
 export function EditLeadForm(lead: Lead) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -76,7 +115,6 @@ export function EditLeadForm(lead: Lead) {
       academicYearId: lead.academicYearId,
     },
   });
-
 
   const onSubmit = async (data: editLeadFormData) => {
     startTransition(async () => {
@@ -511,8 +549,8 @@ export function EditLeadForm(lead: Lead) {
                                       const updated = checked
                                         ? [...(field.value || []), req]
                                         : field.value?.filter(
-                                          (item) => item !== req
-                                        ) || [];
+                                            (item) => item !== req
+                                          ) || [];
                                       field.onChange(updated);
                                     }}
                                     className="border-slate-300 focus:ring-2 focus:ring-blue-200"
@@ -548,61 +586,59 @@ export function EditLeadForm(lead: Lead) {
                 </div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="communicationPreference"
-                render={() => (
-                  <FormItem>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[
-                        {
-                          value: LeadCommunicationPreference.EMAIL,
-                          label: 'Email',
-                        },
-                        {
-                          value: LeadCommunicationPreference.SMS,
-                          label: 'SMS',
-                        },
-                        {
-                          value: LeadCommunicationPreference.WHATSAPP,
-                          label: 'WhatsApp',
-                        },
-                        {
-                          value: LeadCommunicationPreference.PHONE_CALL,
-                          label: 'Phone Call',
-                        },
-                      ].map((pref) => (
-                        <FormField
-                          key={pref.value}
-                          control={form.control}
-                          name="communicationPreference"
-                          render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(pref.value)}
-                                  onCheckedChange={(checked) => {
-                                    const updated = checked
-                                      ? [...(field.value || []), pref.value]
-                                      : field.value?.filter(
-                                        (item) => item !== pref.value
-                                      ) || [];
-                                    field.onChange(updated);
-                                  }}
-                                  className="border-slate-300 focus:ring-2 focus:ring-blue-200"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {CHANNELS.map((channel) => (
+                  <FormField
+                    key={channel.name}
+                    control={form.control}
+                    name="communicationPreference" // ✅ fixed
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn('rounded-lg p-1.5', channel.iconBg)}
+                          >
+                            {channel.name ===
+                            LeadCommunicationPreference.WHATSAPP ? (
+                              <WhatsApp
+                                className={cn('h-4 w-4', channel.iconColor)}
+                              />
+                            ) : (
+                              channel.icon && (
+                                <channel.icon
+                                  className={cn('h-4 w-4', channel.iconColor)}
                                 />
-                              </FormControl>
-                              <FormLabel className="font-normal cursor-pointer text-slate-700">
-                                {pref.label}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                  </FormItem>
-                )}
-              />
+                              )
+                            )}
+                          </div>
+                          <div>
+                            <FormLabel className="text-sm font-medium cursor-pointer">
+                              {channel.label}
+                            </FormLabel>
+                            <FormDescription className="text-xs">
+                              {channel.description}
+                            </FormDescription>
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value?.includes(channel.name)} // ✅ fixed
+                            onCheckedChange={(checked) => {
+                              // ✅ fixed
+                              const current = field.value ?? [];
+                              field.onChange(
+                                checked
+                                  ? [...current, channel.name]
+                                  : current.filter((v) => v !== channel.name)
+                              );
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Additional Notes */}
