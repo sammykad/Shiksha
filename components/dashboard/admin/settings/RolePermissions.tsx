@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -68,7 +67,6 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
     "alert-triangle": AlertTriangle,
 }
 
-// Defined outside the component so it's stable and never re-created
 const GROUPS_TEMPLATE: Record<string, { label: string; icon: string }> = {
     students: { label: "Students", icon: "graduation-cap" },
     teachers: { label: "Teachers", icon: "users" },
@@ -96,7 +94,6 @@ const GROUPS_TEMPLATE: Record<string, { label: string; icon: string }> = {
     transport: { label: "Transport", icon: "calendar" },
 }
 
-// VIEW_LIKE_ACTIONS set for O(1) lookup instead of array.includes on every row
 const VIEW_LIKE_ACTIONS = new Set([
     "view", "manage", "mark", "analytics", "reminders", "reports", "resolve",
     "approve", "verify", "reject", "convert", "generate", "publish", "assign",
@@ -111,11 +108,8 @@ const EDIT_LIKE_ACTIONS = new Set([
 ])
 const DELETE_LIKE_ACTIONS = new Set(["delete", "reject"])
 
-// Pure function — no side effects, safe to call anywhere
 function buildCategoriesForRole(role: Role): PermissionCategory[] {
     const caps = ROLE_CAPABILITIES[role]
-
-    // Group capabilities by resource
     const grouped: Record<string, string[]> = {}
     for (const cap of caps) {
         const resource = cap.split(":")[0]
@@ -125,11 +119,9 @@ function buildCategoriesForRole(role: Role): PermissionCategory[] {
     }
 
     const categories: PermissionCategory[] = []
-
     for (const [resource, { label, icon }] of Object.entries(GROUPS_TEMPLATE)) {
         const perms = grouped[resource]
         if (!perms?.length) continue
-
         categories.push({
             id: resource,
             label,
@@ -147,7 +139,6 @@ function buildCategoriesForRole(role: Role): PermissionCategory[] {
             }),
         })
     }
-
     return categories
 }
 
@@ -181,7 +172,11 @@ function UserList({
     }, [users, search])
 
     return (
-        <div className="flex flex-col">
+        // FIX: Use flex+overflow instead of ScrollArea so the list grows
+        // naturally with few users and only scrolls when content overflows.
+        // This eliminates the "scrollbar on an almost-empty panel" problem.
+        <div className="flex flex-col h-full">
+            {/* Search bar — never scrolls away */}
             <div className="p-3 border-b shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="relative flex-1">
@@ -201,42 +196,49 @@ function UserList({
                 </div>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0">
-                <div className="divide-y divide-slate-100">
-                    {filtered.map((user) => {
-                        const meta = ROLE_META[user.role as Role]
-                        return (
-                            <button
-                                key={user.id}
-                                onClick={() => {
-                                    onSelect(user.id)
-                                    onClose?.()
-                                }}
-                                className={cn(
-                                    "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-                                    selectedId === user.id
-                                        ? "bg-blue-50 border-l-2 border-l-blue-600"
-                                        : "hover:bg-slate-50 border-l-2 border-l-transparent"
+            {/* User list — scrollable only when it overflows the panel */}
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+                {filtered.map((user) => {
+                    const meta = ROLE_META[user.role as Role]
+                    return (
+                        <button
+                            key={user.id}
+                            onClick={() => {
+                                onSelect(user.id)
+                                onClose?.()
+                            }}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                                selectedId === user.id
+                                    ? "bg-blue-50 border-l-2 border-l-blue-600"
+                                    : "hover:bg-slate-50 border-l-2 border-l-transparent"
+                            )}
+                        >
+                            <Avatar className="h-9 w-9 shrink-0">
+                                {user.avatarUrl ? (
+                                    <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                ) : (
+                                    <AvatarFallback className="text-xs font-medium">
+                                        {user.initials}
+                                    </AvatarFallback>
                                 )}
-                            >
-                                <Avatar className="h-9 w-9 shrink-0">
-                                    {user.avatarUrl ? (
-                                        <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                    ) : (
-                                        <AvatarFallback className="text-xs font-medium">
-                                            {user.initials}
-                                        </AvatarFallback>
-                                    )}
-                                </Avatar>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium truncate text-slate-900">{user.name}</p>
-                                    <p className="text-xs text-slate-500 truncate capitalize">{meta.label}</p>
-                                </div>
-                            </button>
-                        )
-                    })}
-                </div>
-            </ScrollArea>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate text-slate-900">{user.name}</p>
+                                <p className="text-xs text-slate-500 truncate capitalize">{meta.label}</p>
+                            </div>
+                        </button>
+                    )
+                })}
+
+                {/* Empty state — only shown when search yields nothing */}
+                {filtered.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                        <Users className="h-8 w-8 text-slate-300 mb-2" />
+                        <p className="text-sm text-slate-500">No users match "{search}"</p>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
@@ -260,7 +262,6 @@ function PermissionRowComponent({
                 <Icon className="h-4 w-4 text-slate-400 shrink-0" />
                 <span className="text-sm text-slate-700 truncate">{permission.label}</span>
             </div>
-
             {(["view", "create", "edit", "delete"] as const).map((action) => (
                 <div key={action} className="flex items-center justify-center">
                     <Checkbox
@@ -279,22 +280,16 @@ function PermissionRowComponent({
 // ─────────────────────────────────────────────────────────────
 
 function PermissionPanel({ user }: { user: RolePermissionsUser }) {
-    // Initialize once from the role — no remount hack needed
     const [categories, setCategories] = useState<PermissionCategory[]>(() =>
         buildCategoriesForRole(user.role)
     )
 
-    // FIX: When the selected user changes role, rebuild categories in an effect
-    // instead of via a key-remount, which caused the "state update on unmounted
-    // component" warning and an expensive full teardown/recreation of the panel.
     useEffect(() => {
         setCategories(buildCategoriesForRole(user.role))
     }, [user.role])
 
     const meta = ROLE_META[user.role]
 
-    // FIX: Stable callback reference — recreating this on every render caused
-    // every PermissionRowComponent to re-render even when its own data didn't change.
     const handleToggle = useCallback(
         (id: string, action: "view" | "create" | "edit" | "delete", checked: boolean) => {
             setCategories((prev) =>
@@ -306,7 +301,7 @@ function PermissionPanel({ user }: { user: RolePermissionsUser }) {
                 }))
             )
         },
-        [] // setCategories is stable, so no deps needed
+        []
     )
 
     const handleReset = useCallback(() => {
@@ -314,8 +309,11 @@ function PermissionPanel({ user }: { user: RolePermissionsUser }) {
     }, [user.role])
 
     return (
-        <div className="flex flex-col">
-            {/* User Header */}
+        // FIX: Same pattern as UserList — flex column, overflow on the content
+        // area only. The sticky category headers now work correctly because
+        // overflow-y-auto is on the scrolling ancestor, not a portal (ScrollArea).
+        <div className="flex flex-col h-full">
+            {/* User header — pinned, never scrolls */}
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-white shrink-0">
                 <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
@@ -357,7 +355,7 @@ function PermissionPanel({ user }: { user: RolePermissionsUser }) {
                 </div>
             </div>
 
-            {/* Column Headers */}
+            {/* Column headers — pinned, never scrolls */}
             <div className="hidden md:grid grid-cols-[1fr_repeat(4,5rem)] px-4 py-2 bg-slate-50 border-b border-slate-200 shrink-0">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Permission
@@ -369,29 +367,29 @@ function PermissionPanel({ user }: { user: RolePermissionsUser }) {
                 ))}
             </div>
 
-            {/* Categories */}
-            <ScrollArea className="flex-1 min-h-0">
-                <div className="divide-y divide-slate-200">
-                    {categories.map((category) => (
-                        <div key={category.id}>
-                            <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                                <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                                    {category.label}
-                                </span>
-                            </div>
-                            <div>
-                                {category.permissions.map((perm) => (
-                                    <PermissionRowComponent
-                                        key={perm.id}
-                                        permission={perm}
-                                        onToggle={handleToggle}
-                                    />
-                                ))}
-                            </div>
+            {/* Categories — the ONE scrollable region in this panel */}
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-200">
+                {categories.map((category) => (
+                    <div key={category.id}>
+                        {/* Sticky works correctly because overflow-y-auto is on
+                            the nearest scrolling ancestor, not a Shadow DOM portal */}
+                        <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                                {category.label}
+                            </span>
                         </div>
-                    ))}
-                </div>
-            </ScrollArea>
+                        <div>
+                            {category.permissions.map((perm) => (
+                                <PermissionRowComponent
+                                    key={perm.id}
+                                    permission={perm}
+                                    onToggle={handleToggle}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     )
 }
@@ -427,9 +425,12 @@ export default function RolePermissions({ users }: { users: RolePermissionsUser[
     }
 
     return (
-        <Card>
+        // FIX: Give the card a fixed viewport height so both panels have a
+        // real boundary to scroll within. Without this, flex children that use
+        // overflow-y-auto can't compute a scroll height and collapse to content.
+        <Card className="flex flex-col h-[calc(100vh-8rem)]">
             {/* Header */}
-            <CardHeader className="gap-3">
+            <CardHeader className="flex-row items-center gap-3 shrink-0">
                 <Button
                     variant="ghost"
                     size="sm"
@@ -446,10 +447,11 @@ export default function RolePermissions({ users }: { users: RolePermissionsUser[
                 </div>
             </CardHeader>
 
-            <CardContent className="p-0">
-                {/* Desktop: Two-panel layout */}
-                <div className="flex-1 min-h-0 hidden lg:grid lg:grid-cols-[16rem_1fr] gap-2">
-                    <Card className="overflow-hidden flex flex-col min-h-0">
+            {/* Body — fills the remaining card height */}
+            <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
+                {/* Desktop: two panels side by side, both fill the full height */}
+                <div className="hidden lg:grid lg:grid-cols-[16rem_1fr] gap-2 h-full p-2 pt-0">
+                    <Card className="overflow-hidden flex flex-col">
                         <UserList
                             users={users}
                             selectedId={selectedUserId}
@@ -459,17 +461,14 @@ export default function RolePermissions({ users }: { users: RolePermissionsUser[
                         />
                     </Card>
 
-                    <Card className="overflow-hidden flex flex-col min-h-0">
-                        {/* FIX: Removed key={selectedUserId} — the panel now handles
-                            user changes internally via useEffect, so we no longer
-                            need the expensive unmount/remount on every selection. */}
+                    <Card className="overflow-hidden flex flex-col">
                         <PermissionPanel user={selectedUser} />
                     </Card>
                 </div>
 
-                {/* Mobile: Show one panel at a time */}
-                <div className="flex-1 min-h-0 lg:hidden">
-                    <Card className="h-full overflow-hidden">
+                {/* Mobile: one panel at a time */}
+                <div className="lg:hidden h-full">
+                    <Card className="h-full overflow-hidden flex flex-col">
                         {showUserList ? (
                             <UserList
                                 users={users}

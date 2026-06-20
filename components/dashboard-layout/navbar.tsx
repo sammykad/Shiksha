@@ -3,9 +3,11 @@ import { Separator } from "@/components/ui/separator";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AcademicYearSwitcher } from "../AcademicYearSwitcher";
+import { AdminOnboardingGuide } from "../AdminOnboardingGuide";
 import NotificationBanner from "./notification-banner";
 import type { Role } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
+import { getOnboardingProgress } from "@/lib/onboarding";
 import { RoleBadge } from "@/components/auth/role-badge";
 import { UserButton } from "@/components/auth/user-button";
 import NotificationPanel from "./notification-panel";
@@ -17,6 +19,8 @@ export async function Navbar() {
   const firstName = user.firstName ?? "User";
   const lastName = user.lastName ?? "";
   const fullName = `${firstName} ${lastName}`.trim();
+  const onboardingProgress =
+    orgRole === "ADMIN" ? await getOnboardingProgress() : null;
 
   return (
     <>
@@ -49,6 +53,14 @@ export async function Navbar() {
               <AcademicYearSwitcher />
             </Suspense>
 
+            {orgRole === "ADMIN" && (
+              <div className="hidden sm:block">
+                <Suspense fallback={<Skeleton className="h-8 w-12 rounded-lg" />}>
+                  <AdminOnboardingGuide initialData={onboardingProgress} />
+                </Suspense>
+              </div>
+            )}
+
             <Suspense fallback={<Skeleton className="size-10 rounded-full" />}>
               <NotificationPanel />
             </Suspense>
@@ -64,6 +76,16 @@ export async function Navbar() {
             />
           </div>
         </div>
+        {orgRole === "ADMIN" && (
+          <div className="border-t px-4 py-2 sm:hidden">
+            <Suspense fallback={<Skeleton className="h-9 w-full rounded-lg" />}>
+              <AdminOnboardingGuide
+                initialData={onboardingProgress}
+                variant="mobile"
+              />
+            </Suspense>
+          </div>
+        )}
         <NotificationBanner />
       </header>
 
