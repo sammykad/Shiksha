@@ -10,7 +10,6 @@ import Image from 'next/image';
 interface Props {
   currentStep: StepId;
   completedSteps: Set<number>;
-  canGoDashboard: boolean;
   onStepClick?: (step: StepId) => void;
   maxStepReached: number;
 }
@@ -18,7 +17,6 @@ interface Props {
 export default function StepsSidebar({
   currentStep,
   completedSteps,
-  canGoDashboard,
   onStepClick,
   maxStepReached,
 }: Props) {
@@ -66,22 +64,22 @@ export default function StepsSidebar({
               {phase.steps.map((step) => {
                 const isCompleted = completedSteps.has(step.id);
                 const isActive = currentStep === step.id;
-                const isFuture = !isCompleted && !isActive;
+                const canClick = isCompleted || isActive || step.id <= maxStepReached;
 
                 return (
                   <button
                     key={step.id}
                     onClick={() => {
-                      if (onStepClick && (isCompleted || isActive || step.id <= maxStepReached)) {
+                      if (onStepClick && canClick) {
                         onStepClick(step.id as StepId);
                       }
                     }}
-                    disabled={!isCompleted && !isActive && step.id > maxStepReached}
+                    disabled={!canClick}
                     className={cn(
                       'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors text-left',
                       isActive
                         ? 'bg-primary/10 text-primary font-medium'
-                        : (isCompleted || step.id <= maxStepReached)
+                        : canClick
                           ? 'text-foreground/80 hover:bg-muted/60 cursor-pointer'
                           : 'text-muted-foreground cursor-not-allowed'
                     )}
@@ -118,22 +116,20 @@ export default function StepsSidebar({
       </nav>
 
       {/* Footer */}
-      {canGoDashboard && (
-        <div className="p-3 border-t border-border">
-          <Link href="/dashboard">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs gap-1.5 h-8"
-            >
-              Go to Dashboard →
-            </Button>
-          </Link>
-          <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-            You can finish setup later
-          </p>
-        </div>
-      )}
+      <div className="p-3 border-t border-border">
+        <Link href="/dashboard">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs gap-1.5 h-8"
+          >
+            Go to Dashboard →
+          </Button>
+        </Link>
+        <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+          You can finish setup later
+        </p>
+      </div>
     </aside>
   );
 }
