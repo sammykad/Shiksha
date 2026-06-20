@@ -1,17 +1,13 @@
 'use server';
 
 import { cache } from 'react';
-import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import prisma from './prisma-base';
 import { getOrganizationId } from './organization';
 
 /**
- * Safe version - returns null if not found (no redirect)
- */
-/**
- * Safe — returns null, never throws, never redirects.
- * Used by: getOnboardingStatus, getActiveAcademicYearId (cookie fallback)
+ * Returns the current academic year ID, or null if none exists.
+ * Never throws. Used by onboarding check.
  */
 export const getCurrentAcademicYearIdSafe = cache(
   async (): Promise<string | null> => {
@@ -27,8 +23,11 @@ export const getCurrentAcademicYearIdSafe = cache(
     }
   }
 );
+
 /**
- * Protected version - redirects to onboarding if not found
+ * Returns the current (isCurrent) academic year ID.
+ * Throws if none exists — academic year is created during org setup.
+ * Use this for writes: all new data goes to the current year.
  */
 export const getCurrentAcademicYearId = cache(async (): Promise<string> => {
   const id = await getCurrentAcademicYearIdSafe();
@@ -37,7 +36,7 @@ export const getCurrentAcademicYearId = cache(async (): Promise<string> => {
 });
 
 /**
- * Get current academic year object
+ * Returns the current academic year object, or null.
  */
 export const getCurrentAcademicYear = cache(async () => {
   const organizationId = await getOrganizationId();
@@ -47,39 +46,29 @@ export const getCurrentAcademicYear = cache(async () => {
 });
 
 /**
- * Get all academic years
- */
-export const getAcademicYears = cache(async (organizationId: string) => {
-  return prisma.academicYear.findMany({
-    where: { organizationId },
-    orderBy: { startDate: 'desc' },
-  });
-});
-
-/**
- * Get active year ID (from cookie or fallback to current)
+ * Returns the active (user-selected viewing) academic year ID.
+ * Checks a cookie first (set by year switcher), falls back to current year.
+ * Throws if no valid year exists.
+ * Use this for reads: scopes queries to the year the user is viewing.
  */
 export const getActiveAcademicYearId = cache(async (): Promise<string> => {
   const cookieStore = await cookies();
-  const activeYearId = cookieStore.get('activeAcademicYearId')?.value;
+  const cookieYearId = cookieStore.get('activeAcademicYearId')?.value;
 
-  if (activeYearId) {
-    // Verify it exists and belongs to org
+  if (cookieYearId) {
     const organizationId = await getOrganizationId();
     const year = await prisma.academicYear.findFirst({
-      where: { id: activeYearId, organizationId },
+      where: { id: cookieYearId, organizationId },
       select: { id: true },
     });
-    if (year) return activeYearId;
+    if (year) return cookieYearId;
   }
 
-  // Fallback to current year
-  const currentYearId = await getCurrentAcademicYearIdSafe();
-  return currentYearId ?? '';
+  return getCurrentAcademicYearId();
 });
 
 /**
- * Get active academic year object
+ * Returns the active academic year object.
  */
 export const getActiveAcademicYear = cache(async () => {
   const organizationId = await getOrganizationId();
@@ -90,14 +79,25 @@ export const getActiveAcademicYear = cache(async () => {
 });
 
 /**
- * Set active year in cookie
+ * Persists the user's year selection in a cookie for 30 days.
  */
 export async function setActiveAcademicYearId(id: string) {
   const cookieStore = await cookies();
   cookieStore.set('activeAcademicYearId', id, {
     path: '/',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: 60 * 60 * 24 * 30,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
   });
 }
+
+/**
+ * Returns all academic years for the organization, newest first.
+ */
+export const getAcademicYears = cache(async (organizationId: string) => {
+  return prisma.academicYear.findMany({
+    where: { organizationId },
+    orderBy: { startDate: 'desc' },
+  });
+});
+

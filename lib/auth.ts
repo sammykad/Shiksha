@@ -1,4 +1,5 @@
-import { APIError, betterAuth } from "better-auth";
+import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api"
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { emailOTP, organization } from "better-auth/plugins";
 import { memberAc, ownerAc } from "better-auth/plugins/organization/access";
@@ -18,6 +19,9 @@ import {
 } from "./auth-email";
 import { sendBrevoEmail } from "./brevo";
 import { initializeOrganization } from "./initialize-organization";
+import { normalizeSlug } from "@/lib/utils";
+import { ORGANIZATION_LIMIT } from "@/lib/constants/pricing";
+
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -33,7 +37,9 @@ const organizationRoles = {
   [Role.PARENT]: memberAc,
 };
 
-// ─── Auth Configuration ───────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. BETTER AUTH INSTANCE
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const betterAuthServer = betterAuth({
   appName: APP_NAME,
@@ -130,6 +136,7 @@ export const betterAuthServer = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24,    // 1 day
+    freshAge: 60 * 60 * 24 * 7, // 7 days — match expiresIn, prevents "session not fresh" on list-sessions
     cookieCache: {
       enabled: true,
       maxAge: 60 * 5, // 5 minutes — fast revocation for suspended/removed members
@@ -139,13 +146,15 @@ export const betterAuthServer = betterAuth({
   // ── Plugins ────────────────────────────────────────────────────────────────
   plugins: [
     organization({
+      // ac: defaultAc,
+      roles: organizationRoles,
+      creatorRole: Role.ADMIN,
       schema: {
         member: { modelName: "membership" },
       },
-      roles: organizationRoles,
-      creatorRole: Role.ADMIN,
+
       allowUserToCreateOrganization: (user) => user.emailVerified === true,
-      organizationLimit: 3,
+      organizationLimit: ORGANIZATION_LIMIT,
       membershipLimit: async (_user, org) => getOrganizationAccountLimit(org.id),
       invitationExpiresIn: 60 * 60 * 24 * 7, // 7 days
       invitationLimit: async ({ organization }) => getOrganizationAccountLimit(organization.id),
@@ -201,6 +210,16 @@ export const betterAuthServer = betterAuth({
               organizationId: organization.id,
             });
           }
+
+          // Temporarily disabled — Student.userId is required at creation,
+          // so linking post-acceptance is unreachable. See linkStudentProfile below.
+          // if (member.role === Role.STUDENT) {
+          //   await linkStudentProfile({
+          //     userId: user.id,
+          //     email: user.email,
+          //     organizationId: organization.id,
+          //   });
+          // }
         },
 
         beforeRemoveMember: async ({ member, organization }) => {
@@ -256,7 +275,7 @@ export const betterAuthServer = betterAuth({
       otpLength: 6,
       expiresIn: 60 * 5,      // 5 minutes
       allowedAttempts: 3,
-      resendStrategy: "reuse",
+      resendStrategy: "rotate",
       storeOTP: "hashed",
       sendVerificationOnSignUp: false,
       overrideDefaultEmailVerification: true,
@@ -284,7 +303,7 @@ export const betterAuthServer = betterAuth({
               ...user,
               firstName: user.firstName || firstName || "",
               lastName: user.lastName || rest.join(" ") || "",
-              image: user.image || "/clerk.png",
+              image: user.image || "/default-avatar.png",
             },
           };
         },
@@ -321,13 +340,17 @@ export const betterAuthServer = betterAuth({
   },
 });
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 export type Auth = typeof betterAuthServer;
 
 type BetterAuthSession = NonNullable<
   Awaited<ReturnType<typeof betterAuthServer.api.getSession>>
->;
+>
+  ;
 
 export type AuthUser = {
   id: string;
@@ -337,7 +360,7 @@ export type AuthUser = {
   lastName: string | null;
   image: string | null;
 };
-
+// Context WITH organization (default)
 export type AuthContext = {
   userId: string;
   orgId: string;
@@ -353,49 +376,65 @@ export type RoleContext =
   | { role: typeof Role.STUDENT; userId: string; studentId: string; organizationId: string }
   | { role: typeof Role.PARENT; userId: string; parentId: string; studentIds: string[]; organizationId: string };
 
-// ─── Session Helpers ──────────────────────────────────────────────────────────
-
-export const getSession = cache(async () => {
-  const session = await betterAuthServer.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Not authenticated");
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. SESSION HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const fetchSession = cache(async () => {
+  return betterAuthServer.api.getSession({
+    headers: await headers(),
+  }) as Promise<BetterAuthSession | null>;
+});
+export const getSession = cache(async (): Promise<BetterAuthSession> => {
+  const session = await fetchSession();
+  if (!session) redirect("/sign-in");
   return session;
 });
+export const getSessionOrNull = fetchSession;
 
-export const getSessionOrNull = cache(async () => {
-  try { return await getSession(); }
-  catch { return null; }
-});
 
-// ─── Auth Context ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. AUTH CONTEXT (Multi-tenant aware)
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Use this when you NEED an organization context.
+ * Redirects to /select-organization if none exists.
+ */
 
 export const auth = cache(
-  async (
-    options: { organizationReturnUrl?: string } = {}
-  ): Promise<AuthContext> => {
-    const orgReturnUrl = options.organizationReturnUrl ?? "/dashboard";
-
+  async (options: { returnUrl?: string } = {}): Promise<AuthContext> => {
+    const returnUrl = options.returnUrl ?? "/dashboard";
+    const headerList = await headers();
+    const currentPath = headerList.get("x-pathname") || returnUrl;
     const session = await getSessionOrNull();
-    if (!session) redirect("/sign-in");
-
-    // Resolve active organisation
-    let orgId = (session.session as { activeOrganizationId?: string | null }).activeOrganizationId;
-
+    if (!session) {
+      redirect(`/sign-in?callbackURL=${encodeURIComponent(currentPath)}`);
+    }
+    let orgId = session.session.activeOrganizationId;
+    // Try to resolve default org if none active
     if (!orgId) {
       orgId = await resolveDefaultOrganizationId(session.user.id);
-
       if (orgId) {
-        await prisma.session.update({
-          where: { id: session.session.id },
-          data: { activeOrganizationId: orgId },
-        });
+        await betterAuthServer.api
+          .setActiveOrganization({
+            body: { organizationId: orgId },
+            headers: await headers(),
+          })
+          .catch(() => null);
+        session.session.activeOrganizationId = orgId;
       } else {
-        redirect(`/select-organization?returnUrl=${encodeURIComponent(orgReturnUrl)}`);
+        redirect(
+          `/select-organization?returnUrl=${encodeURIComponent(currentPath)}`
+        );
       }
     }
 
-    const [membership, org] = await Promise.all([
+    let [membership, org] = await Promise.all([
       prisma.membership.findFirst({
-        where: { userId: session.user.id, organizationId: orgId, status: "ACTIVE" },
+        where: {
+          userId: session.user.id,
+          organizationId: orgId,
+          status: MembershipStatus.ACTIVE,
+        },
         select: { role: true },
       }),
       prisma.organization.findUnique({
@@ -403,15 +442,57 @@ export const auth = cache(
         select: { slug: true, isActive: true },
       }),
     ]);
-
+    // Invalid org - try fallback or redirect
     if (!membership || !org?.isActive) {
-      redirect(`/select-organization?switch=true&returnUrl=${encodeURIComponent(orgReturnUrl)}`);
-    }
+      const fallbackOrgId = await resolveDefaultOrganizationId(session.user.id);
+      if (fallbackOrgId) {
+        await prisma.session
+          .update({
+            where: { id: session.session.id },
+            data: { activeOrganizationId: fallbackOrgId },
+          })
+          .catch(() => null);
+        session.session.activeOrganizationId = fallbackOrgId;
 
+        const [fallbackMembership, fallbackOrg] = await Promise.all([
+          prisma.membership.findFirst({
+            where: {
+              userId: session.user.id,
+              organizationId: fallbackOrgId,
+              status: MembershipStatus.ACTIVE,
+            },
+            select: { role: true },
+          }),
+          prisma.organization.findUnique({
+            where: { id: fallbackOrgId },
+            select: { slug: true, isActive: true },
+          }),
+        ]);
+
+        if (fallbackMembership && fallbackOrg?.isActive) {
+          orgId = fallbackOrgId;
+          membership = fallbackMembership;
+          org = fallbackOrg;
+        }
+      }
+      if (!membership || !org?.isActive) {
+        // Clear invalid org and force selection
+        // Direct DB update is fine here — redirect loses the cookie anyway.
+        await prisma.session
+          .update({
+            where: { id: session.session.id },
+            data: { activeOrganizationId: null },
+          })
+          .catch(() => null);
+        redirect(
+          `/select-organization?returnUrl=${encodeURIComponent(currentPath)}`
+        );
+      }
+    }
     return {
       userId: session.user.id,
       orgId,
-      orgRole: membership.role,
+      orgRole: membership.role as Role,
       orgSlug: org.slug ?? "",
       user: {
         id: session.user.id,
@@ -421,12 +502,15 @@ export const auth = cache(
         lastName: (session.user as { lastName?: string | null }).lastName ?? null,
         image: session.user.image ?? null,
       },
-      session: session.session,
+      session: session.session, // Now correctly reflects activeOrganizationId if it was resolved
     };
   }
 );
 
-// ─── Convenience Accessors ────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. CONVENIENCE ACCESSORS
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const getCurrentUserId = cache(async () => (await auth()).userId);
 export const getOrganizationId = cache(async () => (await auth()).orgId);
@@ -444,8 +528,8 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
       where: { userId, organizationId: orgId },
       select: { id: true },
     });
-    if (!teacher) redirect('/dashboard');
-    return { role: Role.TEACHER, userId, teacherId: teacher!.id, organizationId: orgId };
+    if (!teacher) redirect('/dashboard/missing-profile?role=teacher');
+    return { role: Role.TEACHER, userId, teacherId: teacher.id, organizationId: orgId };
   }
 
   if (orgRole === Role.STUDENT) {
@@ -453,8 +537,8 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
       where: { userId, organizationId: orgId },
       select: { id: true },
     });
-    if (!student) redirect('/dashboard');
-    return { role: Role.STUDENT, userId, studentId: student!.id, organizationId: orgId };
+    if (!student) redirect('/dashboard/missing-profile?role=student');
+    return { role: Role.STUDENT, userId, studentId: student.id, organizationId: orgId };
   }
 
   // PARENT
@@ -472,11 +556,13 @@ export const getCurrentUserByRole = cache(async (): Promise<RoleContext> => {
     },
   });
 
+  if (!parent) redirect("/dashboard/missing-profile?role=parent");
+
   return {
     role: Role.PARENT,
     userId,
-    parentId: parent?.id ?? "",
-    studentIds: parent?.students.map((s) => s.studentId) ?? [],
+    parentId: parent.id,
+    studentIds: parent.students.map((s) => s.studentId),
     organizationId: orgId,
   };
 });
@@ -515,7 +601,18 @@ export async function resolveDefaultOrganizationId(
     orderBy: { updatedAt: "desc" },
   });
 
-  return lastSession?.activeOrganizationId ?? null;
+  const candidateId = lastSession?.activeOrganizationId ?? null;
+
+  if (!candidateId) return orgIds[0];
+
+  const org = await prisma.organization.findUnique({
+    where: { id: candidateId },
+    select: { id: true, isActive: true },
+  });
+
+  if (org?.isActive) return candidateId;
+
+  return orgIds[0];
 }
 
 async function getOrganizationAccountLimit(organizationId: string) {
@@ -554,10 +651,7 @@ async function linkParentProfile({
         email: email.trim().toLowerCase(),
       },
     },
-    select: {
-      id: true,
-      userId: true,
-    },
+    select: { id: true, userId: true },
   });
 
   if (!parent) return;
@@ -575,6 +669,40 @@ async function linkParentProfile({
     data: { userId },
   });
 }
+
+// Temporarily disabled — Student.userId is String @unique (required),
+// so a student record always has a userId at creation time.
+// Linking post-acceptance is unreachable.
+//
+// async function linkStudentProfile({
+//   userId,
+//   email,
+//   organizationId,
+// }: {
+//   userId: string;
+//   email: string;
+//   organizationId: string;
+// }) {
+//   const student = await prisma.student.findFirst({
+//     where: { organizationId, email: email.trim().toLowerCase() },
+//     select: { id: true, userId: true },
+//   });
+//
+//   if (!student) return;
+//
+//   if (student.userId && student.userId !== userId) {
+//     throw new APIError("BAD_REQUEST", {
+//       message: "This student profile is already linked to another account.",
+//     });
+//   }
+//
+//   if (student.userId === userId) return;
+//
+//   await prisma.student.update({
+//     where: { id: student.id },
+//     data: { userId },
+//   });
+// }
 
 async function markMembershipAccepted(memberId: string) {
   await prisma.membership.update({
@@ -604,16 +732,6 @@ async function assertNotLastAdmin({
       message: "Cannot remove or demote the last administrator.",
     });
   }
-}
-
-function normalizeSlug(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 function normalizeMetadata(metadata: unknown) {

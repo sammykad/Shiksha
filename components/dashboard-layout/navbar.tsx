@@ -5,17 +5,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AcademicYearSwitcher } from "../AcademicYearSwitcher";
 import { AdminOnboardingGuide } from "../AdminOnboardingGuide";
 import NotificationBanner from "./notification-banner";
-import type { Role } from "@/generated/prisma/enums";
-import { auth } from "@/lib/auth";
 import { getOnboardingProgress } from "@/lib/onboarding";
 import { RoleBadge } from "@/components/auth/role-badge";
 import { UserButton } from "@/components/auth/user-button";
+import type { AuthUser } from "@/lib/auth";
+import type { Role } from "@/generated/prisma/enums";
 import NotificationPanel from "./notification-panel";
 
-export async function Navbar() {
-  const { user, orgRole } = await auth();
+interface NavbarProps {
+  user: AuthUser;
+  orgRole: Role;
+}
 
-  const role: Role = orgRole as Role;
+export async function Navbar({ user, orgRole }: NavbarProps) {
   const firstName = user.firstName ?? "User";
   const lastName = user.lastName ?? "";
   const fullName = `${firstName} ${lastName}`.trim();
@@ -28,7 +30,7 @@ export async function Navbar() {
         <div className="flex h-16 items-center px-4">
           {/* Left section */}
           <div className="flex items-center space-x-4">
-            <SheetMenu role={role} />
+            <SheetMenu role={orgRole} />
 
             <div className="flex items-center space-x-3">
               <div className="flex flex-col">
@@ -50,7 +52,7 @@ export async function Navbar() {
             <Suspense
               fallback={<Skeleton className="h-8 w-24 rounded-full" />}
             >
-              <AcademicYearSwitcher />
+              <AcademicYearSwitcher canSetup={orgRole === "ADMIN"} />
             </Suspense>
 
             {orgRole === "ADMIN" && (

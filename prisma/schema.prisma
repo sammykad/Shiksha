@@ -471,7 +471,7 @@ model BillingEvent {
 }
 
 //////////////////////////////////////////////////////
-// BRANCH (Campus/Location)
+// BRANCH (Campus/Location) For Future Better Auth (Team)
 // Physical location under an Organization
 //////////////////////////////////////////////////////
 

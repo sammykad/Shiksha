@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,8 +52,8 @@ import {
 const MAX_LOGO_BYTES = 3 * 1024 * 1024; // 3 MB
 
 const ORG_ERROR = {
-  LIMIT_REACHED: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
-  SLUG_TAKEN: "ORGANIZATION_SLUG_ALREADY_TAKEN",
+    LIMIT_REACHED: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
+    SLUG_TAKEN: "ORGANIZATION_SLUG_ALREADY_TAKEN",
 } as const;
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -273,9 +273,6 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
             toast.error(error.message ?? "Failed to create organization.");
             return;
         }
-
-        await authClient.organization.setActive({ organizationId: data.id });
-
         // Auto-create default academic year so the user lands on a ready dashboard
         await createDefaultAcademicYear(data.id);
 
@@ -681,7 +678,7 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
                                             <SelectItem
                                                 key={r}
                                                 value={r}
-                                                className="text-xs]"
+                                                className="text-xs"
                                             >
                                                 {r}
                                             </SelectItem>
@@ -723,54 +720,37 @@ function StepInviteMembers({ org, onDone }: Step2Props) {
 
 // ─── Wizard shell ─────────────────────────────────────────────────────────────
 
-type Step = "create" | "invite";
-
 export function CreateOrganization({
     onSuccess,
     onCancel,
 }: CreateOrganizationProps) {
     const router = useRouter();
-
-    const [step, setStep] = useState<Step>("create");
+    const searchParams = useSearchParams();
     const [createdOrg, setCreatedOrg] = useState<{
-        id: string;
-        name: string;
-        slug: string;
+        id: string; name: string; slug: string;
     } | null>(null);
 
-    const handleCreated = (org: { id: string; name: string; slug: string }) => {
-        setCreatedOrg(org);
-        setStep("invite");
-    };
-
-    const handleDone = () => {
-        if (!createdOrg) return;
-        onSuccess?.(createdOrg);
-        router.push("/dashboard");
-    };
-
-    const handleCancel = () => {
-        if (onCancel) {
-            onCancel();
-            return;
-        }
-
-        if (window.history.length > 1) {
-            router.back();
-            return;
-        }
-
-        router.push("/sign-in");
+    const handleDone = (org: { id: string; name: string; slug: string }) => {
+        const raw = searchParams.get("returnUrl") ?? "";
+        const returnUrl = raw.startsWith("/") && !raw.startsWith("//")
+            ? raw
+            : "/dashboard/onboarding";
+        onSuccess?.(org);
+        router.push(returnUrl);
     };
 
     return (
         <Card>
-            {step === "create" && (
-                <StepCreateOrg onCreated={handleCreated} onCancel={handleCancel} />
-            )}
-            {step === "invite" && createdOrg && (
-                <StepInviteMembers org={createdOrg} onDone={handleDone} />
-            )}
+            {!createdOrg
+                ? <StepCreateOrg
+                    onCreated={setCreatedOrg}
+                    onCancel={onCancel ?? (() => router.push("/sign-in"))}
+                />
+                : <StepInviteMembers
+                    org={createdOrg}
+                    onDone={() => handleDone(createdOrg)}
+                />
+            }
         </Card>
     );
 }

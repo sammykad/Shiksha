@@ -10,13 +10,13 @@ export const metadata: Metadata = {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; callbackURL?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, callbackURL } = await searchParams;
 
   return (
     <main className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-8 sm:px-6 lg:px-8">
-      <BetterAuthSignIn aftersignin={AFTER_SIGN_IN_URL} initialError={error} />
+      <BetterAuthSignIn aftersignin={callbackURL || AFTER_SIGN_IN_URL} initialError={error} />
     </main>
   );
 }

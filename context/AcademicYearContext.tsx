@@ -3,7 +3,7 @@
 import { AcademicYear } from "@/generated/prisma/client";
 import { setActiveAcademicYearId } from "@/lib/academicYear";
 import { useRouter } from "next/navigation";
-import { createContext, useContext, useMemo, useState, useTransition } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useTransition } from "react";
 
 
 type AcademicYearContextType = {
@@ -13,6 +13,7 @@ type AcademicYearContextType = {
   isViewingPastYear: boolean;
   years: AcademicYear[];
   isPending: boolean;
+  organizationId: string;
 };
 
 const AcademicYearContext = createContext<AcademicYearContextType | null>(null);
@@ -20,30 +21,27 @@ const AcademicYearContext = createContext<AcademicYearContextType | null>(null);
 export function AcademicYearProvider({
   children,
   years,
-  initialActiveYearId,
+  organizationId,
 }: {
   children: React.ReactNode;
   years: AcademicYear[];
-  initialActiveYearId: string;
+  organizationId: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [activeYearId, setActiveYearId] = useState(initialActiveYearId);
+  const [viewingYearId, setViewingYearId] = useState<string | null>(null);
 
   const currentYear = years.find((y) => y.isCurrent) ?? null;
-  // ❌ Still using initialActiveYearId — never changes
-  // const viewingYear = years.find((y) => y.id === initialActiveYearId) ?? currentYear;
-
-  const viewingYear = years.find((y) => y.id === activeYearId) ?? currentYear;
+  const viewingYear = years.find((y) => y.id === viewingYearId) ?? currentYear;
   const isViewingPastYear = !!viewingYear && !!currentYear && viewingYear.id !== currentYear.id;
 
-  async function handleSetViewingYear(yearId: string) {
+  const handleSetViewingYear = useCallback((yearId: string) => {
     startTransition(async () => {
-      setActiveYearId(yearId); // optimistic — instant UI
+      setViewingYearId(yearId);
       await setActiveAcademicYearId(yearId);
-      router.refresh(); // Force server components to re-fetch with new academicYearId
+      router.refresh();
     });
-  }
+  }, [router]);
 
   const contextValue = useMemo(() => ({
     currentYear,
@@ -52,7 +50,9 @@ export function AcademicYearProvider({
     isViewingPastYear,
     years,
     isPending,
-  }), [currentYear, viewingYear, isViewingPastYear, years, isPending]);
+    organizationId,
+  }  ), [currentYear, viewingYear, handleSetViewingYear, isViewingPastYear, years, isPending, organizationId]);
+
   return (
     <AcademicYearContext.Provider value={contextValue}>
       {children}

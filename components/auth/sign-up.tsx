@@ -74,7 +74,7 @@ export function BetterAuthSignUp({
   showOAuth = true,
   heading = "Create your account",
   subheading = "Enter your email first. We will verify it before creating a new account.",
-  redirectUrl = "/dashboard",
+  redirectUrl = "/select-organization",
   signInUrl = "/sign-in",
   initialError = null,
 }: SignUpProps) {
@@ -280,7 +280,6 @@ export function BetterAuthSignUp({
       }
       startTransition(() => {
         router.push(redirectUrl);
-        router.refresh();
       });
     } finally {
       setIsSubmitting(false);
@@ -333,7 +332,6 @@ export function BetterAuthSignUp({
 
       startTransition(() => {
         router.push(redirectUrl);
-        router.refresh();
       });
     } catch {
       toast.error("Something went wrong. Please try again.");

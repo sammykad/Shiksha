@@ -26,7 +26,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userId, orgId, orgRole } = await auth();
+  const { userId, orgId, orgRole, user } = await auth();
 
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") || "/dashboard";
@@ -53,9 +53,9 @@ export default async function DashboardLayout({
   return (
     <TerminologyProvider organizationType={organizationType}>
       <AcademicYearProvider years={academicYears} organizationId={orgId}>
-        <RoleLayoutWrapper role={orgRole as Role} userId={userId}>
-          <AdminPanelLayout role={orgRole as Role}>
-            <Navbar />
+        <RoleLayoutWrapper role={orgRole} userId={userId}>
+          <AdminPanelLayout role={orgRole}>
+            <Navbar user={user} orgRole={orgRole} />
             <BreadCrumbNavigation />
             <div className="px-2 sm:px-4 pb-2">{children}</div>
           </AdminPanelLayout>

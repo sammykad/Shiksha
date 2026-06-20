@@ -1,15 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import { Role } from "@/generated/prisma/enums";
 import { authClient } from "@/lib/auth-client";
-import {
-    getUserOrganizationInvitations,
-    getUserOrganizationMemberships,
-} from "@/lib/data/organization/get-memberships";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import { BrandAuthHeader } from "./_components/brand";
@@ -20,7 +17,8 @@ import {
     OrganizationRow,
 } from "./_components/organization-row";
 import { UserAvatar } from "./_components/user-avatar";
-import type { OrganizationLike, OrgInvitation } from "./types";
+import type { OrgInvitation } from "./types";
+import { cn } from "@/lib/utils";
 
 interface OrganizationListProps {
     /** Hide the card shell/header/footer for compact surfaces like the sidebar switcher. */
@@ -63,62 +61,23 @@ export function OrganizationList({
     onManageOrganization,
 }: OrganizationListProps) {
     const router = useRouter();
-    const { data: session } = authClient.useSession();
+    const { data: session, isPending: isSessionLoading } = authClient.useSession();
     const { data: activeOrg } = authClient.useActiveOrganization();
-    const { data: orgs, refetch: refetchOrgs } = authClient.useListOrganizations();
+    const { data: orgs, isPending: isOrgsLoading, refetch: refetchOrgs } = authClient.useListOrganizations();
+
+    // Fetch invitations manually - this is a Promise, not a hook
+    const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
+    const [isInvitationsLoading, setIsInvitationsLoading] = useState(true);
 
     const [loadingId, setLoadingId] = useState<string | null>(null);
-    const [orgRoles, setOrgRoles] = useState<Record<string, string>>({});
-
     const user = session?.user;
-    const orgList = ((orgs as OrganizationLike[] | undefined) ?? []).filter((org) => {
+    const userId = user?.id;
+    // Filter organizations if needed - no type cast required
+    const orgList = (orgs ?? []).filter((org) => {
         if (!excludeActiveOrganization) return true;
         return org.id !== activeOrg?.id;
     });
-    const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function loadInvitations() {
-            if (!user) {
-                setInvitations([]);
-                return;
-            }
-
-            try {
-                const userInvitations = await getUserOrganizationInvitations();
-                if (cancelled) return;
-                setInvitations(userInvitations);
-            } catch {
-                if (cancelled) return;
-                setInvitations([]);
-            }
-        }
-
-        loadInvitations();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [user?.id]);
-
-    const fetchMemberships = useCallback(async () => {
-        try {
-            const memberships = await getUserOrganizationMemberships();
-            const map: Record<string, string> = {};
-            for (const m of memberships) {
-                map[m.organizationId] = m.role;
-            }
-            setOrgRoles(map);
-        } catch {
-            // Server action may fail if auth context is not ready
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchMemberships();
-    }, [fetchMemberships]);
+    const isLoading = isSessionLoading || isOrgsLoading || isInvitationsLoading;
 
     const handleSelectOrg = async (orgId: string) => {
         if (loadingId) return;
@@ -129,10 +88,11 @@ export function OrganizationList({
             });
             if (error) {
                 toast.error("Failed to switch organization.");
-                return;
-            }
-            if (afterSelectOrganizationUrl) {
-                router.push(afterSelectOrganizationUrl);
+            } else {
+                if (afterSelectOrganizationUrl) {
+                    router.push(afterSelectOrganizationUrl);
+                }
+                router.refresh();
             }
         } catch {
             toast.error("Something went wrong.");
@@ -140,22 +100,20 @@ export function OrganizationList({
             setLoadingId(null);
         }
     };
-
     const handleSelectPersonal = async () => {
         if (loadingId) return;
         setLoadingId("personal");
         try {
-            await authClient.organization.setActive({ organizationId: null as unknown as string });
+            await authClient.organization.setActive({ organizationId: null });
+            if (afterSelectPersonalUrl) {
+                router.push(afterSelectPersonalUrl);
+            }
         } catch {
-            // Some Better Auth versions may not support null. Personal context is best-effort.
+            toast.error("Something went wrong.");
         } finally {
             setLoadingId(null);
         }
-        if (afterSelectPersonalUrl) {
-            router.push(afterSelectPersonalUrl);
-        }
     };
-
     const handleAcceptInvitation = async (invitationId: string) => {
         if (loadingId) return;
         setLoadingId(invitationId);
@@ -167,7 +125,8 @@ export function OrganizationList({
                 toast.error("Failed to accept invitation.");
             } else {
                 toast.success("Invitation accepted!");
-                setInvitations((current) => current.filter((invitation) => invitation.id !== invitationId));
+                const refreshedInvites = await authClient.organization.listUserInvitations();
+                if (refreshedInvites.data) setInvitations(refreshedInvites.data);
                 await refetchOrgs();
                 router.refresh();
             }
@@ -177,7 +136,51 @@ export function OrganizationList({
             setLoadingId(null);
         }
     };
+    // Fetch invitations on mount
+    useEffect(() => {
+        let cancelled = false;
+        async function loadInvitations() {
+            if (!userId) {
+                setInvitations([]);
+                setIsInvitationsLoading(false);
+                return;
+            }
+            setIsInvitationsLoading(true);
+            try {
+                const { data: invitedUser } = await authClient.organization.listUserInvitations();
+                if (cancelled) return;
+                if (invitedUser) {
+                    setInvitations(invitedUser);
+                } else {
+                    setInvitations([]);
+                }
+            } catch {
+                if (cancelled) return;
+                setInvitations([]);
+            } finally {
+                if (!cancelled) {
+                    setIsInvitationsLoading(false);
+                }
+            }
+        }
+        loadInvitations(); return () => {
+            cancelled = true;
+        };
+    }, [userId]);
 
+    if (isLoading) {
+        return compact ? (
+            <OrganizationListSkeleton compact spaciousRows={spaciousRows} />
+        ) : (
+            <AuthCard>
+                <AuthCardPanel>
+                    <BrandAuthHeader />
+                    <OrganizationListSkeleton spaciousRows={spaciousRows} />
+                </AuthCardPanel>
+                <AuthFooter />
+            </AuthCard>
+        );
+    }
     const rows = (
         <div>
             {!hidePersonalAccount && user && (
@@ -200,7 +203,11 @@ export function OrganizationList({
 
             {orgList.map((org) => {
                 const isActive = org.id === activeOrg?.id;
-                const role = orgRoles[org.id] ?? org.role ?? undefined;
+                const role =
+                    (org as { role?: string | null }).role ??
+                    activeOrg?.members.find(
+                        (member) => member.organizationId === org.id && member.userId === userId
+                    )?.role;
                 const activeAction = isActive && onManageOrganization && role?.toUpperCase() === Role.ADMIN ? (
                     <button
                         type="button"
@@ -280,5 +287,42 @@ export function OrganizationList({
             </AuthCardPanel>
             <AuthFooter />
         </AuthCard>
+    );
+}
+
+function OrganizationListSkeleton({
+    compact = false,
+    spaciousRows = false,
+}: {
+    compact?: boolean;
+    spaciousRows?: boolean;
+}) {
+    const rowCount = compact ? 2 : 3;
+
+    return (
+        <div aria-hidden="true" className={compact ? "py-1" : undefined}>
+            {Array.from({ length: rowCount }).map((_, index) => (
+                <div
+                    key={index}
+                    className={cn(
+                        "flex min-h-[68px] w-full items-center gap-3 border-b border-[rgba(0,0,0,0.055)] px-5 py-4",
+                        spaciousRows && "min-h-[102px] gap-4 px-7 py-6",
+                        compact && "border-b-0 px-4"
+                    )}
+                >
+                    <Skeleton
+                        className={cn(
+                            "size-9 shrink-0 rounded-md",
+                            spaciousRows && "size-[52px] rounded-[8px]"
+                        )}
+                    />
+                    <div className="flex min-w-px flex-1 flex-col gap-2">
+                        <Skeleton className={cn("h-4 w-36", spaciousRows && "h-5 w-44")} />
+                        <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="size-6 shrink-0 rounded-full" />
+                </div>
+            ))}
+        </div>
     );
 }
