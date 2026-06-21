@@ -107,13 +107,13 @@ export const betterAuthServer = betterAuth({
       enabled: true,
       beforeDelete: async (user) => {
         const adminMemberships = await prisma.membership.findMany({
-          where: { userId: user.id, role: "ADMIN", status: "ACTIVE" },
+          where: { userId: user.id, role: Role.ADMIN, status: "ACTIVE" },
           include: { organization: { select: { name: true } } },
         });
 
         for (const membership of adminMemberships) {
           const adminCount = await prisma.membership.count({
-            where: { organizationId: membership.organizationId, role: "ADMIN", status: "ACTIVE" },
+            where: { organizationId: membership.organizationId, role: Role.ADMIN, status: "ACTIVE" },
           });
           const isLastAdmin = adminCount <= 1;
           if (isLastAdmin) {
@@ -138,8 +138,7 @@ export const betterAuthServer = betterAuth({
     updateAge: 60 * 60 * 24,    // 1 day
     freshAge: 60 * 60 * 24 * 7, // 7 days — match expiresIn, prevents "session not fresh" on list-sessions
     cookieCache: {
-      enabled: true,
-      maxAge: 60 * 5, // 5 minutes — fast revocation for suspended/removed members
+      enabled: false,
     },
   },
 
@@ -403,38 +402,28 @@ export const getSessionOrNull = fetchSession;
 export const auth = cache(
   async (options: { returnUrl?: string } = {}): Promise<AuthContext> => {
     const returnUrl = options.returnUrl ?? "/dashboard";
-    const headerList = await headers();
-    const currentPath = headerList.get("x-pathname") || returnUrl;
     const session = await getSessionOrNull();
     if (!session) {
-      redirect(`/sign-in?callbackURL=${encodeURIComponent(currentPath)}`);
+      redirect(`/sign-in?callbackURL=${encodeURIComponent(returnUrl)}`);
     }
+
     let orgId = session.session.activeOrganizationId;
-    // Try to resolve default org if none active
     if (!orgId) {
       orgId = await resolveDefaultOrganizationId(session.user.id);
       if (orgId) {
-        await betterAuthServer.api
-          .setActiveOrganization({
-            body: { organizationId: orgId },
-            headers: await headers(),
-          })
-          .catch(() => null);
+        await prisma.session.update({
+          where: { id: session.session.id },
+          data: { activeOrganizationId: orgId },
+        });
         session.session.activeOrganizationId = orgId;
       } else {
-        redirect(
-          `/select-organization?returnUrl=${encodeURIComponent(currentPath)}`
-        );
+        redirect(`/select-organization?returnUrl=${encodeURIComponent(returnUrl)}`);
       }
     }
 
-    let [membership, org] = await Promise.all([
+    const [membership, org] = await Promise.all([
       prisma.membership.findFirst({
-        where: {
-          userId: session.user.id,
-          organizationId: orgId,
-          status: MembershipStatus.ACTIVE,
-        },
+        where: { userId: session.user.id, organizationId: orgId, status: MembershipStatus.ACTIVE },
         select: { role: true },
       }),
       prisma.organization.findUnique({
@@ -442,53 +431,15 @@ export const auth = cache(
         select: { slug: true, isActive: true },
       }),
     ]);
-    // Invalid org - try fallback or redirect
+
     if (!membership || !org?.isActive) {
-      const fallbackOrgId = await resolveDefaultOrganizationId(session.user.id);
-      if (fallbackOrgId) {
-        await prisma.session
-          .update({
-            where: { id: session.session.id },
-            data: { activeOrganizationId: fallbackOrgId },
-          })
-          .catch(() => null);
-        session.session.activeOrganizationId = fallbackOrgId;
-
-        const [fallbackMembership, fallbackOrg] = await Promise.all([
-          prisma.membership.findFirst({
-            where: {
-              userId: session.user.id,
-              organizationId: fallbackOrgId,
-              status: MembershipStatus.ACTIVE,
-            },
-            select: { role: true },
-          }),
-          prisma.organization.findUnique({
-            where: { id: fallbackOrgId },
-            select: { slug: true, isActive: true },
-          }),
-        ]);
-
-        if (fallbackMembership && fallbackOrg?.isActive) {
-          orgId = fallbackOrgId;
-          membership = fallbackMembership;
-          org = fallbackOrg;
-        }
-      }
-      if (!membership || !org?.isActive) {
-        // Clear invalid org and force selection
-        // Direct DB update is fine here — redirect loses the cookie anyway.
-        await prisma.session
-          .update({
-            where: { id: session.session.id },
-            data: { activeOrganizationId: null },
-          })
-          .catch(() => null);
-        redirect(
-          `/select-organization?returnUrl=${encodeURIComponent(currentPath)}`
-        );
-      }
+      await prisma.session.update({
+        where: { id: session.session.id },
+        data: { activeOrganizationId: null },
+      });
+      redirect(`/select-organization?returnUrl=${encodeURIComponent(returnUrl)}`);
     }
+
     return {
       userId: session.user.id,
       orgId,
@@ -502,7 +453,7 @@ export const auth = cache(
         lastName: (session.user as { lastName?: string | null }).lastName ?? null,
         image: session.user.image ?? null,
       },
-      session: session.session, // Now correctly reflects activeOrganizationId if it was resolved
+      session: session.session,
     };
   }
 );
@@ -573,46 +524,39 @@ export async function resolveDefaultOrganizationId(
   userId: string,
   organizationIds?: string[]
 ) {
-  let orgIds = organizationIds;
-
-  if (!orgIds) {
+  if (!organizationIds) {
     const memberships = await prisma.membership.findMany({
-      where: {
-        userId,
-        status: "ACTIVE",
-        organization: { isActive: true },
-      },
+      where: { userId, status: "ACTIVE", organization: { isActive: true } },
       select: { organizationId: true },
     });
-
     if (memberships.length === 0) return null;
-    orgIds = memberships.map((m) => m.organizationId);
+    organizationIds = memberships.map((m) => m.organizationId);
   }
 
-  if (orgIds.length === 0) return null;
+  if (organizationIds.length === 0) return null;
 
+  // Prefer the org they last used
   const lastSession = await prisma.session.findFirst({
     where: {
       userId,
-      activeOrganizationId: { in: orgIds },
+      activeOrganizationId: { in: organizationIds },
       expiresAt: { gt: new Date() },
     },
     select: { activeOrganizationId: true },
     orderBy: { updatedAt: "desc" },
   });
 
-  const candidateId = lastSession?.activeOrganizationId ?? null;
+  const candidateId = lastSession?.activeOrganizationId;
 
-  if (!candidateId) return orgIds[0];
+  if (!candidateId) return organizationIds[0];
 
+  // Verify the candidate org is still active
   const org = await prisma.organization.findUnique({
     where: { id: candidateId },
-    select: { id: true, isActive: true },
+    select: { isActive: true },
   });
 
-  if (org?.isActive) return candidateId;
-
-  return orgIds[0];
+  return org?.isActive ? candidateId : organizationIds[0];
 }
 
 async function getOrganizationAccountLimit(organizationId: string) {

@@ -18,7 +18,8 @@ export async function sendAuthEmail({
   subject: string;
   react: React.ReactElement;
 }) {
-  if (process.env.NODE_ENV !== "production") {
+  // Only show sensitive information in development
+  if (process.env.NODE_ENV === "development") {
     console.log("\n📬 ======= [DEV AUTH EMAIL BYPASS] =======");
     console.log(`📧 To:      ${to}`);
     console.log(`✉️ Subject: ${subject}`);

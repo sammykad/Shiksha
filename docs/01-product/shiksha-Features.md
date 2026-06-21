@@ -418,33 +418,10 @@ IMP :
 - Student Linking on inviting , or remove student role while invite flow
 
 Plan is not passing correct when we are comes to pricing page
-Commit or Remove Organizaiton Type on -create-organziatoon in Auth its confusing and looks to many Data To fill
-Commit or Remove Academic Year Setup on -create-organziatoon in Auth its confusing and looks to many Data To fill
-check again ive invited as student but got as teacher or its my mistake on testing
+Pricing Plan Not enforce yet : its also important
+
 we can send invite and After click on join button from organization List, not refresh.
-i Think we should show the the AdminOnboardingGuide for mobile also cuz admin might using mobile or small screen device and cannot see the guide properly.
-When I'm admin Setting page. And we can see the notification building like any other section. And if I try to redirect from Setup Progress @adminOnboardingGuide http://localhost:3000/dashboard/settings?section=general to the this page, it's not possible. Why not possible? I don't know, but it's both I think. even i click any other section url stays http://localhost:3000/dashboard/settings?section=general same
-
-permission section not scrolling properly
-
-function toSlug(name: string): string {
-return name
-.toLowerCase()
-.trim()
-.replace(/[^a-z0-9\s-]/g, "")
-.replace(/\s+/g, "-")
-.replace(/-+/g, "-")
-.replace(/^-|-$/g, "");
-}
-
-function parseEmails(raw: string): string[] {
-return raw
-.split(/[\s,;]+/)
-.map((e) => e.trim().toLowerCase())
-.filter(Boolean);
-}
-
-For those i think we have reuable function in utils and if not add there
+<!-- When I'm admin Setting page. And we can see the notification building like any other section. And if I try to redirect from Setup Progress @adminOnboardingGuide http://localhost:3000/dashboard/settings?section=general to the this page, it's not possible. Why not possible? I don't know, but it's both I think. even i click any other section url stays http://localhost:3000/dashboard/settings?section=general same -->
 
 Can u see the @components\dashboard\notice\create-notice.tsx in perticular area for Notificaiton whatsap sms email i want exact same into @components\dashboard\leads\create-lead-form.tsx and edit form but now we have Call option insted of push
 And also I dont see in Lead Details UI for Notification Preferences
@@ -456,7 +433,7 @@ Focus on Edit Profile cuz many Details we are not adding in acttule backend just
 Certifications , Resume Upload
 ID Proof Upload (Aadhaar/PAN/Passport) Find solution to add and If pan is added in profile Just show the In Payout Details dont ask again cuz its redudant
 
-Share Recorded Session ; Need 100 Dyanmic and Delivery to whatsapp
+Share Recorded Session ; Youtube URl Proview and all the things, Need 100% Dyanmic and Delivery to whatsapp
 
 # Decide
 
@@ -470,4 +447,7 @@ Only Super Admin Can See /dashboard/institution
 Other Role Can't See This page or Cant take any actions
 Add Another Organzaiton Flow : CreateOrganization And Invite Flow keep Same
 If we introduce SUPERADMIN Then Many Pages Get Errors We have to fixed this
-Decide What they will See
+Decide What they will See : /dashboard/institution Enitre Data , Give Any permisison 
+
+RBAC ANd Permisison Setup 
+

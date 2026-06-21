@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 
 export default async function SettingPage() {
   const { orgRole } = await auth({
-    organizationReturnUrl: '/dashboard/settings',
+    returnUrl: '/dashboard/settings',
   });
 
   switch (orgRole) {

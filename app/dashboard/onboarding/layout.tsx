@@ -8,7 +8,7 @@ export default async function OnboardingLayout({
     children: React.ReactNode;
 }) {
     const { orgRole } = await auth({
-        organizationReturnUrl: '/dashboard/onboarding',
+        returnUrl: '/dashboard/onboarding',
     });
     if (orgRole !== 'ADMIN') redirect('/dashboard');
 

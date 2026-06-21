@@ -411,11 +411,11 @@ const TeacherSettings = async () => {
       />
 
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
-        <TeacherSettingsSidebar>
-          <ProfileSection teacher={teacher} />
-          <PayoutSection />
-          <AccountSection teacher={teacher} hasPassword={hasPassword} />
-        </TeacherSettingsSidebar>
+        <TeacherSettingsSidebar sections={{
+          profile: <ProfileSection teacher={teacher} />,
+          payout: <PayoutSection />,
+          account: <AccountSection teacher={teacher} hasPassword={hasPassword} />,
+        }} />
       </div>
     </div>
   );

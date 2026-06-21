@@ -28,7 +28,7 @@ import { ORGANIZATION_LIMIT } from "@/lib/constants/pricing";
 import { AuthCard, AuthCardPanel } from "./_components/auth-card";
 import { AuthFooter } from "./_components/auth-footer";
 import { BrandAuthHeader } from "./_components/brand";
-import { createDefaultAcademicYear } from "@/app/actions";
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -273,9 +273,6 @@ function StepCreateOrg({ onCreated, onCancel }: Step1Props) {
             toast.error(error.message ?? "Failed to create organization.");
             return;
         }
-        // Auto-create default academic year so the user lands on a ready dashboard
-        await createDefaultAcademicYear(data.id);
-
         onCreated({ id: data.id, name: data.name, slug: data.slug });
     };
 
@@ -734,7 +731,7 @@ export function CreateOrganization({
         const raw = searchParams.get("returnUrl") ?? "";
         const returnUrl = raw.startsWith("/") && !raw.startsWith("//")
             ? raw
-            : "/dashboard/onboarding";
+            : "/dashboard";
         onSuccess?.(org);
         router.push(returnUrl);
     };

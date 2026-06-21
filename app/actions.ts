@@ -1356,41 +1356,4 @@ export async function submitSupportForm(data: SupportFormData) {
   return { success: true, submission };
 }
 
-/**
- * Auto-create a default academic year (ANNUAL, April–March) for a brand-new
- * organization during onboarding. Skips overlap checks since there are none.
- */
-export async function createDefaultAcademicYear(organizationId: string) {
-  try {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-indexed, 3 = April
 
-    const startYear = currentMonth >= 3 ? currentYear : currentYear - 1;
-    const endYear = startYear + 1;
-
-    const startDate = new Date(startYear, 3, 1);
-    const endDate = new Date(endYear, 2, 31);
-
-    const name = `${startYear}-${endYear.toString().slice(2)}`;
-
-    const createdYear = await prisma.academicYear.create({
-      data: {
-        name,
-        startDate,
-        endDate,
-        type: 'ANNUAL',
-        isCurrent: true,
-        organizationId,
-        createdBy: 'SYSTEM',
-      },
-    });
-
-    await setActiveAcademicYearId(createdYear.id);
-
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to create default academic year:', error);
-    return { success: false, error: 'Failed to create default academic year.' };
-  }
-}

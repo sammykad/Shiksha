@@ -24,9 +24,9 @@ export default async function SelectOrganizationPage({
 }: {
   searchParams: Promise<{ returnUrl?: string; clear?: string }>;
 }) {
-  const session = await getSession();
-
   const { returnUrl = '/dashboard', clear } = await searchParams;
+
+  const session = await getSession();
 
   if (clear === "true") {
     await prisma.session.update({
@@ -43,7 +43,9 @@ export default async function SelectOrganizationPage({
       where: { id: activeOrganizationId },
       select: { id: true },
     });
-    if (org) redirect(returnUrl);
+    if (org) {
+      redirect(returnUrl);
+    }
   }
 
   const memberships = await prisma.membership.findMany({

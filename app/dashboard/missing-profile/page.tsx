@@ -32,15 +32,15 @@ export default function MissingProfilePage() {
   const { data: activeOrg } = authClient.useActiveOrganization();
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  if (!session || !activeOrg) return null;
+
   const currentMember = activeOrg?.members?.find(
     (m) => m.userId === session?.user?.id
   );
-  const orgRole = currentMember?.role ?? session?.session?.activeOrganizationId ? "STUDENT" : "";
+  const orgRole = currentMember?.role ?? (session?.session?.activeOrganizationId ? "STUDENT" : "");
 
   const roleParam = searchParams.get("role") ?? "";
   const profileRole = ROLE_LABELS[roleParam.toLowerCase()] ?? orgRole.toLowerCase();
-
-  if (!session || !activeOrg) return null;
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-10">

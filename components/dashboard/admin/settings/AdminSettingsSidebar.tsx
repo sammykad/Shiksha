@@ -43,8 +43,7 @@ function toSectionId(value: string | null): SectionId {
 export default function AdminSettingsSidebar({ sections }: { sections: SettingsSections }) {
   const searchParams = useSearchParams()
 
-  // Read URL once on mount for deep-link support — never written back to URL
-  const [active, setActive] = useState<SectionId>(() => toSectionId(searchParams.get("section")))
+  const active = toSectionId(searchParams.get("section"))
   const [query, setQuery] = useState("")
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -56,8 +55,8 @@ export default function AdminSettingsSidebar({ sections }: { sections: SettingsS
   const activeItem = NAV.find((item) => item.id === active)!
 
   function select(id: SectionId) {
-    setActive(id)
     setMobileOpen(false)
+    window.history.replaceState(null, "", `/dashboard/settings?section=${id}`)
   }
 
   return (

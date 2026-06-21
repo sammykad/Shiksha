@@ -11,7 +11,7 @@ import { getActiveAcademicYear } from '@/lib/academicYear';
 
 export default async function ChildAttendancePage() {
   const { orgRole } = await auth({
-    organizationReturnUrl: '/dashboard/child-attendance',
+    returnUrl: '/dashboard/child-attendance',
   });
   if (orgRole !== 'PARENT') redirect('/dashboard');
 
