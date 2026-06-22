@@ -44,6 +44,44 @@ type ChangelogEntry = {
 
 const changelogEntries: ChangelogEntry[] = [
   {
+    version: 'v0.2.0',
+    date: 'June 23, 2026',
+    title: 'Teacher Salary & Payout Settings',
+    description:
+      'Teachers can now manage their bank account details and payout preferences directly from settings. Certificate management improved with title persistence and Cloudinary uploads for all documents.',
+    icon: <CreditCard className='size-4' />,
+    categories: [
+      {
+        type: 'new',
+        items: [
+          'Teacher payout settings — bank account, IFSC, UPI, and PAN management',
+          'Payout form pre-fills existing data on page load',
+          'Certificate titles persist as JSON — no more "Certificate 1" placeholders',
+          'Admin bank account management API for future teacher payout management page',
+        ],
+      },
+      {
+        type: 'improvements',
+        items: [
+          'Profile photo, ID proof, and certificate uploads now use Cloudinary (were blob URLs)',
+          'Profile photo preview updates instantly after upload',
+          'Contact email in settings is now editable with clarifying description',
+          'Account holder name defaults to uppercase for bank compliance',
+          'Changelog workflow established — CHANGELOG.md + /changelog page',
+        ],
+      },
+      {
+        type: 'bugfixes',
+        items: [
+          'Fixed certificate and ID proof upload crashing (undefined handler functions)',
+          'Fixed payout form blank on refresh — loads data server-side',
+          'Removed redundant Account tab from teacher settings',
+          'PAN number now lives only in TeacherBankAccount (single source of truth)',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v1.0.0',
     date: 'June 1, 2026',
     title: 'Platform Launch — ID Cards, Certificates & Public Verification',

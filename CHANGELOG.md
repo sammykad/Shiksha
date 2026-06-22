@@ -7,7 +7,9 @@ Versioning: [SemVer](https://semver.org/) — `npm version patch|minor`
 
 ---
 
-## [Unreleased] — Teacher Salary & Payout
+## [Unreleased]
+
+## [0.2.0] — 2026-06-23
 
 ### Added
 - Teacher payout settings page — bank account, IFSC, UPI, PAN management
