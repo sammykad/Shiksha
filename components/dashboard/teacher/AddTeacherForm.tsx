@@ -74,7 +74,7 @@ export function AddTeacherForm({ prefillData, onSuccess }: AddTeacherFormProps) 
       address: '',
       city: '',
       state: '',
-      dateOfBirth: new Date(),
+      dateOfBirth: undefined,
       qualification: '',
       experienceInYears: 0,
       joinedAt: new Date(),
@@ -83,6 +83,7 @@ export function AddTeacherForm({ prefillData, onSuccess }: AddTeacherFormProps) 
       bio: '',
       teachingPhilosophy: '',
       linkedinPortfolio: '',
+      idProofUrl: '',
       languagesKnown: [],
     },
   });
@@ -327,7 +328,7 @@ export function AddTeacherForm({ prefillData, onSuccess }: AddTeacherFormProps) 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Mail className="w-4 h-4" />
-                            Email Address *
+                            Contact Email *
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -534,6 +535,26 @@ export function AddTeacherForm({ prefillData, onSuccess }: AddTeacherFormProps) 
                             {...field}
                           />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="idProofUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ID Proof (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://example.com/id-proof.pdf"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Link to uploaded ID proof document.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

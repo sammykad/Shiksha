@@ -410,7 +410,7 @@ IMP :
   - Debounced 500ms, auto-fills bank dropdown + branch + MICR
   - Works for all banks in banks.json, fallback to manual entry on failure
 
-# IMP Task :
+# IMP Task :Check
 
 - Find Best Sutable / Cheap Domain
 - Student Bulk Import should have Proper Validation , Clear Instructions, Mobile Friendly & CSV File
@@ -421,14 +421,12 @@ Plan is not passing correct when we are comes to pricing page
 Pricing Plan Not enforce yet : its also important
 
 we can send invite and After click on join button from organization List, not refresh.
-<!-- When I'm admin Setting page. And we can see the notification building like any other section. And if I try to redirect from Setup Progress @adminOnboardingGuide http://localhost:3000/dashboard/settings?section=general to the this page, it's not possible. Why not possible? I don't know, but it's both I think. even i click any other section url stays http://localhost:3000/dashboard/settings?section=general same -->
 
-Can u see the @components\dashboard\notice\create-notice.tsx in perticular area for Notificaiton whatsap sms email i want exact same into @components\dashboard\leads\create-lead-form.tsx and edit form but now we have Call option insted of push
-And also I dont see in Lead Details UI for Notification Preferences
+
 
 Make Teacher Settings Like AdminSetting Clean and optimzie Ui Need TopNotch
 Setup Teacher Profile : Keep atleast 16 years back date picker for Date of Birth
-Salary & Payout Information ; Make schema and Bank add Like PDC Cheque Easy to Fill Details
+
 Focus on Edit Profile cuz many Details we are not adding in acttule backend just Dummy and also Documents & Certifications
 Certifications , Resume Upload
 ID Proof Upload (Aadhaar/PAN/Passport) Find solution to add and If pan is added in profile Just show the In Payout Details dont ask again cuz its redudant

@@ -718,3 +718,23 @@ export const assignLeadSchema = z.object({
 });
 
 export type AssignLeadFormData = z.infer<typeof assignLeadSchema>;
+
+// ─── Salary & Payout ───────────────────────────────────────────
+
+export const bankAccountSchema = z.object({
+  accountHolderName: z.string().min(1, 'Account holder name is required'),
+  bankName: z.string().min(1, 'Bank name is required'),
+  accountNumber: z.string().regex(/^\d{9,18}$/, 'Enter a valid account number (9-18 digits)'),
+  confirmAccountNumber: z.string().min(1, 'Please confirm account number'),
+  ifscCode: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Enter a valid IFSC code'),
+  branchName: z.string().optional(),
+  upiId: z.string().regex(/^[\w.\-]+@[\w]+$/, 'Enter a valid UPI ID').optional().or(z.literal('')),
+  panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Enter a valid PAN number').optional().or(z.literal('')),
+}).refine((data) => data.accountNumber === data.confirmAccountNumber, {
+  message: 'Account numbers do not match',
+  path: ['confirmAccountNumber'],
+});
+
+export type BankAccountFormData = z.infer<typeof bankAccountSchema>;
+
+

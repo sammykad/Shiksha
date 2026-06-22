@@ -281,6 +281,7 @@ model Organization {
   certificates         Certificate[]
   reportCards          ReportCard[]
   parents              Parent[]
+  teacherBankAccounts  TeacherBankAccount[]
 
   // Branches - physical locations
   // branches    Branch[]
@@ -725,11 +726,11 @@ model Teacher {
   // membershipId String @unique
   // membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   idCards            IdCard[]
+  bankAccount        TeacherBankAccount?
 
   // salaries           Salary[]
   // model TeacherAttendance {}
-  // model TeacherSalary {}
-  @@unique([userId, organizationId])
+  // model TeacherSalary {}  @@unique([userId, organizationId])
   @@unique([employeeCode, organizationId])
   @@index([organizationId, userId])
   @@index([organizationId, isActive])
@@ -761,7 +762,32 @@ model TeacherProfile {
 
   linkedinPortfolio String?
   languagesKnown    String[]
-  certificateUrls   String[]
+  certificateUrls   Json?
+}
+
+model TeacherBankAccount {
+  id        String  @id @default(cuid())
+  teacherId String @unique
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  accountHolderName String
+  bankName          String
+  accountNumber     String // Encrypted at rest
+  ifscCode          String
+  branchName        String?
+  upiId             String?
+  panNumber         String?
+
+  isActive Boolean @default(true)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@index([organizationId])
 }
 
 model Grade {

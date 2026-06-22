@@ -336,6 +336,33 @@ These are real tasks from the team. Use this to understand what's in progress:
 
 ---
 
+## Changelog Workflow
+
+```bash
+# 1. Start a feature
+git checkout develop
+git checkout -b feature/my-feature
+
+# 2. Test your changes on develop
+git checkout develop
+git merge feature/my-feature
+# test everything
+
+# 3. Ship to production
+git checkout main
+git merge develop
+npm version patch   # or minor
+git push origin main --tags
+```
+
+**When finishing a feature on `develop`:** update `CHANGELOG.md` under `[Unreleased]` — add/change/fix/remove categories. Keep entries high-level, user-facing.
+
+**When merging `develop → main`:** move `[Unreleased]` entries into a new versioned section in `CHANGELOG.md`, then copy into `app/(website)/changelog/page.tsx` changelogEntries array.
+
+The changelog page at `/changelog` is the public-facing version. `CHANGELOG.md` is the internal source of truth.
+
+---
+
 ## Agent Behavior Rules
 avoid API Route so use server actions 
 1. **Never delete** files, migrations, or routes without explicit confirmation from the user
@@ -361,6 +388,7 @@ avoid API Route so use server actions
 | `docs/api.md` | API route reference |
 | `docs/setup.md` | Local environment setup guide |
 | `prisma/schema.prisma` | Source of truth for all data models |
+| `CHANGELOG.md` | Internal changelog — update on every feature/fix merged to develop |
 
 ---
 

@@ -84,9 +84,10 @@ export const getMenuList = (terminology: TerminologyLabels): Record<string, Grou
         },
         {
           href: '/dashboard/teachers',
-          label: 'Teacher Management',
+          label: 'Teachers Management',
           icon: GraduationCap,
         },
+
         {
           href: '/dashboard/students',
           label: `${terminology.student} Management`,

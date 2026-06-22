@@ -9,8 +9,8 @@ import {
   Plus,
   X,
   User,
-  Mail,
   Phone,
+  Mail,
   MapPin,
   GraduationCap,
   Briefcase,
@@ -20,6 +20,9 @@ import {
   BookOpen,
   Award,
   Shield,
+  Loader2,
+  Eye,
+  CheckCircle2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -83,6 +86,44 @@ interface TeacherProfileFormProps {
 export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
   const [isPending, startTransition] = useTransition();
   const [uploadedResume, setUploadedResume] = useState<File[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingIdProof, setUploadingIdProof] = useState(false);
+  const [uploadingCert, setUploadingCert] = useState<number | null>(null);
+
+  async function uploadFile(file: File): Promise<string | null> {
+    try {
+      const result = await uploadToCloudinary(file);
+      return result.url;
+    } catch {
+      toast.error('Failed to upload file');
+      return null;
+    }
+  }
+
+  function getFileNameFromUrl(url: string): string {
+    const segment = url.split('/').pop() || url;
+    return decodeURIComponent(segment.split('?')[0]).replace(/^[^/]+\//, '');
+  }
+
+  async function handleCertUpload(index: number, file: File, onChange: (url: string) => void) {
+    setUploadingCert(index);
+    const url = await uploadFile(file);
+    if (url) {
+      onChange(url);
+      toast.success('Certificate uploaded');
+    }
+    setUploadingCert(null);
+  }
+
+  async function handleIdProofUpload(file: File, onChange: (url: string) => void) {
+    setUploadingIdProof(true);
+    const url = await uploadFile(file);
+    if (url) {
+      onChange(url);
+      toast.success('ID proof uploaded');
+    }
+    setUploadingIdProof(false);
+  }
 
   const form = useForm<TeacherProfileFormData>({
     resolver: zodResolver(teacherProfileSchema),
@@ -166,7 +207,7 @@ export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
               <div className="flex flex-col items-center space-y-4">
                 <Avatar className="w-24 h-24">
                   <AvatarImage
-                    src={teacher.profilePhoto || ''}
+                    src={form.watch('profilePhoto') || ''}
                     alt="Profile"
                     className="rounded-full"
                   />
@@ -186,24 +227,32 @@ export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
                           <Input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              //   if (file) {
-                              //     handleFileUpload(file, 'profilePhoto');
-                              //   }
-                            }}
                             className="hidden"
                             id="profile-photo"
+                            disabled={uploadingPhoto}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploadingPhoto(true);
+                              const url = await uploadFile(file);
+                              if (url) {
+                                form.setValue('profilePhoto', url);
+                                toast.success('Profile photo uploaded');
+                              }
+                              setUploadingPhoto(false);
+                              e.target.value = '';
+                            }}
                           />
                           <Button
                             type="button"
                             variant="outline"
+                            disabled={uploadingPhoto}
                             onClick={() =>
                               document.getElementById('profile-photo')?.click()
                             }
                           >
                             <Upload className="w-4 h-4 mr-2" />
-                            Upload Photo
+                            {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
                           </Button>
                         </div>
                       </FormControl>
@@ -265,11 +314,10 @@ export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         <Mail className="w-4 h-4" />
-                        Email Address *
+                        Contact Email *
                       </FormLabel>
                       <FormControl>
                         <Input
-                          disabled={true}
                           type="email"
                           placeholder="Enter email address"
                           {...field}
@@ -602,14 +650,14 @@ export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
                                     onCheckedChange={(checked) => {
                                       return checked
                                         ? field.onChange([
-                                            ...field.value,
-                                            subject,
-                                          ])
+                                          ...field.value,
+                                          subject,
+                                        ])
                                         : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== subject.value
-                                            )
-                                          );
+                                          field.value?.filter(
+                                            (value) => value !== subject.value
+                                          )
+                                        );
                                     }}
                                   />
                                 </FormControl>
@@ -655,14 +703,14 @@ export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
                                     onCheckedChange={(checked) => {
                                       return checked
                                         ? field.onChange([
-                                            ...field.value,
-                                            grade,
-                                          ])
+                                          ...field.value,
+                                          grade,
+                                        ])
                                         : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== grade.value
-                                            )
-                                          );
+                                          field.value?.filter(
+                                            (value) => value !== grade.value
+                                          )
+                                        );
                                     }}
                                   />
                                 </FormControl>
@@ -786,15 +834,15 @@ export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
                                     onCheckedChange={(checked) => {
                                       return checked
                                         ? field.onChange([
-                                            ...(field.value || []),
-                                            language.value,
-                                          ])
+                                          ...(field.value || []),
+                                          language.value,
+                                        ])
                                         : field.onChange(
-                                            field.value?.filter(
-                                              (value) =>
-                                                value !== language.value
-                                            )
-                                          );
+                                          field.value?.filter(
+                                            (value) =>
+                                              value !== language.value
+                                          )
+                                        );
                                     }}
                                   />
                                 </FormControl>
@@ -815,142 +863,239 @@ export function TeacherProfileForm({ teacher }: TeacherProfileFormProps) {
           </Card>
 
           {/* Documents & Certifications */}
-          <Card>
+          <Card className="border-border/60">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Award className="w-5 h-5" />
+                <Award className="w-5 h-5 text-emerald-600" />
                 Documents & Certifications
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+
+            <CardContent className="space-y-8">
               {/* Certification Uploads */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <FormLabel>Certifications</FormLabel>
+                  <div>
+                    <FormLabel className="text-sm font-medium">
+                      Certifications
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Add degrees, B.Ed, or other relevant credentials
+                    </p>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => appendCertification({ title: '', url: '' })}
+                    className="gap-1.5"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Certification
+                    <Plus className="w-3.5 h-3.5" />
+                    Add
                   </Button>
                 </div>
 
-                {certificationFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-4 items-end">
-                    <FormField
-                      control={form.control}
-                      name={`certificateUrls.${index}.title`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Certification Title</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., B.Ed Certificate"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`certificateUrls.${index}.url`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Upload File</FormLabel>
-                          <FormControl>
-                            <div className="flex gap-2">
-                              <Input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    const fakeUrl = URL.createObjectURL(file);
-                                    field.onChange(fakeUrl);
-                                  }
-                                }}
-                                className="hidden"
-                                id={`cert-${index}`}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() =>
-                                  document
-                                    .getElementById(`cert-${index}`)
-                                    ?.click()
-                                }
-                              >
-                                <Upload className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeCertification(index)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                {certificationFields.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+                    No certifications added yet
                   </div>
-                ))}
+                )}
+
+                {certificationFields.map((field, index) => {
+                  const uploading = uploadingCert === index;
+                  const certUrl = form.watch(`certificateUrls.${index}.url`);
+
+                  return (
+                    <div
+                      key={field.id}
+                      className="rounded-xl border border-border bg-card p-4 space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <FormField
+                          control={form.control}
+                          name={`certificateUrls.${index}.title`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel className="text-xs text-muted-foreground">
+                                Certification Title
+                              </FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., B.Ed Certificate" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="mt-5 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => removeCertification(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name={`certificateUrls.${index}.url`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div>
+                                <Input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  id={`cert-${index}`}
+                                  disabled={uploading}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    await handleCertUpload(index, file, field.onChange);
+                                    e.target.value = '';
+                                  }}
+                                />
+
+                                {certUrl ? (
+                                  <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 dark:border-emerald-900 dark:bg-emerald-950/30">
+                                    <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span className="flex-1 text-sm text-emerald-900 dark:text-emerald-300 truncate">
+                                      {getFileNameFromUrl(certUrl)}
+                                    </span>
+                                    <a
+                                      href={certUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-900"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        document.getElementById(`cert-${index}`)?.click()
+                                      }
+                                      className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
+                                    >
+                                      Replace
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label
+                                    htmlFor={`cert-${index}`}
+                                    className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-3 text-sm text-muted-foreground hover:bg-muted/50 hover:border-muted-foreground/40 cursor-pointer transition-colors"
+                                  >
+                                    {uploading ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Uploading...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Award className="w-4 h-4" />
+                                        Click to upload (PDF, JPG, PNG)
+                                      </>
+                                    )}
+                                  </label>
+                                )}
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  );
+                })}
               </div>
 
               {/* ID Proof Upload */}
               <FormField
                 control={form.control}
                 name="idProofUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Shield className="w-4 h-4" />
-                      ID Proof Upload (Aadhaar/PAN/Passport)
-                    </FormLabel>
-                    <FormControl>
-                      <div className="flex items-center gap-2">
-                        {/* <Input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleFileUpload(file, 'idProofUpload');
-                            }
-                          }}
-                          className="hidden"
-                          id="id-proof-upload"
-                        /> */}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() =>
-                            document.getElementById('id-proof-upload')?.click()
-                          }
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          Upload ID Proof
-                        </Button>
-                        {field.value && (
-                          <Badge variant="secondary">ID Proof uploaded</Badge>
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Upload a clear copy of your government-issued ID
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  return (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                        <Shield className="w-4 h-4 text-emerald-600" />
+                        ID Proof (Aadhaar / PAN / Passport)
+                      </FormLabel>
+                      <FormControl>
+                        <div>
+                          <Input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="hidden"
+                            id="id-proof-upload"
+                            disabled={uploadingIdProof}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              await handleIdProofUpload(file, field.onChange);
+                              e.target.value = '';
+                            }}
+                          />
+
+                          {field.value ? (
+                            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 dark:border-emerald-900 dark:bg-emerald-950/30">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span className="flex-1 text-sm text-emerald-900 dark:text-emerald-300 truncate">
+                                {getFileNameFromUrl(field.value)}
+                              </span>
+                              <Badge
+                                variant="secondary"
+                                className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
+                              >
+                                Verified upload
+                              </Badge>
+                              <a
+                                href={field.value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-900"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  document.getElementById('id-proof-upload')?.click()
+                                }
+                                className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
+                              >
+                                Replace
+                              </button>
+                            </div>
+                          ) : (
+                            <label
+                              htmlFor="id-proof-upload"
+                              className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground hover:bg-muted/50 hover:border-muted-foreground/40 cursor-pointer transition-colors"
+                            >
+                              {uploadingIdProof ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="w-4 h-4" />
+                                  Click to upload your government ID
+                                </>
+                              )}
+                            </label>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Upload a clear copy of your government-issued ID. This is kept
+                        private and used only for verification.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </CardContent>
           </Card>

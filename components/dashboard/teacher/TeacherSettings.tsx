@@ -19,7 +19,6 @@ import { getInitials, capitalizeName } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import {
   UserRound,
-  Shield,
   Settings,
   Mail,
   Calendar,
@@ -36,7 +35,6 @@ import {
   ShieldPlus,
   NotepadTextDashed,
   Building2,
-  Hash,
   type LucideIcon,
 } from 'lucide-react';
 import { TeacherProfileForm } from './TeacherProfileForm';
@@ -47,7 +45,6 @@ import { getCurrentUserId } from '@/lib/user';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import prismaBase from '@/lib/prisma-base';
 
 export async function getTeacher(userId: string) {
   const teacher = await prisma.teacher.findUnique({
@@ -89,6 +86,17 @@ export async function getTeacher(userId: string) {
           bio: true,
         },
       },
+      bankAccount: {
+        select: {
+          accountHolderName: true,
+          bankName: true,
+          accountNumber: true,
+          ifscCode: true,
+          branchName: true,
+          upiId: true,
+          panNumber: true,
+        },
+      },
     },
   });
 
@@ -117,12 +125,10 @@ export async function getTeacher(userId: string) {
     linkedinPortfolio: teacher.profile.linkedinPortfolio || '',
     languagesKnown: teacher.profile.languagesKnown,
     teachingPhilosophy: teacher.profile.teachingPhilosophy || '',
-    certificateUrls: teacher.profile.certificateUrls.map((url, index) => ({
-      title: `Certificate ${index + 1}`,
-      url,
-    })),
+    certificateUrls: (teacher.profile.certificateUrls as { title: string; url: string }[]) || [],
     idProofUrl: teacher.profile.idProofUrl,
-    joinedAt: teacher.joinedAt,
+    joinedAt: teacher.joinedAt ?? teacher.createdAt,
+    bankAccount: teacher.bankAccount || null,
   };
 }
 
@@ -137,10 +143,8 @@ function InfoRow({
 }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3 py-2">
-      <div className="mt-0.5 shrink-0 rounded-md bg-muted p-1.5">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-      </div>
+    <div className="flex items-start gap-3 py-2.5 border-b border-border/40 last:border-0">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60" />
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-sm font-medium text-foreground break-words">{value}</p>
@@ -174,27 +178,26 @@ function ProfileSection({ teacher }: { teacher: NonNullable<Awaited<ReturnType<t
       <Separator />
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <Card className="flex-1">
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <Card className="flex-1 overflow-hidden">
+          <CardHeader className="flex flex-row items-start justify-between gap-4 sm:px-6">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16 border-2 border-border">
+              <Avatar className="h-16 w-16 border-2 border-border sm:h-20 sm:w-20">
                 <AvatarImage src={teacher.profilePhoto || undefined} />
-                <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                <AvatarFallback className="text-lg bg-primary/10 text-primary sm:text-xl">
                   {getInitials(`${teacher.firstName} ${teacher.lastName}`)}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <CardTitle className="text-lg">
+              <div className="space-y-1.5">
+                <CardTitle className="text-lg sm:text-xl">
                   {capitalizeName(teacher.firstName)} {capitalizeName(teacher.lastName)}
                 </CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-0.5">
-                  <Badge variant="secondary" className="text-[11px] font-normal">
+                <CardDescription className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs  font-normal">
                     {teacher.employmentStatus}
                   </Badge>
                   {teacher.employeeCode && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Hash className="h-3 w-3" />
-                      {teacher.employeeCode}
+                    <span className="text-xs text-muted-foreground">
+                      Employee Code: {teacher.employeeCode}
                     </span>
                   )}
                 </CardDescription>
@@ -285,106 +288,13 @@ function ProfileSection({ teacher }: { teacher: NonNullable<Awaited<ReturnType<t
   );
 }
 
-function PayoutSection() {
-  return <TeacherPayoutForm />;
-}
-
-function AccountSection({ teacher, hasPassword }: { teacher: NonNullable<Awaited<ReturnType<typeof getTeacher>>>; hasPassword: boolean }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
-          Account
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your account settings and security preferences.
-        </p>
-      </div>
-
-      <Separator />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            Account Information
-          </CardTitle>
-          <CardDescription>
-            Your primary email and account details.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Email Address</p>
-              <p className="text-sm font-medium">{teacher.email}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Contact Email</p>
-              <p className="text-sm font-medium">{teacher.contactEmail}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Account Created</p>
-              <p className="text-sm font-medium">{formatDate(teacher.joinedAt)}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Status</p>
-              <Badge variant="secondary" className="text-[11px] font-normal mt-0.5">
-                {teacher.employmentStatus}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Shield className="h-4 w-4 text-muted-foreground" />
-            Security
-          </CardTitle>
-          <CardDescription>
-            Manage your password and account security.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="text-sm font-medium">Password</p>
-              <p className="text-xs text-muted-foreground">
-                {hasPassword ? 'Change your account password' : 'Set a password for your account'}
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              {hasPassword ? 'Change Password' : 'Set Password'}
-            </Button>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="text-sm font-medium">Two-Factor Authentication</p>
-              <p className="text-xs text-muted-foreground">
-                Add an extra layer of security
-              </p>
-            </div>
-            <Badge variant="secondary" className="text-[11px]">Coming Soon</Badge>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+function PayoutSection({ teacherName, bankAccount }: { teacherName: string; bankAccount: NonNullable<Awaited<ReturnType<typeof getTeacher>>>['bankAccount'] }) {
+  return <TeacherPayoutForm defaultName={teacherName} initialBank={bankAccount} />;
 }
 
 const TeacherSettings = async () => {
   const userId = await getCurrentUserId();
   const teacher = await getTeacher(userId);
-
-  const account = await prismaBase.account.findFirst({
-    where: { userId, providerId: 'credential' },
-    select: { id: true },
-  });
-  const hasPassword = !!account;
 
   if (!teacher) {
     return (
@@ -403,18 +313,17 @@ const TeacherSettings = async () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="bg-background px-2 space-y-6">
       <PageHeader
         title="Teacher Settings"
-        description="Manage your profile, payout information, and account preferences."
+        description="Manage your profile and payout information."
         icon={UserRound}
       />
 
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
         <TeacherSettingsSidebar sections={{
           profile: <ProfileSection teacher={teacher} />,
-          payout: <PayoutSection />,
-          account: <AccountSection teacher={teacher} hasPassword={hasPassword} />,
+          payout: <PayoutSection teacherName={`${teacher.firstName} ${teacher.lastName}`} bankAccount={teacher.bankAccount} />,
         }} />
       </div>
     </div>

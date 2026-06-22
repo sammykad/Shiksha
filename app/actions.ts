@@ -603,9 +603,8 @@ export async function updateTeacherProfileAction({
 }) {
   const validatedData = teacherProfileSchema.parse(data);
 
-  // Convert { title, url }[] → string[]
-  const certificateUrls: string[] =
-    validatedData.certificateUrls?.map((file) => file.url) || [];
+  // Store certificate data as JSON array
+  const certificateUrls = validatedData.certificateUrls || [];
 
   const existingProfile = await prisma.teacherProfile.findUnique({
     where: { teacherId },
@@ -1338,31 +1337,6 @@ export async function deleteAcademicYear(id: string) {
       success: false,
       error: errorMessage,
     };
-  }
-}
-
-export async function updateTeacherPayoutAction(data: {
-  accountHolderName: string;
-  bankName: string;
-  accountNumber: string;
-  ifscCode: string;
-  upiId?: string | null;
-  panNumber?: string | null;
-}) {
-  try {
-    // TODO: Store payout info on Teacher model or create dedicated PayoutInfo model
-    // const organizationId = await getOrganizationId();
-    // await prisma.teacherPayout.upsert({ ... });
-
-    console.log("[updateTeacherPayoutAction] Payout data received:", {
-      ...data,
-      accountNumber: "***" + data.accountNumber.slice(-4),
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error("[updateTeacherPayoutAction] Error:", error);
-    return { success: false, error: "Failed to save payout information." };
   }
 }
 

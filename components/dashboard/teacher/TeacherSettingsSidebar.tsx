@@ -2,11 +2,11 @@
 
 import { useState, useMemo, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation"
-import { UserRound, WalletCards, Shield, Search, Menu, X } from "lucide-react"
+import { UserRound, WalletCards, Search, Menu, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-type SectionId = "profile" | "payout" | "account"
+type SectionId = "profile" | "payout"
 
 interface NavItem {
   id: SectionId
@@ -19,7 +19,6 @@ export type TeacherSections = Record<SectionId, ReactNode>
 const NAV: NavItem[] = [
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "payout", label: "Salary & Payout", icon: WalletCards },
-  { id: "account", label: "Account", icon: Shield },
 ]
 
 const SECTION_IDS = NAV.map((item) => item.id)

@@ -5,7 +5,23 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
+// Done. develop branch created locally and remote is in sync.
+// Workflow:
+// # 1. Start a feature
+// git checkout develop
+// git checkout -b feature/attendance-ai
 
+// # 2. Test your changes on develop
+// git checkout develop
+// git merge feature/attendance-ai
+// # test everything
+
+// # 3. Ship to production
+// git checkout main
+// git merge develop
+// npm version patch   # or minor
+// git push origin main --tags
+// main only gets merged when you're sure it's stable.
 function getVersion(): string {
   try {
     return execSync("git describe --tags --always", {
