@@ -53,3 +53,6 @@ generated/
 
 # Generated invoices
 /invoices/output/
+
+# Auto-generated version file
+/lib/version.ts

@@ -4,7 +4,6 @@ import { useSidebar } from '@/hooks/use-sidebar';
 import { useStore } from '@/hooks/use-store';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './sidebar';
-import { VersionBadge } from '@/components/ui/version-badge';
 
 interface AdminPanelLayoutProps {
   children: React.ReactNode;
@@ -43,9 +42,7 @@ export default function AdminPanelLayout({
           !settings.disabled && (!getOpenState() ? 'lg:ml-[90px]' : 'lg:ml-72')
         )}
       >
-        <div className="flex items-center justify-end border-t border-black/[0.04] px-4 py-2">
-          <VersionBadge />
-        </div>
+        {/* Footer content can go here */}
       </footer>
     </div>
   );
