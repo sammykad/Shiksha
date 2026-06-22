@@ -2146,7 +2146,6 @@ model AcademicYear {
   // ScheduledJob
   // NotificationLog
   // HallTicket
-  // ReportCard
   // ExamResult
   // ExamEnrollment
   createdBy          String

@@ -13,6 +13,8 @@ const YEAR_SCOPED_MODELS = new Set([
   'Leave',
   'Lead',
   'ExamSession',
+  'ReportCard',
+  'Certificate',
 ])
 
 const READ_OPS = new Set([

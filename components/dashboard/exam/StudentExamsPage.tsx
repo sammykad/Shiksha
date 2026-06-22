@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,11 +27,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { BookA, Filter, Paperclip, School } from 'lucide-react';
+import { BookA, Calendar, CheckCircle2, Filter, GraduationCap, Paperclip, Radio, School } from 'lucide-react';
 import Link from 'next/link';
 import type { ExamMode, ExamStatus } from '@/generated/prisma/enums';
 import { toast } from 'sonner';
-import { enrollStudentToExam } from '@/lib/data/exam/enroll-student-to-exam';
+import { enrollInExam } from '@/lib/data/exam/enroll-in-exam';
 
 import { ExamCard } from './ExamCard';
 import { ExamCardSkeleton } from '@/components/skeletons/exam-skeleton';
@@ -150,7 +149,7 @@ function humanize(val?: string | null) {
     .replace(/^\w/, (m) => m.toUpperCase());
 }
 
-export function StudentExamsPage({ exams }: { exams: ExamWithRelations[] }) {
+export function StudentExamsPage({ exams, role = 'STUDENT' }: { exams: ExamWithRelations[], role?: 'STUDENT' | 'PARENT' }) {
   // Colors used: blue (primary), red (accent), amber (accent), plus neutrals (white/gray/black)
   const [isFiltersVisible, setIsFiltersVisible] = useState<boolean>(false);
   const [isEnrolling, startTransition] = useTransition();
@@ -243,7 +242,7 @@ export function StudentExamsPage({ exams }: { exams: ExamWithRelations[] }) {
   const handleEnroll = (examId: string) => {
     startTransition(async () => {
       try {
-        const result = await enrollStudentToExam(examId);
+        const result = await enrollInExam(examId);
 
         if (result.success) {
           toast.success(result.message ?? "Successfully enrolled in exam!");
@@ -262,9 +261,9 @@ export function StudentExamsPage({ exams }: { exams: ExamWithRelations[] }) {
     <section className="px-2 space-y-3">
       <Card className="py-4 px-2 flex items-center justify-between">
         <div>
-          <CardTitle className="text-lg">My Exams</CardTitle>
+          <CardTitle className="text-lg">{role === 'PARENT' ? 'Exams / Results' : 'My Exams'}</CardTitle>
           <CardDescription className="text-sm">
-            Browse all your exams by session, subject.
+            {role === 'PARENT' ? 'Browse your children\u2019s exams by session, subject.' : 'Browse all your exams by session, subject.'}
           </CardDescription>
         </div>
         <div className="flex justify-center items-center space-x-3">
@@ -274,45 +273,75 @@ export function StudentExamsPage({ exams }: { exams: ExamWithRelations[] }) {
         </div>
       </Card>
 
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4 md:gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {stats.total}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium text-muted-foreground">Total Exams</span>
+              <div className="p-2 bg-blue-100 dark:bg-blue-950/50 rounded-lg">
+                <GraduationCap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">
+              {stats.total}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              All scheduled exams
+            </p>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent pointer-events-none" />
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Upcoming
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {stats.upcoming}
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium text-muted-foreground">Upcoming</span>
+              <div className="p-2 bg-amber-100 dark:bg-amber-950/50 rounded-lg">
+                <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">
+              {stats.upcoming}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Yet to begin
+            </p>
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Live
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {stats.live}
+
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium text-muted-foreground">Live Now</span>
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                <Radio className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+            </div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">
+              {stats.live}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Currently in progress
+            </p>
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none" />
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Completed
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {stats.completed}
+
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium text-muted-foreground">Completed</span>
+              <div className="p-2 bg-purple-100 dark:bg-purple-950/50 rounded-lg">
+                <CheckCircle2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">
+              {stats.completed}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Exams finished
+            </p>
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent pointer-events-none" />
           </CardContent>
         </Card>
       </div>
@@ -457,7 +486,7 @@ export function StudentExamsPage({ exams }: { exams: ExamWithRelations[] }) {
                 <ExamCard
                   key={e.id}
                   exam={e}
-                  onEnroll={handleEnroll}
+                  onEnroll={role === 'PARENT' ? undefined : handleEnroll}
                   onViewResult={(examId) => router.push(`/dashboard/exams/${examId}`)}
                 />
               </Suspense>

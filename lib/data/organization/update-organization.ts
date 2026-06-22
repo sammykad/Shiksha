@@ -1,6 +1,7 @@
 'use server';
 import prisma from '@/lib/db';
 import { OrganizationFormData } from '@/lib/schemas';
+import { getCurrentUser } from '@/lib/user';
 
 export async function updateOrganization({
   organizationId,
@@ -9,6 +10,11 @@ export async function updateOrganization({
   organizationId: string;
   data: OrganizationFormData;
 }) {
+  const user = await getCurrentUser();
+  if (user.organizationRole !== 'ADMIN') {
+    throw new Error('Only admins can update organization settings.');
+  }
+
   await prisma.organization.update({
     where: { id: organizationId },
     data: {

@@ -4,6 +4,42 @@ import { HallTicketPDF } from '@/lib/pdf-generator/HallTicketPDF';
 import { getCurrentUserByRole } from '@/lib/auth';
 import { getHallTicketForStudentExam } from '@/lib/data/hall-ticket/get-hall-ticket-data';
 import prisma from '@/lib/db';
+import { EmptyState } from '@/components/ui/empty-state';
+import { BookX, ArrowLeft } from 'lucide-react';
+
+async function resolveStudentId(
+  examId: string,
+  organizationId: string,
+): Promise<string> {
+  const currentUser = await getCurrentUserByRole();
+
+  if (currentUser.role === 'STUDENT') {
+    if (!currentUser.studentId) notFound();
+    return currentUser.studentId;
+  }
+
+  if (currentUser.role === 'PARENT') {
+    const exam = await prisma.exam.findFirst({
+      where: { id: examId, organizationId },
+      select: { gradeId: true, sectionId: true },
+    });
+    if (!exam) notFound();
+
+    const child = await prisma.student.findFirst({
+      where: {
+        id: { in: currentUser.studentIds },
+        gradeId: exam.gradeId,
+        sectionId: exam.sectionId,
+        organizationId,
+      },
+      select: { id: true },
+    });
+    if (!child) notFound();
+    return child.id;
+  }
+
+  redirect('/dashboard/exams');
+}
 
 export default async function HallTicketPage({
   params,
@@ -12,61 +48,31 @@ export default async function HallTicketPage({
 }) {
   const { id: examId } = await params;
   const organizationId = await getOrganizationId();
-  const currentUser = await getCurrentUserByRole();
+  const studentId = await resolveStudentId(examId, organizationId);
 
-  if (currentUser.role === 'PARENT') {
-    redirect('/dashboard/exams');
-  }
-
-  // First, get the student record for the current user
-  const student = await prisma.student.findFirst({
-    where: {
-      userId: currentUser.userId,
-      organizationId,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!student) {
-    return notFound();
-  }
-
-  // Fetch hall ticket data with all relations
-  const hallTicketData = await getHallTicketForStudentExam(student.id, examId);
+  const hallTicketData = await getHallTicketForStudentExam(studentId, examId);
 
   if (!hallTicketData) {
     return (
-      <div className="min-h-screen bg-muted/30 p-4 flex items-center justify-center">
-        <div className="max-w-md">
-          <div className="text-center">
-            <h2 className="text-lg font-semibold text-destructive mb-2">
-              Hall Ticket Not Found
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              No hall ticket is available for this exam. Please contact the
-              administration if you believe this is an error.
-            </p>
-            <a
-              href={`/dashboard/exams/${examId}`}
-              className="text-primary hover:underline"
-            >
-              ← Back to Exam Details
-            </a>
-          </div>
-        </div>
+      <div className="min-h-[60vh] flex items-center justify-center p-4">
+        <EmptyState
+          title="Hall Ticket Not Available"
+          description="No hall ticket has been generated for this exam. Please contact the administration."
+          icons={[BookX]}
+          action={{
+            label: "Back to Exam Details",
+            href: `/dashboard/exams/${examId}`,
+            icon: ArrowLeft,
+          }}
+        />
       </div>
     );
   }
 
-  return (
-    <HallTicketPDF
-      hallTicketData={hallTicketData}
-      // onDownloadPDF={() => {
-      //   // This could trigger a server action to generate/regenerate the PDF
-      //   console.log('Download PDF requested');
-      // }}
-    />
-  );
+  return <HallTicketPDF hallTicketData={hallTicketData}
+  // onDownloadPDF={() => {
+  //   // This could trigger a server action to generate/regenerate the PDF
+  //   console.log('Download PDF requested');
+  // }}
+  />;;
 }

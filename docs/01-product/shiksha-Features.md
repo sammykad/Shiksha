@@ -435,6 +435,66 @@ ID Proof Upload (Aadhaar/PAN/Passport) Find solution to add and If pan is added 
 
 Share Recorded Session ; Youtube URl Proview and all the things, Need 100% Dyanmic and Delivery to whatsapp
 
+# Audit Findings — Academic Year & Organization (June 2026)
+
+## Fixed Bugs
+
+- **Academic Year — `setCurrentAcademicYear()` didn't update cookie**: Admin sets new current year but user's `activeAcademicYearId` cookie still points to old year for up to 30 days. Users see wrong year's data. Fix: added `setActiveAcademicYearId(yearId)` after toggling `isCurrent`.
+- **Academic Year — `createAcademicYear()` had no admin role check**: Any org member could create academic years. Fix: added `organizationRole !== 'ADMIN'` guard.
+- **Academic Year — `deleteAcademicYear()` had no admin role check or "can't delete current year" check**: Fix: added both guards.
+- **Academic Year — `isCurrent` toggle race condition**: Brief window where no year has `isCurrent=true` between `updateMany` (clear all) and `create`/`update` (set one). Fix: wrapped all 3 toggle sites in `prisma.$transaction()`.
+- **Academic Year — `ReportCard` and `Certificate` not auto-scoped**: Both have `academicYearId` FK but missing from `YEAR_SCOPED_MODELS` in `lib/db.ts`. Fix: added both.
+- **Organization — `updateOrganization()` had no auth guard**: Anyone with an org ID could update name, slug, logo, etc. Fix: added `getCurrentUser()` + admin role check.
+- **Organization — Member pagination broken in UI**: `pageRows = filtered` ignored `page`/`pageSize`. Fix: sliced array with `filtered.slice(start, start + pageSize)`.
+
+## Unfixed Observations (deferred)
+
+- **TerminologySettings.tsx**: All save logic commented out, dead code. No `terminology` field on Organization model.
+- **RolePermissions.tsx**: View-only, toggles are local state only with no server action to persist.
+- **OrganizationConfig.tsx**: Duplicate of GeneralSettings.tsx with logo upload commented out. Which one should exist?
+- **Organization model has no address fields**: Missing `city`, `state`, `postalCode` — needed for school profiles.
+- **OrganizationConfig phone placeholder**: Uses US format `+1 (555)` instead of Indian `+91 98765`.
+- **Metadata field on Organization**: Used during creation but no UI to read/update.
+- **Student role after email invite is disabled** (`lib/auth.ts:213-221`): Students invited via email have no linked student profile → see "Missing profile" page. Fix requires schema change: make `Student.userId` optional (`String?`) like `Parent.userId`.
+
+# Audit Findings — Onboarding (June 2026)
+
+## Observations
+- **Onboarding auto-redirect never fires**: `getOnboardingStatus()` only checks academic year existence, which is auto-created by `initializeOrganization()` during org creation. The redirect to `/dashboard/onboarding` is effectively dead code. This is fine — the AdminOnboardingGuide (navbar popover) serves the same purpose non-intrusively.
+- **Wizard progress in localStorage**: `onboarding-max-step-{orgId}` is stored client-side, lost on browser clear or different device.
+- **Step count mismatch**: Guide = 11 steps (includes Organization), Wizard = 10 steps (starts at Grades).
+- **All wizard steps skippable**: No enforcement of foundational steps — user can skip everything.
+
+## Known but accepted
+- **Student invitation linking disabled**: `linkStudentProfile()` is commented out because `Student.userId String @unique` (required) prevents creating a Student record without a userId. To fix: change schema to `String? @unique`, update `createStudent.ts` (already provides userId), uncomment `linkStudentProfile` in `lib/auth.ts`.
+- **Missing profile page has no self-resolution path**: Users must contact admin. Expected — cannot self-create profile without data (section, grade, roll number, etc.).
+
+# Audit Findings — Auth & Authorization (June 2026)
+
+## Fixed Bugs
+- **No middleware was running**: `proxy.ts` was dead code (not named `middleware.ts` + wrong export name). RBAC `x-pathname` header was never set — all dashboard route permission checks fell back to `/dashboard` (all roles allowed). Fix: created `middleware.ts` with correct Next.js middleware export.
+- **`getSession()` dropped callback URL**: Redirected to `/sign-in` without preserving intended destination on expired sessions. Fix: added optional `returnUrl` parameter, included `?callbackURL=` on redirect.
+
+## Unfixed Issues (deferred)
+- **`/dashboard/institution` allows ADMINs in rbac.ts** — should be SuperAdmin-only. Fixable when SuperAdmin role is introduced.
+- **OTP subject typo** (`auth-email.ts:119`): `"forget-password"` → `"forgot-password"`.
+- **`sendAuthEmail()` (Resend) is dead code** in `auth-email.ts` — Brevo is the actual email provider. Remove or consolidate.
+- **Missing env var validation**: `NEXT_PUBLIC_APP_URL` and `BREVO_API_KEY` use `!` assertion — crash silently at module load time.
+- **`getOrganizationId` name collision**: Both `lib/auth.ts` and `lib/organization.ts` export same name — imports split 50/50 across codebase (functionally identical, both call `auth()`).
+
+# Audit Findings — Pricing, Billing & Subscription (June 2026)
+
+## Issues (deferred)
+- **Trial defaults to GROWTH plan**: `createTrialSubscription({ planCode = PlanCode.GROWTH })` — small schools on Starter get Growth pricing during trial. Should default to STARTER or respect the coupon/plan from sign-up.
+- **No trial expiry notification**: `handleExpiredTrials()` silently expires trials. No 7-day/1-day reminder to admin via email/SMS/WhatsApp.
+- **No automated subscription payment collection**: Invoices created as OPEN but never collected. No payment gateway integrated for subscription fees (PhonePe is only for school fee collection, parent→school).
+- **Wallet never debited**: `walletBalance` (Int) on Organization is credited (₹100 onboarding) but has no deduction mechanism. Notification costs and usage not tracked against wallet.
+- **`WalletTransaction` / `TopUpRequest` models don't exist in schema**: Documented in PRD but not in `schema.prisma`. No audit trail for wallet.
+- **Student limit never enforced**: `checkStudentLimit()` exists but is never called by any server action or middleware. AGENTS.md says "Zero enforcement until 20 schools" — no gate implemented for either.
+- **`activateSubscription()` ignores billing cycle**: Always sets `currentPeriodEnd = addMonths(now, 1)` regardless of MONTHLY or ANNUAL.
+- **No `PAST_DUE` handling defined**: Enum value exists but no code transitions subscriptions to PAST_DUE or handles overdue.
+- **Invoice PDF restricted to ADMIN**: `app/api/billing/invoice/[invoiceId]/pdf/route.ts` returns 403 for non-ADMIN roles — students/parents cannot download.
+
 # Decide
 
 - @organizaitonconfig or genralsetting ? which one is correct or why look same ?

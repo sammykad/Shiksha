@@ -4,20 +4,20 @@ import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { singleHolidayFormSchema } from '@/lib/schemas';
-import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { notify } from '@/lib/notifications/notify';
 import { CalendarEventType } from '@/generated/prisma/enums';
 import { formatInIST } from '@/lib/utils';
+import { getCurrentUser } from '@/lib/user';
 
 export const createSingleHolidayAction = async (
   data: z.infer<typeof singleHolidayFormSchema>
 ) => {
   const validateData = singleHolidayFormSchema.parse(data);
 
-  const { user } = await getSession();
+  const user = await getCurrentUser();
   const organizationId = await getOrganizationId();
   const academicYearId = await getCurrentAcademicYearId();
 

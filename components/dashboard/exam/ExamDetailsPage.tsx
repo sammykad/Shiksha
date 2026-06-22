@@ -34,7 +34,7 @@ import {
 import { toast } from 'sonner';
 import { Prisma } from '@/generated/prisma/client';
 import { ExamMode, ExamStatus } from '@/generated/prisma/enums';
-import { enrollStudentToExam } from '@/lib/data/exam/enroll-student-to-exam';
+import { enrollInExam } from '@/lib/data/exam/enroll-in-exam';
 import { formatDateTimeIN, formatDuration } from '@/lib/utils';
 import Link from 'next/link';
 import {
@@ -166,6 +166,7 @@ type ExamResultSummary = {
 interface ExamDetailsPageProps {
   exam: Exam;
   studentId: string;
+  role?: 'STUDENT' | 'PARENT';
   enrollment: Enrollment | null;
   result: Result | null;
   hallTicket: HallTicket | null;
@@ -176,6 +177,7 @@ interface ExamDetailsPageProps {
 export function ExamDetailsPage({
   exam,
   studentId,
+  role = 'STUDENT',
   enrollment,
   result,
   hallTicket,
@@ -222,7 +224,7 @@ export function ExamDetailsPage({
   const handleEnroll = async () => {
     startTransition(async () => {
       try {
-        const enrollResult = await enrollStudentToExam(exam.id);
+        const enrollResult = await enrollInExam(exam.id, role === 'PARENT' ? studentId : undefined);
 
         if (enrollResult.error) {
           toast.error(enrollResult.error);

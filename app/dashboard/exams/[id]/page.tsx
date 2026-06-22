@@ -16,7 +16,8 @@ export default async function UnifiedExamPage({
   const { id: examId } = await params;
   const organizationId = await getOrganizationId();
   const userId = await getCurrentUserId();
-  const { role } = await getCurrentUserByRole();
+  const currentUser = await getCurrentUserByRole();
+  const { role } = currentUser;
 
   // Fetch exam first to check if it exists
   const exam = await prisma.exam.findFirst({
@@ -241,17 +242,31 @@ export default async function UnifiedExamPage({
     );
   }
 
-  const student = await prisma.student.findFirst({
-    where: {
-      userId: userId,
-      organizationId,
-    },
-    select: {
-      id: true,
-      gradeId: true,
-      sectionId: true,
-    },
-  });
+  let student: { id: string; gradeId: string; sectionId: string } | null = null;
+
+  if (role === 'PARENT') {
+    const children = await prisma.student.findMany({
+      where: {
+        id: { in: currentUser.studentIds },
+        gradeId: exam.gradeId,
+        sectionId: exam.sectionId,
+        organizationId,
+      },
+      select: { id: true, gradeId: true, sectionId: true },
+    });
+
+    if (children.length === 0) {
+      return notFound();
+    }
+
+    student = children[0];
+  } else {
+    student = await prisma.student.findFirst({
+      where: { userId, organizationId },
+      select: { id: true, gradeId: true, sectionId: true },
+    });
+  }
+
   if (!student) {
     throw new Error('Student not found');
   }
@@ -401,6 +416,7 @@ export default async function UnifiedExamPage({
         gradingScale: effectiveGradingScale,
       }}
       studentId={student.id}
+      role={role as 'STUDENT' | 'PARENT'}
       enrollment={enrollment}
       result={result}
       hallTicket={hallTicket}

@@ -4,8 +4,8 @@ import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { singleHolidayFormSchema } from '@/lib/schemas';
-import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { getCurrentUser } from '@/lib/user';
 
 type HolidayCSVData = {
   name: string;
@@ -27,7 +27,7 @@ export const createCsvHolidayAction = async (holidayData: HolidayCSVData) => {
     isRecurring: holidayData.isRecurring,
   });
 
-  const { user } = await getSession();
+  const user = await getCurrentUser()
   const organizationId = await getOrganizationId();
   const academicYearId = await getCurrentAcademicYearId();
 

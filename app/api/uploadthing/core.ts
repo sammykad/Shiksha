@@ -1,4 +1,4 @@
-import { auth, getSession } from '@/lib/auth';
+import { auth, getCurrentUserId, } from '@/lib/auth';
 import { createUploadthing, type FileRouter } from 'uploadthing/next';
 import { UploadThingError } from 'uploadthing/server';
 
@@ -7,8 +7,8 @@ const f = createUploadthing();
 export const ourFileRouter = {
   organizationLogo: f({ image: { maxFileSize: '4MB', maxFileCount: 1 } })
     .middleware(async () => {
-      const session = await getSession();
-      return { userId: session.user.id };
+      const userId = await getCurrentUserId();
+      return { userId };
     })
     .onUploadComplete(async ({ metadata, file }) => {
       console.log('Organization logo uploaded for userId:', metadata.userId);

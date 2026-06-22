@@ -18,7 +18,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { subDays } from 'date-fns';
+import { Prisma } from '@/generated/prisma/client';
 import { Role } from '@/generated/prisma/enums';
+import { auth } from '@/lib/auth';
 import { getCurrentUser, getCurrentUserId } from '@/lib/user';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
@@ -1036,9 +1038,13 @@ export async function toggleTeacherStatus(teacherId: string) {
 
 export async function createAcademicYear(data: AcademicYearFormData) {
   try {
-    const organizationId = await getOrganizationId();
-    const user = await getCurrentUser();
-    const userId = await getCurrentUserId();
+    const { userId, orgId: organizationId, orgRole, user } = await auth();
+    if (orgRole !== 'ADMIN') {
+      return {
+        success: false,
+        error: 'You do not have permission to perform this action. Only Admin can perform this action.',
+      };
+    }
 
     const validatedData = academicYearSchema.parse(data);
     // Check for overlapping academic years
@@ -1080,26 +1086,28 @@ export async function createAcademicYear(data: AcademicYearFormData) {
     const count = await prisma.academicYear.count({ where: { organizationId } });
     const isActuallyCurrent = validatedData.isCurrent || count === 0;
 
-    if (isActuallyCurrent) {
-      await prisma.academicYear.updateMany({
-        where: {
-          organizationId: organizationId,
-          isCurrent: true,
-        },
-        data: { isCurrent: false },
-      });
-    }
+    const createdYear = await prisma.$transaction(async (tx) => {
+      if (isActuallyCurrent) {
+        await tx.academicYear.updateMany({
+          where: {
+            organizationId: organizationId,
+            isCurrent: true,
+          },
+          data: { isCurrent: false },
+        });
+      }
 
-    const createdYear = await prisma.academicYear.create({
-      data: {
-        ...validatedData,
-        isCurrent: isActuallyCurrent,
-        organizationId, // Force the organizationId from session
-        createdBy:
-          [user.firstName, user.lastName].filter(Boolean).join(' ') ||
-          userId ||
-          'SYSTEM',
-      },
+      return tx.academicYear.create({
+        data: {
+          ...validatedData,
+          isCurrent: isActuallyCurrent,
+          organizationId,
+          createdBy:
+            [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+            userId ||
+            'SYSTEM',
+        },
+      });
     });
 
     await setActiveAcademicYearId(createdYear.id);
@@ -1192,28 +1200,30 @@ export async function updateAcademicYear(data: AcademicYearUpdateFormData) {
       }
     }
 
-    // If this is set as current, unset other currents
-    if (validatedData.isCurrent) {
-      await prisma.academicYear.updateMany({
-        where: {
-          organizationId: validatedData.organizationId,
-          isCurrent: true,
-          id: { not: validatedData.id },
-        },
-        data: { isCurrent: false },
-      });
-    }
+    // If this is set as current, unset other currents in the same transaction
+    await prisma.$transaction(async (tx) => {
+      if (validatedData.isCurrent) {
+        await tx.academicYear.updateMany({
+          where: {
+            organizationId: validatedData.organizationId,
+            isCurrent: true,
+            id: { not: validatedData.id },
+          },
+          data: { isCurrent: false },
+        });
+      }
 
-    await prisma.academicYear.update({
-      where: { id: validatedData.id },
-      data: {
-        name: validatedData.name,
-        startDate: validatedData.startDate,
-        endDate: validatedData.endDate,
-        type: validatedData.type,
-        description: validatedData.description,
-        isCurrent: validatedData.isCurrent,
-      },
+      await tx.academicYear.update({
+        where: { id: validatedData.id },
+        data: {
+          name: validatedData.name,
+          startDate: validatedData.startDate,
+          endDate: validatedData.endDate,
+          type: validatedData.type,
+          description: validatedData.description,
+          isCurrent: validatedData.isCurrent,
+        },
+      });
     });
 
     if (validatedData.isCurrent) {
@@ -1251,28 +1261,24 @@ export async function setCurrentAcademicYear(
         error: 'You do not have permission to perform this action. Only Admin can perform this action.',
       };
     }
-    // Unset all other currents
-    await prisma.academicYear.updateMany({
-      where: {
-        organizationId,
-        isCurrent: true,
-        id: { not: yearId },
-      },
-      data: {
-        isCurrent: false,
-      },
+    // Unset all other currents and set selected year as current in one transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.academicYear.updateMany({
+        where: {
+          organizationId,
+          isCurrent: true,
+          id: { not: yearId },
+        },
+        data: { isCurrent: false },
+      });
+
+      await tx.academicYear.update({
+        where: { id: yearId },
+        data: { isCurrent: true },
+      });
     });
 
-    // Set selected year as current
-    await prisma.academicYear.update({
-      where: {
-        id: yearId,
-      },
-      data: {
-        isCurrent: true,
-      },
-    });
-
+    await setActiveAcademicYearId(yearId);
     revalidatePath('/dashboard/settings');
     return { success: true };
   } catch (error) {
@@ -1285,8 +1291,31 @@ export async function setCurrentAcademicYear(
 }
 
 export async function deleteAcademicYear(id: string) {
-  const organizationId = await getOrganizationId();
   try {
+    const { orgId: organizationId, orgRole } = await auth();
+    if (orgRole !== 'ADMIN') {
+      return {
+        success: false,
+        error: 'You do not have permission to perform this action. Only Admin can perform this action.',
+      };
+    }
+
+    const year = await prisma.academicYear.findUnique({
+      where: { id, organizationId },
+      select: { isCurrent: true },
+    });
+
+    if (!year) {
+      return { success: false, error: 'Academic year not found.' };
+    }
+
+    if (year.isCurrent) {
+      return {
+        success: false,
+        error: 'Cannot delete the current academic year. Set another year as current first.',
+      };
+    }
+
     await prisma.academicYear.delete({
       where: { id, organizationId },
     });
@@ -1298,13 +1327,7 @@ export async function deleteAcademicYear(id: string) {
 
     let errorMessage = 'Failed to delete academic year';
 
-    // Check for Prisma foreign key error
-    if (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as any).code === 'P2003'
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       errorMessage =
         'Cannot delete. This academic year is linked to other data (e.g., attendance, notices, etc.)';
     } else if (error instanceof Error) {

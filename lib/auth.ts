@@ -378,18 +378,11 @@ export type RoleContext =
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. SESSION HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
-const fetchSession = cache(async () => {
+export const getSession = cache(async (): Promise<BetterAuthSession | null> => {
   return betterAuthServer.api.getSession({
     headers: await headers(),
   }) as Promise<BetterAuthSession | null>;
 });
-export const getSession = cache(async (): Promise<BetterAuthSession> => {
-  const session = await fetchSession();
-  if (!session) redirect("/sign-in");
-  return session;
-});
-export const getSessionOrNull = fetchSession;
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. AUTH CONTEXT (Multi-tenant aware)
@@ -402,7 +395,7 @@ export const getSessionOrNull = fetchSession;
 export const auth = cache(
   async (options: { returnUrl?: string } = {}): Promise<AuthContext> => {
     const returnUrl = options.returnUrl ?? "/dashboard";
-    const session = await getSessionOrNull();
+    const session = await getSession();
     if (!session) {
       redirect(`/sign-in?callbackURL=${encodeURIComponent(returnUrl)}`);
     }

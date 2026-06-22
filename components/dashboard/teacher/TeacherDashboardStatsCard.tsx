@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Users, Calendar, BookOpen, AlertTriangle } from 'lucide-react';
@@ -7,8 +6,6 @@ import { getTeacherDashboardStats } from '@/lib/data/teacher/get-teacher-dashboa
 
 async function TeacherStatsContent() {
   const stats = await getTeacherDashboardStats();
-
-  if (!stats) redirect('/dashboard/missing-profile?role=teacher');
 
   return (
     <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">

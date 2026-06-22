@@ -96,7 +96,7 @@ export default async function ExamsPage() {
 
       return (
         <Suspense fallback={<ExamsPageSkeleton />}>
-          <StudentExamsPage exams={exams} />
+          <StudentExamsPage exams={exams} role="PARENT" />
         </Suspense>
       );
     }

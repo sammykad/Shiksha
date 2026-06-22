@@ -1,7 +1,8 @@
 "use server";
 
 import prisma from "@/lib/prisma-base";
-import { auth, getSession } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/user";
 
 export type OrgMembershipEntry = {
     organizationId: string;
@@ -32,12 +33,12 @@ export async function getUserOrganizationMemberships(): Promise<OrgMembershipEnt
 }
 
 export async function getUserOrganizationMembershipRole(organizationId: string): Promise<string | null> {
-    const session = await getSession();
+    const user = await getCurrentUser();
 
     const membership = await prisma.membership.findFirst({
         where: {
             organizationId,
-            userId: session.user.id,
+            userId: user.id,
             status: "ACTIVE",
         },
         select: {
@@ -49,12 +50,12 @@ export async function getUserOrganizationMembershipRole(organizationId: string):
 }
 
 export async function getUserOrganizationInvitations(): Promise<OrgInvitationEntry[]> {
-    const session = await getSession();
+    const user = await getCurrentUser();
 
     const invitations = await prisma.invitation.findMany({
         where: {
             email: {
-                equals: session.user.email,
+                equals: user.email,
                 mode: "insensitive",
             },
             status: {

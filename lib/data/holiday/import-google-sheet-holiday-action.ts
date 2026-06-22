@@ -3,16 +3,16 @@ import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { goggleImportHolidayFormSchema } from '@/lib/schemas';
-import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { getCurrentUser } from '@/lib/user';
 
 export const ImportGoogleSheetHolidayAction = async (
   data: z.infer<typeof goggleImportHolidayFormSchema>
 ) => {
   try {
     const organizationId = await getOrganizationId();
-    const { user } = await getSession();
+    const user = await getCurrentUser();
     const academicYearId = await getCurrentAcademicYearId();
 
     // Validate data against schema

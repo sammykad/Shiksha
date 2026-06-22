@@ -27,6 +27,7 @@ export default async function SelectOrganizationPage({
   const { returnUrl = '/dashboard', clear } = await searchParams;
 
   const session = await getSession();
+  if (!session) redirect("/sign-in");
 
   if (clear === "true") {
     await prisma.session.update({

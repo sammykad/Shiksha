@@ -80,8 +80,8 @@ import { notifyStudentsForExamEnrollment } from '@/lib/data/exam/notify-student-
 import { enrollStudentsInExam } from '@/lib/data/exam/enroll-students-by-admin';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BandPreviewBar } from './BandPreviewBar';
-import Link from 'next/link';
 import { AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export function AdminExamManagementPage({
   exam,
@@ -762,7 +762,7 @@ export function AdminExamManagementPage({
               No institutional grading system has been selected for this exam. Results calculation and grade distribution will not be available.
             </p>
             <Button size="sm" variant="outline" className="mt-4 border-amber-200 hover:bg-amber-100 text-amber-900" asChild>
-              <Link href={`/dashboard/exams/${exam.id}/edit`}>
+              <Link href="/dashboard/settings?section=grading">
                 Configure Grading System
               </Link>
             </Button>

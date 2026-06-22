@@ -17,6 +17,8 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
     Loader2,
     Mail,
     Menu,
@@ -505,7 +507,8 @@ function MembersContent({ org }: { org: OrganizationLike }) {
         );
     });
     const totalPages = Math.max(1, Math.ceil((search ? filtered.length : memberCount) / pageSize));
-    const pageRows = filtered;
+    const start = (page - 1) * pageSize;
+    const pageRows = filtered.slice(start, start + pageSize);
 
     const handleInvite = async () => {
         const emails = Array.from(new Set(parseInviteEmails(inviteEmails)));
@@ -826,8 +829,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                     className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.92] disabled:opacity-30"
                                     aria-label="First page"
                                 >
-                                    <ChevronLeft className="size-3.5" />
-                                    <ChevronLeft className="-ml-2 size-3.5" />
+                                    <ChevronsLeft className="size-3.5" />
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -860,8 +862,7 @@ function MembersContent({ org }: { org: OrganizationLike }) {
                                     className="size-7 rounded-[6px] border-black/[0.1] text-[#747686] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.92] disabled:opacity-30"
                                     aria-label="Last page"
                                 >
-                                    <ChevronRight className="size-3.5" />
-                                    <ChevronRight className="-ml-2 size-3.5" />
+                                    <ChevronsRight className="size-3.5" />
                                 </Button>
                             </div>
                         </div>

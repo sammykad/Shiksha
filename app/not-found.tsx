@@ -1,7 +1,7 @@
 import { EmptyState } from '@/components/ui/empty-state';
 import { Mail, Phone, User } from 'lucide-react';
 import type { Metadata } from 'next';
-import { getSessionOrNull } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'Page Not Found | Shiksha Cloud',
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NotFound() {
-  const session = await getSessionOrNull();
+  const session = await getSession();
   const userId = session?.user.id;
 
   const homeHref = userId ? '/dashboard' : '/';

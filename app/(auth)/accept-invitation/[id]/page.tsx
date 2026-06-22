@@ -24,6 +24,7 @@ export default async function AcceptInvitationPage({
 }) {
     const { id } = await params;
     const session = await getSession();
+    if (!session) redirect("/sign-in");
 
     const invitation = await prisma.invitation.findUnique({
         where: { id },

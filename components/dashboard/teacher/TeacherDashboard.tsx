@@ -2,18 +2,16 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { Calendar, Users, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import { getCurrentUserByRole } from '@/lib/auth';
 import { TeacherStatsCards } from '@/components/dashboard/teacher/TeacherDashboardStatsCard';
 import { RecentActivitiesCard } from '@/components/dashboard/teacher/RecentActivitiesCard';
 import { TeacherTodaysClassScheduleCard } from './TeacherTodaysClassScheduleCard';
 
-// import { MyClassesCard } from "@/components/teacher-dashboard/my-classes-card"
-// import { RecentActivitiesCard } from "@/components/teacher-dashboard/recent-activities-card"
-// import { StudentPerformanceCard } from "@/components/teacher-dashboard/student-performance-card"
-// import { QuickActionsCard } from "@/components/teacher-dashboard/quick-actions-card"
-
 // Available Sameer Kad Main V0.dev
 
 export default async function TeacherDashboard() {
+  // Redirects to /dashboard/missing-profile if teacher record doesn't exist
+  await getCurrentUserByRole();
   return (
     <div className="bg-gradient-to-br from-background via-background to-muted/10">
       <div className="px-2 space-y-3">
