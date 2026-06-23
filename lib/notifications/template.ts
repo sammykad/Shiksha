@@ -295,6 +295,13 @@ export interface StudentOnboardedVariables extends BaseVariables {
   loginUrl?: string;
 }
 
+export interface RecordedSessionSharedVariables extends BaseVariables {
+  title: string;
+  videoUrl: string;
+  teacherName: string;
+  message?: string;
+}
+
 export interface CertificateIssuedVariables extends BaseVariables {
   studentName: string;
   certificateType: string;
@@ -323,6 +330,9 @@ export type TemplateVariablesMap = {
   PAYMENT_SUCCESS: PaymentSuccessVariables;
   PAYMENT_FAILED: PaymentFailedVariables;
 
+  PDC_CHEQUE_RECORDED: PdcChequeRecordedVariables;
+  PDC_CHEQUE_BOUNCED: PdcChequeBouncedVariables;
+
   EXAM_CREATED: ExamCreatedVariables;
   EXAM_REMINDER: ExamReminderVariables;
   EXAM_ENROLLMENT: ExamEnrollmentVariables;
@@ -344,12 +354,12 @@ export type TemplateVariablesMap = {
   EMERGENCY_HOLIDAY: EmergencyHolidayVariables;
   TEACHING_ASSIGNMENT: TeachingAssignmentVariables;
   COMPLAINT_RECEIVED: ComplaintReceivedVariables;
+  RECORDED_SESSION_SHARED: RecordedSessionSharedVariables;
   ADMISSION_CONFIRMED: AdmissionConfirmedVariables;
   STUDENT_ONBOARDED: StudentOnboardedVariables;
   CERTIFICATE_ISSUED: CertificateIssuedVariables;
 
-  PDC_CHEQUE_RECORDED: PdcChequeRecordedVariables;
-  PDC_CHEQUE_BOUNCED: PdcChequeBouncedVariables;
+
 };
 
 export type NotificationVariables = TemplateVariablesMap[keyof TemplateVariablesMap];

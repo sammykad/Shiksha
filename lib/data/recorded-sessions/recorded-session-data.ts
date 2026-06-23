@@ -4,6 +4,32 @@ import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { toISTDate } from '@/lib/utils';
+import { auth } from '@/lib/auth';
+import { notify } from '@/lib/notifications/notify';
+
+export async function sendRecordedSessionAction(data: {
+  studentIds: string[];
+  title: string;
+  videoUrl: string;
+  message?: string;
+}) {
+  const { user } = await auth();
+  const teacherName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Teacher';
+
+  const result = await notify.recordedSession.shared({
+    sessionId: `share:${Date.now()}`,
+    recipients: data.studentIds.map((id) => ({ studentId: id })),
+    channels: ['WHATSAPP'],
+    variables: {
+      title: data.title,
+      videoUrl: data.videoUrl,
+      teacherName,
+      message: data.message,
+    },
+  });
+
+  return { success: result.ok, sent: result.totalSent, failed: result.totalFailed };
+}
 
 export async function getStudentsForRecording(sectionId: string) {
     const organizationId = await getOrganizationId();

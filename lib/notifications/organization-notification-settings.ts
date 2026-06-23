@@ -327,6 +327,13 @@ const DEFAULT_SETTINGS = [
         PUSH: { enabled: true, locked: false },
         EMAIL: { enabled: false, locked: false },
       },
+      recorded_session_shared: {
+        label: "Recorded Session Shared",
+        SMS: { enabled: false, locked: true },
+        WHATSAPP: { enabled: true, locked: false },
+        PUSH: { enabled: true, locked: false },
+        EMAIL: { enabled: false, locked: true },
+      },
     },
   },
 ] as const satisfies SettingDef[];
