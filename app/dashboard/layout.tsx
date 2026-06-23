@@ -12,7 +12,7 @@ import { getOnboardingStatus } from "@/lib/onboarding";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { Role } from "@/generated/prisma/enums";
-import { getRequiredRoles, isAllowed, ROLE_HOMEPAGE } from "@/lib/rbac";
+import { getRequiredRoles, isAllowed } from "@/lib/rbac";
 
 export const metadata: Metadata = {
   robots: {
@@ -33,7 +33,7 @@ export default async function DashboardLayout({
   const requiredRoles = getRequiredRoles(pathname);
 
   if (requiredRoles && !isAllowed(orgRole, requiredRoles)) {
-    redirect(ROLE_HOMEPAGE[orgRole] ?? "/dashboard");
+    redirect("/dashboard");
   }
 
   if (

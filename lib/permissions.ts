@@ -1,31 +1,4 @@
-// lib/permissions.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPLETE PERMISSION SYSTEM — Auth-Framework Independent
-// Drop-in replacement for Clerk's has() with identical API
-// Compatible with: Clerk, Better Auth, NextAuth, Lucia, custom auth
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { Role } from "@/generated/prisma/enums";
-
-// ─────────────────────────────────────────────────────────────
-// 1. ROLE SYSTEM
-// ─────────────────────────────────────────────────────────────
-
-
-/** Role hierarchy — higher = more privileges. Used for min: checks. */
-export const ROLE_HIERARCHY: Readonly<Record<Role, number>> = {
-  [Role.ADMIN]: 4,
-  [Role.TEACHER]: 3,
-  [Role.STUDENT]: 2,
-  [Role.PARENT]: 1,
-} as const
-
-export const ROLE_META: Readonly<Record<Role, { label: string; icon: string; color: string }>> = {
-  [Role.ADMIN]: { label: 'Administrator', icon: '👑', color: '#7c3aed' },
-  [Role.TEACHER]: { label: 'Teacher', icon: '👨‍🏫', color: '#2563eb' },
-  [Role.STUDENT]: { label: 'Student', icon: '🎓', color: '#059669' },
-  [Role.PARENT]: { label: 'Parent', icon: '👨‍👩‍👧', color: '#d97706' },
-} as const
 
 export const ROLE_CAPABILITIES: Readonly<Record<Role, Permission[]>> = {
   [Role.ADMIN]: [
@@ -96,7 +69,7 @@ export const ROLE_CAPABILITIES: Readonly<Record<Role, Permission[]>> = {
 } as const
 
 // ─────────────────────────────────────────────────────────────
-// 2. PERMISSION TYPES
+// PERMISSION TYPES
 // ─────────────────────────────────────────────────────────────
 
 export type Permission =
@@ -130,99 +103,38 @@ export type Permission =
   | 'children:view'
 
 // ─────────────────────────────────────────────────────────────
-// 3. FEATURE FLAGS
+// AUTH CONTEXT
 // ─────────────────────────────────────────────────────────────
 
-export type Feature =
-  | 'ai-agent' | 'ai-reports' | 'ai-attendance'
-  | 'online-payment'
-  | 'sms-notifications' | 'whatsapp-notifications' | 'push-notifications' | 'email-notifications'
-  | 'bus-tracking' | 'biometric-attendance'
-  | 'certificate-generator'
-  | 'bulk-import'
-  | 'api-access'
-  | 'custom-domain' | 'white-label'
-  | 'exam-hall-tickets' | 'report-cards'
-  | 'multi-tenant' | 'sso'
-
-// ─────────────────────────────────────────────────────────────
-// 4. REVERIFICATION
-// ─────────────────────────────────────────────────────────────
-
-export type ReverificationLevel = 'first_factor' | 'second_factor' | 'multi_factor'
-
-export type ReverificationConfig =
-  | ReverificationLevel
-  | { level: ReverificationLevel; afterMinutes: number }
-
-export const REVERIFICATION_PRESETS: Readonly<Record<string, number>> = {
-  strict_mfa: 10,
-  strict: 10,
-  moderate: 60,
-  lax: 1440,
-} as const
-
-export const REVERIFICATION_LEVELS: Readonly<Record<ReverificationLevel, { minFactors: number }>> = {
-  first_factor: { minFactors: 1 },
-  second_factor: { minFactors: 2 },
-  multi_factor: { minFactors: 2 },
-} as const
-
-// ─────────────────────────────────────────────────────────────
-// 5. AUTH CONTEXT
-// ─────────────────────────────────────────────────────────────
-
-export interface AuthContext {
+export interface PermissionContext {
   userId: string | null
   sessionId: string | null
   role: Role | null
   orgId: string | null
   orgSlug: string | null
   permissions: Permission[]
-  features: Feature[]
-  factorVerificationCount: number
-  lastVerifiedAt: number | null
-  tokenType: 'session' | 'api_key' | 'oauth_token' | 'm2m_token'
 }
 
-// ─────────────────────────────────────────────────────────────
-// 6. HAS() TYPES
-// ─────────────────────────────────────────────────────────────
-
 export interface HasParams {
-  role?: Role | `min:${Role}`
+  role?: Role
   permission?: Permission
-  feature?: Feature
-  reverification?: ReverificationConfig
 }
 
 export type HasFunction = (params: HasParams) => boolean
 
 // ─────────────────────────────────────────────────────────────
-// 7. createHas() — CORE ENGINE
+// HAS ENGINE
 // ─────────────────────────────────────────────────────────────
 
-export function createHas(ctx: Partial<AuthContext>): HasFunction {
+export function createHas(ctx: Partial<PermissionContext>): HasFunction {
   return function has(params: HasParams): boolean {
-    // Machine tokens are not allowed for user/org access control
-    if (ctx.tokenType && ctx.tokenType !== 'session') return false
-
-    const { role, permission, feature, reverification } = params
+    const { role, permission } = params
     let result = true
 
-    // Role check
     if (role !== undefined) {
-      if (!ctx.role) {
-        result = false
-      } else if (role.startsWith('min:')) {
-        const minRole = role.replace('min:', '') as Role
-        result = result && (ROLE_HIERARCHY[ctx.role] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0)
-      } else {
-        result = result && ctx.role === role
-      }
+      result = result && ctx.role === role
     }
 
-    // Permission check — explicit first, then role capabilities
     if (permission !== undefined) {
       if (!ctx.role) {
         result = false
@@ -233,73 +145,27 @@ export function createHas(ctx: Partial<AuthContext>): HasFunction {
       }
     }
 
-    // Feature check — use ctx.features if set
-    if (feature !== undefined) {
-      if (!ctx.features || !ctx.features.length) {
-        result = false
-      } else {
-        result = result && (ctx.features as readonly string[]).includes(feature)
-      }
-    }
-
-    // Reverification check
-    if (reverification !== undefined) {
-      if (ctx.lastVerifiedAt === null || ctx.lastVerifiedAt === undefined) {
-        result = false
-      } else {
-        const config: { level: ReverificationLevel; afterMinutes: number } =
-          typeof reverification === 'string'
-            ? {
-              level: (reverification as string) === 'strict_mfa'
-                ? 'multi_factor'
-                : (reverification as ReverificationLevel),
-              afterMinutes: REVERIFICATION_PRESETS[reverification] ?? 10,
-            }
-            : reverification
-
-        const elapsedMinutes = (Date.now() - ctx.lastVerifiedAt) / 60_000
-        if (elapsedMinutes > config.afterMinutes) result = false
-
-        const requiredFactors = REVERIFICATION_LEVELS[config.level].minFactors
-        if ((ctx.factorVerificationCount ?? 0) < requiredFactors) result = false
-      }
-    }
-
     return result
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 8. createTypedHas() — ERGONOMIC WRAPPER
-// ─────────────────────────────────────────────────────────────
-
-export function createTypedHas(ctx: Partial<AuthContext>) {
+export function createTypedHas(ctx: Partial<PermissionContext>) {
   const has = createHas(ctx)
   return {
     has,
-    /** Check exact role */
     hasRole: (role: Role) => has({ role }),
-    /** Check role or above in hierarchy */
-    hasMinRole: (role: Role) => has({ role: `min:${role}` }),
-    /** Check specific permission */
     hasPermission: (permission: Permission) => has({ permission }),
-    /** Check feature flag */
-    hasFeature: (feature: Feature) => has({ feature }),
-    /** True if user has ANY of the given roles */
     hasAnyRole: (...roles: Role[]) => roles.some(r => has({ role: r })),
-    /** True if user has ALL of the given permissions */
     hasAllPermissions: (...permissions: Permission[]) => permissions.every(p => has({ permission: p })),
-    /** True if user has ANY of the given permissions */
     hasAnyPermission: (...permissions: Permission[]) => permissions.some(p => has({ permission: p })),
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 9. requireAuth() / checkAuth() — SERVER GUARDS
+// SERVER GUARDS
 // ─────────────────────────────────────────────────────────────
 
-/** Throws if the check fails. Use in server actions. */
-export function requireAuth(ctx: Partial<AuthContext>, params: HasParams): void {
+export function requireAuth(ctx: Partial<PermissionContext>, params: HasParams): void {
   if (!createHas(ctx)(params)) {
     throw new Error(
       `[permissions] Authorization failed.\n` +
@@ -309,9 +175,8 @@ export function requireAuth(ctx: Partial<AuthContext>, params: HasParams): void 
   }
 }
 
-/** Returns { ok: true } or { ok: false, reason }. Never throws. */
 export function checkAuth(
-  ctx: Partial<AuthContext>,
+  ctx: Partial<PermissionContext>,
   params: HasParams,
 ): { ok: true } | { ok: false; reason: string } {
   if (createHas(ctx)(params)) return { ok: true }
@@ -319,34 +184,6 @@ export function checkAuth(
   const reasons: string[] = []
   if (params.role) reasons.push(`role: need "${params.role}", have "${ctx.role}"`)
   if (params.permission) reasons.push(`permission: "${params.permission}" not granted`)
-  if (params.feature) reasons.push(`feature: "${params.feature}" not enabled`)
-  if (params.reverification) reasons.push('reverification required')
 
   return { ok: false, reason: reasons.join('; ') || 'unauthorized' }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 10. createAuthContext() — BUILD FROM MINIMAL INPUT
-// ─────────────────────────────────────────────────────────────
-
-export function createAuthContext(options: {
-  userId: string | null
-  role: Role | null
-  orgId?: string | null
-  orgSlug?: string | null
-  features?: Feature[]
-  permissions?: Permission[]
-}): AuthContext {
-  return {
-    userId: options.userId,
-    sessionId: null,
-    role: options.role,
-    orgId: options.orgId ?? null,
-    orgSlug: options.orgSlug ?? null,
-    permissions: options.permissions ?? [],
-    features: options.features ?? [],
-    factorVerificationCount: 1,
-    lastVerifiedAt: Date.now(),
-    tokenType: 'session',
-  }
 }
