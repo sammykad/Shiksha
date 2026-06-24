@@ -15,7 +15,7 @@ import {
     UserPlus, Mail, MessageSquare, BarChart3,
     AlertTriangle, CheckSquare, FolderOpen, Layout,
 } from "lucide-react"
-import { ROLE_CAPABILITIES, ROLE_META } from "@/lib/permissions"
+import { ROLE_CAPABILITIES } from "@/lib/permissions"
 import { Role } from "@/generated/prisma/enums"
 
 // ─────────────────────────────────────────────────────────────
@@ -198,9 +198,7 @@ function UserList({
 
             {/* User list — scrollable only when it overflows the panel */}
             <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-                {filtered.map((user) => {
-                    const meta = ROLE_META[user.role as Role]
-                    return (
+                {filtered.map((user) => (
                         <button
                             key={user.id}
                             onClick={() => {
@@ -225,11 +223,11 @@ function UserList({
                             </Avatar>
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium truncate text-slate-900">{user.name}</p>
-                                <p className="text-xs text-slate-500 truncate capitalize">{meta.label}</p>
+                                <p className="text-xs text-slate-500 truncate capitalize">{user.role.toLowerCase()}</p>
                             </div>
                         </button>
                     )
-                })}
+                )}
 
                 {/* Empty state — only shown when search yields nothing */}
                 {filtered.length === 0 && (
@@ -287,8 +285,6 @@ function PermissionPanel({ user }: { user: RolePermissionsUser }) {
     useEffect(() => {
         setCategories(buildCategoriesForRole(user.role))
     }, [user.role])
-
-    const meta = ROLE_META[user.role]
 
     const handleToggle = useCallback(
         (id: string, action: "view" | "create" | "edit" | "delete", checked: boolean) => {

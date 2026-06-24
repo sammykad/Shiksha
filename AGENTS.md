@@ -125,6 +125,14 @@ Shiksha.cloud uses **Clerk** for auth with org-based, role-scoped access.
 - Introducing SuperAdmin will break many existing pages — audit all role checks before shipping
 - Teachers are scoped to assigned sections and subjects only — never expose cross-section data
 
+### Permission Model: Keep It Simple
+
+`lib/permissions.ts` has a `ROLE_CAPABILITIES` table showing what each role can do. That's useful for documentation. Everything else in that file — `createHas`, `createTypedHas`, `requireAuth`, `checkAuth`, `PermissionContext`, `Permission` type — is speculative code with zero consumers. Don't build on it.
+
+**The role-based system is fine.** ADMIN/TEACHER/STUDENT/PARENT checks with `orgRole ===` are simple, auditable, and every school admin understands them. Don't build per-user permission overrides, don't wire `hasPermission()` into routes or server actions, don't add a permission override DB table — until a real customer asks for it and you can design all 7 enforcement layers (DB, UI, engine, menu, routes, server actions, components) at once. Half-built permission systems give false security.
+
+**Auth accessor consolidation is a bigger practical problem than permissions.** The codebase has 3 auth accessor functions (`auth()`, `getCurrentUser()`, `getCurrentUserByRole()`) used inconsistently across 25+ files. That's worth fixing. The permission model is not.
+
 ---
 
 ## Core Domain Concepts

@@ -1,5 +1,13 @@
 COMPLETE FEATURE LIST - NEXUS SCHOOL MANAGEMENT
 
+# Testing Needed 
+- Digital ID Card Generation : Pending
+- Student Report Generation
+- Ring Chart/Heatmap/Skyline Visualization
+- QR Attendance Scanner : Pending
+- Face Scanner : Pending
+- Meta/Facebook Lead Integration 
+
 1. STUDENT MANAGEMENT
 
 - Student Registration/Profiles
@@ -105,8 +113,9 @@ COMPLETE FEATURE LIST - NEXUS SCHOOL MANAGEMENT
 - Lead Priority (Low/Medium/High/Urgent/VIP)
 - Lead Source Tracking (20+ sources)
 - Convert Lead to Student
-- Meta/Facebook Lead Integration
+- Meta/Facebook Lead Integration 
 - Lead Communication Preferences
+- Assigned Leads - PENDING
 
 9. EXAM MANAGEMENT : Not Tested Properly Or Real
 
@@ -409,7 +418,7 @@ IMP :
   - Uses [BANKCODE] from API to match banks.json keys (not bank name string)
   - Debounced 500ms, auto-fills bank dropdown + branch + MICR
   - Works for all banks in banks.json, fallback to manual entry on failure
-
+- Issue: The Leave model uses type String // New instead of the LeaveType enum defined just above it.
 # IMP Task :Check
 
 - Find Best Sutable / Cheap Domain

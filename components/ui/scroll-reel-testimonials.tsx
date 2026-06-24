@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 
 // import { ScrollReelTestimonials } from "@/components/ui/scroll-reel-testimonials";
@@ -65,6 +66,8 @@ export interface ScrollReelTestimonialsProps {
     testimonials: ScrollReelTestimonial[];
     /** Per-character stagger in ms (default 6) */
     charStaggerMs?: number;
+    /** Auto-advance interval in ms (default 0 = off) */
+    autoPlayInterval?: number;
     /** Extra classes for the outer container */
     className?: string;
 }
@@ -184,6 +187,7 @@ function Chars({
 export function ScrollReelTestimonials({
     testimonials,
     charStaggerMs = 6,
+    autoPlayInterval = 0,
     className,
 }: ScrollReelTestimonialsProps) {
     /* Navigation state vs display state are kept separate so the
@@ -192,8 +196,10 @@ export function ScrollReelTestimonials({
     const [displayIndex, setDisplayIndex] = React.useState(0);
     const [exiting, setExiting] = React.useState(false);
     const [mounted, setMounted] = React.useState(false);
+    const [paused, setPaused] = React.useState(false);
     const animating = React.useRef(false);
     const timeouts = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+    const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
     const count = testimonials.length;
 
@@ -206,8 +212,22 @@ export function ScrollReelTestimonials({
         return () => {
             cancelAnimationFrame(raf);
             timeouts.current.forEach(clearTimeout);
+            if (intervalRef.current) clearInterval(intervalRef.current);
         };
     }, []);
+
+    /* Auto-play interval */
+    React.useEffect(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (!autoPlayInterval || paused) return;
+        intervalRef.current = setInterval(() => {
+            if (animating.current || index >= count - 1) return;
+            paginate(1);
+        }, autoPlayInterval);
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        };
+    }, [autoPlayInterval, paused, index, count]);
 
     const paginate = React.useCallback(
         (dir: 1 | -1) => {
@@ -279,6 +299,10 @@ export function ScrollReelTestimonials({
             aria-label="Testimonials"
             tabIndex={0}
             onKeyDown={onKeyDown}
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+            onFocus={() => setPaused(true)}
+            onBlur={() => setPaused(false)}
             className={cn(
                 "relative flex w-full max-w-[1060px] flex-col items-stretch gap-2.5 overflow-hidden rounded-xl border border-border bg-muted shadow-[inset_0_2px_0_rgba(255,255,255,1)] outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-[320px] md:flex-row",
                 "dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
@@ -391,44 +415,24 @@ export function ScrollReelTestimonials({
                 </div>
 
                 {/* Controls */}
-                <div className="mt-6 flex items-center gap-1.5 md:mt-0">
+                <div className="mt-10 flex items-center gap-1.5">
                     <button
                         type="button"
                         onClick={() => paginate(-1)}
                         disabled={index === 0}
                         aria-label="Previous testimonial"
-                        className="grid h-6 w-6 cursor-pointer place-items-center rounded-full border border-foreground/15 bg-transparent p-0 text-foreground transition-[opacity,transform] duration-200 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:enabled:scale-[1.08] active:enabled:scale-[0.94] disabled:cursor-default disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-full border border-foreground/15 bg-transparent p-0 text-foreground transition-[opacity,transform] duration-200 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:enabled:scale-[1.08] active:enabled:scale-[0.94] disabled:cursor-default disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                        <svg
-                            className="h-3 w-3 opacity-70"
-                            viewBox="0 0 12 12"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <path d="M7.5 2.5 3.5 6l4 3.5" />
-                        </svg>
+                        <ChevronLeft className="h-4 w-4 opacity-70" />
                     </button>
                     <button
                         type="button"
                         onClick={() => paginate(1)}
                         disabled={index === count - 1}
                         aria-label="Next testimonial"
-                        className="grid h-6 w-6 cursor-pointer place-items-center rounded-full border border-foreground/15 bg-transparent p-0 text-foreground transition-[opacity,transform] duration-200 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:enabled:scale-[1.08] active:enabled:scale-[0.94] disabled:cursor-default disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-full border border-foreground/15 bg-transparent p-0 text-foreground transition-[opacity,transform] duration-200 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:enabled:scale-[1.08] active:enabled:scale-[0.94] disabled:cursor-default disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                        <svg
-                            className="h-3 w-3 opacity-70"
-                            viewBox="0 0 12 12"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <path d="m4.5 2.5 4 3.5-4 3.5" />
-                        </svg>
+                        <ChevronRight className="h-4 w-4 opacity-70" />
                     </button>
                 </div>
             </div>

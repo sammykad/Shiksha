@@ -1,30 +1,8 @@
 import { Role } from '@/generated/prisma/enums';
 
-// lib/rbac.ts
-// ─────────────────────────────────────────────────────────────
-// SINGLE SOURCE OF TRUTH for route permissions
-//
-// To add a new route:  just add it here. Touch nothing else.
-// To change a role:    just update the array here.
-//
-// Roles: ADMIN | TEACHER | STUDENT | PARENT
-// ─────────────────────────────────────────────────────────────
-
-// Where each role lands after login or on unauthorized access
-export const ROLE_HOMEPAGE: Record<Role, string> = {
-    [Role.ADMIN]: '/dashboard',
-    [Role.TEACHER]: '/dashboard',
-    [Role.STUDENT]: '/dashboard',
-    [Role.PARENT]: '/dashboard',
-};
-
-// ─────────────────────────────────────────────────────────────
-// ROUTE PERMISSIONS
-//
 // Each entry is a route prefix and which roles can access it.
 // More specific routes go first — first match wins.
 // '*' in roles means any authenticated user.
-// ─────────────────────────────────────────────────────────────
 export const ROUTE_PERMISSIONS: { path: string; roles: Role[] | '*' }[] = [
     // ── Onboarding ─────────────────────────────────────────
     { path: '/dashboard/onboarding', roles: ['ADMIN'] },

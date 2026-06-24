@@ -1,4 +1,4 @@
-# 📊 Fedena vs Nexus - Complete Module Comparison
+# 📊 Fedena vs shiksha - Complete Module Comparison
 
 **Generated:** April 2026  
 **Purpose:** Detailed module-by-module comparison for competitive positioning
@@ -21,7 +21,7 @@
 
 **Included in: Standard, Premium, Ultimate**
 
-| #   | Module                       | Description                               | Nexus Equivalent                   |
+| #   | Module                       | Description                               | shiksha Equivalent                   |
 | --- | ---------------------------- | ----------------------------------------- | ---------------------------------- |
 | 1   | **Multiple Dashboards**      | Role-based dashboards for different users | ✅ Dashboard (All roles)           |
 | 2   | **News Management**          | School announcements and updates          | ✅ Notices                         |
@@ -52,7 +52,7 @@
 
 **Included in: Standard, Premium, Ultimate**
 
-| #   | Module                 | Description                               | Nexus Equivalent                  |
+| #   | Module                 | Description                               | shiksha Equivalent                  |
 | --- | ---------------------- | ----------------------------------------- | --------------------------------- |
 | 1   | **Hostel / Dormitory** | Student hostel management                 | ❌ Not Available                  |
 | 2   | **Instant Fees**       | Temporary/ad-hoc fee collection           | ✅ Fee Management                 |
@@ -78,7 +78,7 @@
 
 **Included in: Premium, Ultimate Only**
 
-| #   | Module                            | Description                    | Nexus Equivalent         |
+| #   | Module                            | Description                    | shiksha Equivalent         |
 | --- | --------------------------------- | ------------------------------ | ------------------------ |
 | 1   | **Data Export**                   | Export data to XML/CSV         | ✅ Export (CSV/Excel)    |
 | 2   | **Tally Integration**             | Sync with Tally accounting     | ❌ Not Available         |
@@ -97,7 +97,7 @@
 
 **Included in: Ultimate Plan Only**
 
-| #   | Module                            | Description                     | Nexus Equivalent             |
+| #   | Module                            | Description                     | shiksha Equivalent             |
 | --- | --------------------------------- | ------------------------------- | ---------------------------- |
 | 1   | **Alumni**                        | Alumni network management       | ❌ Not Available             |
 | 2   | **Audit**                         | User activity tracking and logs | ⚠️ Partial (NotificationLog) |
@@ -114,7 +114,7 @@
 
 ---
 
-## 🎯 Nexus - Complete Module List (25 Modules Total)
+## 🎯 shiksha - Complete Module List (25 Modules Total)
 
 ### ✅ Core Functional Modules (20)
 
@@ -159,7 +159,7 @@
 
 ### Feature Coverage Matrix
 
-| Category              | Fedena Standard | Fedena Premium | Fedena Ultimate | Nexus  |
+| Category              | Fedena Standard | Fedena Premium | Fedena Ultimate | shiksha  |
 | --------------------- | --------------- | -------------- | --------------- | ------ |
 | **Total Modules**     | 38              | 48             | 60              | 25     |
 | **Core SIS**          | ✅ 22           | ✅ 22          | ✅ 22           | ✅ 20  |
@@ -172,11 +172,11 @@
 
 ---
 
-## 🎯 Nexus Advantages vs. Fedena
+## 🎯 shiksha Advantages vs. Fedena
 
-### Where Nexus Wins
+### Where shiksha Wins
 
-| Feature                   | Nexus                            | Fedena                            | Advantage                         |
+| Feature                   | shiksha                            | Fedena                            | Advantage                         |
 | ------------------------- | -------------------------------- | --------------------------------- | --------------------------------- |
 | **Pricing**               | ₹79/student/month, all-inclusive | ₹50K-₹1L/year + GST, module-based | **24x cheaper** for small schools |
 | **Setup Fees**            | ₹0                               | Included but hidden in high base  | **Transparent**                   |
@@ -191,11 +191,11 @@
 
 ---
 
-## ⚠️ Fedena Advantages vs. Nexus
+## ⚠️ Fedena Advantages vs. shiksha
 
 ### Where Fedena Wins
 
-| Feature                     | Fedena                        | Nexus          | Gap                    |
+| Feature                     | Fedena                        | shiksha          | Gap                    |
 | --------------------------- | ----------------------------- | -------------- | ---------------------- |
 | **Module Count**            | 60 modules                    | 25 modules     | **35 modules missing** |
 | **Hostel Management**       | ✅ Yes                        | ❌ No          | Significant            |
@@ -224,33 +224,33 @@
 
 1. **Hidden Costs**
    - Fedena: ₹50,000 + 18% GST = ₹59,000 actual
-   - Nexus: ₹79/student transparent (100 students = ₹7,900/month = ₹94,800/year)
-   - **For 500 students:** Nexus ₹47,400/month vs. Fedena ₹59,000 one-time
+   - shiksha: ₹79/student transparent (100 students = ₹7,900/month = ₹94,800/year)
+   - **For 500 students:** shiksha ₹47,400/month vs. Fedena ₹59,000 one-time
    - **Break-even:** ~15 months for small schools
 
 2. **Older Technology**
    - Fedena: PHP-based (2009 architecture)
-   - Nexus: Next.js 15 (2026 modern stack)
+   - shiksha: Next.js 15 (2026 modern stack)
    - **Pitch:** "Would you buy a 2009 car in 2026?"
 
 3. **Limited Parent Communication**
    - Fedena: SMS + Email only
-   - Nexus: WhatsApp + SMS + Email + Push + In-App
+   - shiksha: WhatsApp + SMS + Email + Push + In-App
    - **Pitch:** "WhatsApp has 98% open rate vs. 20% for email"
 
 4. **No AI Features**
    - Fedena: Manual everything
-   - Nexus: AI attendance suggestions, fee insights
+   - shiksha: AI attendance suggestions, fee insights
    - **Pitch:** "Save 2 hours daily with AI automation"
 
 5. **Complex Module Upgrades**
    - Fedena: Need to upgrade plan for new features
-   - Nexus: All features included, continuous updates
+   - shiksha: All features included, continuous updates
    - **Pitch:** "Never pay extra for new features"
 
 ---
 
-### Defend Nexus Gaps
+### Defend shiksha Gaps
 
 **When Fedena mentions missing modules:**
 
@@ -266,7 +266,7 @@
 
 ## 📈 Ideal Customer Profiles
 
-### Choose Nexus When:
+### Choose shiksha When:
 
 - ✅ **Budget-conscious** schools (₹79/student is accessible)
 - ✅ **WhatsApp-first** parent communication needed
@@ -293,15 +293,15 @@
 
 ### Against Fedena Standard (₹50K)
 
-"Fedena Standard is ₹50,000 + 18% GST = ₹59,000 per year. For a 200-student school, that's ₹295 per student annually. Nexus is ₹79 per student per month = ₹948 annually, but includes WhatsApp notifications, AI features, and 24/7 India support. Yes, we're 3x the price, but you get 10x the value. Plus, no hidden GST charges."
+"Fedena Standard is ₹50,000 + 18% GST = ₹59,000 per year. For a 200-student school, that's ₹295 per student annually. shiksha is ₹79 per student per month = ₹948 annually, but includes WhatsApp notifications, AI features, and 24/7 India support. Yes, we're 3x the price, but you get 10x the value. Plus, no hidden GST charges."
 
 ### Against Fedena Premium (₹75K)
 
-"Fedena Premium is ₹75,000 + GST. You get payment gateway and Google SSO, but still no WhatsApp. Our ₹79/student plan includes WhatsApp, AI attendance suggestions, and a modern mobile-friendly interface. For 300 students, Nexus is ₹23,700/month vs. Fedena's ₹75,000 one-time. Over 3 years, Fedena costs ₹2.25L + GST, Nexus costs ₹8.53L. But you're paying for continuous innovation, not legacy maintenance."
+"Fedena Premium is ₹75,000 + GST. You get payment gateway and Google SSO, but still no WhatsApp. Our ₹79/student plan includes WhatsApp, AI attendance suggestions, and a modern mobile-friendly interface. For 300 students, shiksha is ₹23,700/month vs. Fedena's ₹75,000 one-time. Over 3 years, Fedena costs ₹2.25L + GST, shiksha costs ₹8.53L. But you're paying for continuous innovation, not legacy maintenance."
 
 ### Against Fedena Ultimate (₹1L)
 
-"Fedena Ultimate is ₹1,00,000 + GST for 60 modules. But how many will you actually use? Schools typically use 15 modules regularly. Nexus focuses on those 15 essentials and does them exceptionally well with AI automation and WhatsApp integration. What are the top 5 modules you'll use daily? Let's compare those."
+"Fedena Ultimate is ₹1,00,000 + GST for 60 modules. But how many will you actually use? Schools typically use 15 modules regularly. shiksha focuses on those 15 essentials and does them exceptionally well with AI automation and WhatsApp integration. What are the top 5 modules you'll use daily? Let's compare those."
 
 ---
 
@@ -317,7 +317,7 @@
    - Reveals limitation (SMS/Email only)
 
 4. **"What's the implementation timeline from contract to go-live?"**
-   - Exposes complexity (weeks vs. Nexus days)
+   - Exposes complexity (weeks vs. shiksha days)
 
 5. **"Does Fedena have AI-powered features for attendance or fee insights?"**
    - Reveals manual processes
@@ -335,18 +335,18 @@
 
 ## 📊 Summary Table
 
-| Metric                      | Fedena            | Nexus             | Winner         |
+| Metric                      | Fedena            | shiksha             | Winner         |
 | --------------------------- | ----------------- | ----------------- | -------------- |
 | **Total Modules**           | 60                | 25                | Fedena         |
 | **Core Modules**            | 22                | 20                | Tie            |
-| **Pricing (200 students)**  | ₹59K-₹1.18L + GST | ₹1.89L/year       | Nexus (small)  |
+| **Pricing (200 students)**  | ₹59K-₹1.18L + GST | ₹1.89L/year       | shiksha (small)  |
 | **Pricing (1000 students)** | ₹59K-₹1.18L + GST | ₹9.48L/year       | Fedena (large) |
-| **WhatsApp Integration**    | ❌ No             | ✅ Yes            | Nexus          |
-| **AI Features**             | ❌ No             | ✅ Yes            | Nexus          |
-| **Implementation Time**     | 2-4 weeks         | 2-5 days          | Nexus          |
-| **Tech Stack**              | PHP (2009)        | Next.js 15 (2026) | Nexus          |
+| **WhatsApp Integration**    | ❌ No             | ✅ Yes            | shiksha          |
+| **AI Features**             | ❌ No             | ✅ Yes            | shiksha          |
+| **Implementation Time**     | 2-4 weeks         | 2-5 days          | shiksha          |
+| **Tech Stack**              | PHP (2009)        | Next.js 15 (2026) | shiksha          |
 | **Mobile App**              | ✅ Native         | ⚠️ PWA            | Fedena         |
-| **India Support**           | ⚠️ Mixed          | ✅ 24/7           | Nexus          |
+| **India Support**           | ⚠️ Mixed          | ✅ 24/7           | shiksha          |
 | **Open Source**             | ✅ Yes            | ❌ No             | Fedena         |
 | **Integrations**            | ✅ 8+             | ⚠️ 2              | Fedena         |
 
@@ -354,7 +354,7 @@
 
 ## 🎯 Conclusion
 
-**Nexus wins when:**
+**shiksha wins when:**
 
 - School prioritizes modern UX, WhatsApp, AI, and fast implementation
 - Budget is ₹79/student/month (accessible for most Indian schools)
@@ -367,7 +367,7 @@
 - Large institution (500+ students) can absorb ₹1L cost
 - Established brand reduces perceived risk
 
-**Sweet spot for Nexus:** 100-500 student schools valuing innovation over module breadth.
+**Sweet spot for shiksha:** 100-500 student schools valuing innovation over module breadth.
 
 ---
 
