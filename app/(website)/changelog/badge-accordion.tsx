@@ -1,15 +1,10 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Sparkles, RefreshCw, Bug } from 'lucide-react'
-
-type ChangelogItem = {
-  type: string
-  items: string[]
-  badges?: string[]
-}
+import type { ChangelogCategory } from '@/lib/data/changelog/changelog-entries'
 
 type BadgeAccordionProps = {
-  data: ChangelogItem[]
+  data: ChangelogCategory[]
 }
 
 const categoryConfig = {

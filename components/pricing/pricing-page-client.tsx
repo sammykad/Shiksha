@@ -10,7 +10,6 @@ import {
   CreditCard,
   HardDrive,
   MinusIcon,
-  Quote,
   ShieldCheck,
 } from "lucide-react"
 import {
@@ -30,6 +29,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollReelTestimonials } from "@/components/ui/scroll-reel-testimonials"
 import { CallToAction } from "@/components/website/shared/CallToAction"
 import { BillingCycle } from '@/generated/prisma/enums'
 import {
@@ -783,47 +783,21 @@ function TrustedSchools() {
 }
 
 function TestimonialsCarousel() {
+  const reelTestimonials = TESTIMONIALS.map((t) => ({
+    quote: t.quote,
+    author: `${t.name}, ${t.role}`,
+    image: t.image,
+    alt: t.alt,
+  }))
+
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-muted/20 px-4 py-6 sm:px-6 lg:px-8">
       <TrustedSchools />
 
-      <div
-        className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        aria-label="Customer testimonials"
-      >
-        {TESTIMONIALS.map((testimonial) => (
-          <TestimonialCard
-            key={testimonial.id}
-            testimonial={testimonial}
-          />
-        ))}
+      <div className="mt-8 flex justify-center">
+        <ScrollReelTestimonials testimonials={reelTestimonials} autoPlayInterval={5000} />
       </div>
     </section>
-  )
-}
-
-function TestimonialCard({
-  testimonial,
-}: {
-  testimonial: (typeof TESTIMONIALS)[number]
-}) {
-  return (
-    <article className="flex min-h-[232px] flex-col gap-4 rounded-lg border border-border bg-card p-5 shadow-sm">
-      <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Quote className="size-4" aria-hidden="true" />
-      </div>
-      <p className="text-sm leading-6 text-muted-foreground">
-        &ldquo;{testimonial.quote}&rdquo;
-      </p>
-      <div className="mt-auto">
-        <p className="text-sm font-semibold text-foreground">
-          {testimonial.name}
-        </p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          {testimonial.role}
-        </p>
-      </div>
-    </article>
   )
 }
 
