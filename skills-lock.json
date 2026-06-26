@@ -55,6 +55,12 @@
       "skillPath": "skills/inngest-events/SKILL.md",
       "computedHash": "4fc14cc79c44b9045062e61646adf3a193fa4eb2cb808601f3bd5b2da0ee46ba"
     },
+    "mapbox-maplibre-migration": {
+      "source": "mapbox/mapbox-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/mapbox-maplibre-migration/SKILL.md",
+      "computedHash": "54d432c1c775cdb550c7778cae9eed401bd27efcd267809b7e8debd192c028ff"
+    },
     "organization-best-practices": {
       "source": "better-auth/skills",
       "sourceType": "github",

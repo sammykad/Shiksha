@@ -300,6 +300,11 @@ model Organization {
   invoices             Invoice[]
   aiAgents             AiAgent[]
   aiAgentExecutionLogs AiAgentExecutionLog[]
+  vehicles             Vehicle[]
+  drivers              Driver[]
+  helpers              Helper[]
+  transportRoutes      TransportRoute[]
+  transportEnrollments       TransportEnrollment[]
 
   @@index([id])
   @@index([slug])
@@ -647,7 +652,8 @@ model Student {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  idCards   IdCard[]
+  idCards        IdCard[]
+  transportEnrollments TransportEnrollment[]
 
   @@unique([organizationId, rollNumber])
   @@index([email]) // User lookup
@@ -2174,6 +2180,8 @@ model AcademicYear {
   // HallTicket
   // ExamResult
   // ExamEnrollment
+  transportEnrollments TransportEnrollment[]
+
   createdBy          String
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -2352,6 +2360,158 @@ model IdCard {
   @@index([organizationId, studentId])
   @@index([organizationId, teacherId])
   @@index([cardNumber])
+}
+
+// ============================================================================
+// TRANSPORT — Vehicles, drivers, routes, stops & enrollment
+// ============================================================================
+
+enum VehicleType {
+  BUS
+  VAN
+  MINI_BUS
+  AUTO
+  TEMPO
+  OTHER
+}
+
+model Vehicle {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  registrationNo String
+  type           VehicleType
+  capacity       Int
+  isActive       Boolean      @default(true)
+
+  routes TransportRoute[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, registrationNo])
+  @@index([organizationId])
+}
+
+model Helper {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name           String
+  phone          String
+  alternatePhone String?
+  photoUrl       String?
+  isActive       Boolean      @default(true)
+
+  routes TransportRoute[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model Driver {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name           String
+  phone          String
+  alternatePhone String?
+  licenseNumber  String
+  licenseExpiry  DateTime?
+  photoUrl       String?
+  isActive       Boolean      @default(true)
+
+  routes TransportRoute[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, licenseNumber])
+  @@index([organizationId])
+}
+
+model TransportRoute {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name             String
+  code             String
+  isActive         Boolean @default(true)
+
+  vehicleId   String?
+  vehicle     Vehicle?    @relation(fields: [vehicleId], references: [id])
+  driverId    String?
+  driver      Driver?     @relation(fields: [driverId], references: [id])
+  helperId String?
+  helper   Helper?    @relation(fields: [helperId], references: [id])
+
+  routeGeometry       String?
+  routeDistanceMeters  Float?
+  routeDurationSeconds Int?
+  routeGeometryUpdatedAt DateTime?
+
+  stops       TransportStop[]
+  enrollments TransportEnrollment[]
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+}
+
+model TransportStop {
+  id      String        @id @default(cuid())
+  routeId String
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  name       String
+  order      Int
+  landmark   String?
+  pickupTime String?
+
+  latitude             Float?
+  longitude            Float?
+  locationSource       String?
+  locationAccuracyMeters Float?
+
+  enrollments TransportEnrollment[]
+
+  @@unique([routeId, order])
+  @@index([routeId])
+}
+
+model TransportEnrollment {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+
+  studentId String
+  student   Student         @relation(fields: [studentId], references: [id])
+  routeId   String
+  route     TransportRoute  @relation(fields: [routeId], references: [id])
+  stopId    String
+  stop      TransportStop   @relation(fields: [stopId], references: [id])
+
+  academicYearId String?
+  academicYear   AcademicYear? @relation(fields: [academicYearId], references: [id])
+
+  isActive Boolean @default(true)
+
+  enrolledAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([studentId, academicYearId])
+  @@index([routeId])
+  @@index([studentId])
+  @@index([organizationId])
 }
 
 // ============================================================================

@@ -116,6 +116,6 @@ export function buildInvitationEmail({
 export const OTP_SUBJECTS: Record<string, string> = {
   "email-verification": "Verify your Shiksha Cloud email",
   "sign-in": "Your Shiksha Cloud sign-in code",
-  "forget-password": "Reset your Shiksha Cloud password",
+  "forgot-password": "Reset your Shiksha Cloud password",
   "change-email": "Confirm your new Shiksha Cloud email",
 };

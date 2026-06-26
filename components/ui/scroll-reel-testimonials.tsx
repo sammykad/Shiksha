@@ -221,7 +221,7 @@ export function ScrollReelTestimonials({
         if (intervalRef.current) clearInterval(intervalRef.current);
         if (!autoPlayInterval || paused) return;
         intervalRef.current = setInterval(() => {
-            if (animating.current || index >= count - 1) return;
+            if (animating.current) return;
             paginate(1);
         }, autoPlayInterval);
         return () => {
@@ -233,7 +233,23 @@ export function ScrollReelTestimonials({
         (dir: 1 | -1) => {
             if (animating.current) return;
             const next = index + dir;
-            if (next < 0 || next >= count) return;
+            if (next < 0 || next >= count) {
+                animating.current = true;
+                setIndex(next < 0 ? count - 1 : 0);
+                setExiting(true);
+                timeouts.current.push(
+                    setTimeout(() => {
+                        setDisplayIndex(next < 0 ? count - 1 : 0);
+                        setExiting(false);
+                    }, EXIT_MS)
+                );
+                timeouts.current.push(
+                    setTimeout(() => {
+                        animating.current = false;
+                    }, SLIDE_MS)
+                );
+                return;
+            }
             animating.current = true;
 
             setIndex(next);

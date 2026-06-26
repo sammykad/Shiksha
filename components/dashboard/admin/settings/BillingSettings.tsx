@@ -301,11 +301,11 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                                                         size="sm"
                                                         onClick={async () => {
                                                             try {
-const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
-                                                                 if (!res.ok) {
-                                                                     const err = await res.json().catch(() => ({}));
-                                                                     throw new Error(err.error || "Download failed");
-                                                                 }
+                                                                const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
+                                                                if (!res.ok) {
+                                                                    const err = await res.json().catch(() => ({}));
+                                                                    throw new Error(err.error || "Download failed");
+                                                                }
                                                                 const blob = await res.blob();
                                                                 const url = URL.createObjectURL(blob);
                                                                 const a = document.createElement("a");
@@ -395,12 +395,12 @@ const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
                                     <h4 className="text-sm font-medium">Subscription timeline</h4>
                                     <div className="flex flex-col gap-2 text-sm">
                                         {subscription.trialEndsAt ? (
-                                        <div className="flex items-center gap-2">
-                                            <span className="size-2 rounded-full bg-primary" />
-                                            <span className="text-muted-foreground">Trial ends</span>
-                                            <span className="ml-auto">{formatDateIN(subscription.trialEndsAt)}</span>
-                                        </div>
-                                    ) : null}
+                                            <div className="flex items-center gap-2">
+                                                <span className="size-2 rounded-full bg-primary" />
+                                                <span className="text-muted-foreground">Trial ends</span>
+                                                <span className="ml-auto">{formatDateIN(subscription.trialEndsAt)}</span>
+                                            </div>
+                                        ) : null}
                                         <div className="flex items-center gap-2">
                                             <span className="size-2 rounded-full bg-amber-500" />
                                             <span className="text-muted-foreground">Current period ends</span>
@@ -532,7 +532,7 @@ const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
             </Dialog>
 
             <Dialog open={activeDialog === "invoice"} onOpenChange={(open) => setActiveDialog(open ? "invoice" : null)}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
                         <DialogTitle>Invoice center</DialogTitle>
                         <DialogDescription>
@@ -540,29 +540,72 @@ const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex flex-col gap-3 text-sm">
-                        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-                            <span className="size-2 rounded-full bg-primary" />
-                            <div>
-                                <p className="font-medium">Sequential receipt numbering</p>
-                                <p className="text-xs text-muted-foreground">Automated numbering is configured.</p>
+                    {billingSummary.recentInvoices.length ? (
+                        <div className="flex flex-col gap-2">
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[500px] text-sm">
+                                    <thead className="text-left text-muted-foreground">
+                                        <tr className="border-b">
+                                            <th className="pb-2 font-medium">Period</th>
+                                            <th className="pb-2 font-medium">Status</th>
+                                            <th className="pb-2 text-right font-medium">Total</th>
+                                            <th className="pb-2 text-right font-medium">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {billingSummary.recentInvoices.map((invoice) => (
+                                            <tr key={invoice.id} className="border-b last:border-0">
+                                                <td className="py-2.5 text-sm">
+                                                    {formatDateIN(invoice.periodStart)} &ndash; {formatDateIN(invoice.periodEnd)}
+                                                </td>
+                                                <td className="py-2.5">
+                                                    <Badge variant={invoice.status === InvoiceStatus.PAID ? "secondary" : "outline"}>
+                                                        {formatBillingStatus(invoice.status)}
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-2.5 text-right text-sm tabular-nums font-medium">
+                                                    {formatCurrencyINWithSymbol(invoice.total)}
+                                                </td>
+                                                <td className="py-2.5 text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={async () => {
+                                                            try {
+                                                                const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
+                                                                if (!res.ok) {
+                                                                    const err = await res.json().catch(() => ({}));
+                                                                    throw new Error(err.error || "Download failed");
+                                                                }
+                                                                const blob = await res.blob();
+                                                                const url = URL.createObjectURL(blob);
+                                                                const a = document.createElement("a");
+                                                                a.href = url;
+                                                                a.download = `${invoice.invoiceNumber ?? "invoice"}.pdf`;
+                                                                document.body.appendChild(a);
+                                                                a.click();
+                                                                document.body.removeChild(a);
+                                                                URL.revokeObjectURL(url);
+                                                            } catch {
+                                                                toast.error("Failed to download invoice PDF");
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Download className="h-4 w-4" />
+                                                        PDF
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-                            <span className="size-2 rounded-full bg-amber-500" />
-                            <div>
-                                <p className="font-medium">PDF invoice export</p>
-                                <p className="text-xs text-muted-foreground">Invoice PDF generation is in progress.</p>
-                            </div>
+                    ) : (
+                        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
+                            No invoices have been generated yet.
                         </div>
-                        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-                            <span className="size-2 rounded-full bg-amber-500" />
-                            <div>
-                                <p className="font-medium">Payment reconciliation</p>
-                                <p className="text-xs text-muted-foreground">Automated reconciliation via payment gateway callbacks.</p>
-                            </div>
-                        </div>
-                    </div>
+                    )}
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setActiveDialog(null)}>
