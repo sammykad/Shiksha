@@ -44,6 +44,7 @@ const organizationRoles = {
 export const betterAuthServer = betterAuth({
   appName: APP_NAME,
   baseURL: APP_URL,
+  basePath: "/api/auth",
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   trustedOrigins: [APP_URL],
 

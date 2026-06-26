@@ -56,7 +56,7 @@ const SHARED_FEATURES: PlanFeature[] = [
   { label: "ID Card Verification", included: true },
   { label: "Security & Compliance", included: true },
   { label: "Custom integrations & API", included: true },
-  { label: "10,000 notifications per month", included: true },
+  { label: "10,000 free credits on signup", included: true },
   { label: "1 GB storage", included: true },
   { label: "Future core modules — always included", included: true },
 ]
@@ -64,13 +64,13 @@ const SHARED_FEATURES: PlanFeature[] = [
 export const PLANS: Plan[] = PRICING_TIERS.map((tier, i) => ({
   id: tier.id,
   name: tier.name,
-  badge: "Early Bird Offer",
+  badge: i === 1 ? "Recommended" : undefined,
   standardPrice: tier.standardPrice,
   pricePerStudent: tier.currentOfferPrice,
   discountPercent: getDiscountPercent(tier.standardPrice, tier.currentOfferPrice),
   description: tier.description,
-  ctaLabel: i === 2 ? "Contact sales" : "Start free trial",
-  ctaVariant: (i === 2 ? "outline" : "default") as "default" | "outline",
+  ctaLabel: "Try Now",
+  ctaVariant: "default" as const,
   featured: i === 1,
   studentLimit: tier.studentLimit,
   features: SHARED_FEATURES,
@@ -241,7 +241,7 @@ export const COMPARISON: ComparisonGroup[] = [
       },
       {
         label: "A converted lead can become a student record",
-        note: "Admissions work connects to student management instead of being lost after enrolment.",
+        note: "Admissions work connects to student management instead of being lost after enrollment.",
         ...included,
       },
     ],
@@ -313,6 +313,8 @@ export interface Testimonial {
   quote: string
   name: string
   role: string
+  image: string
+  alt: string
 }
 
 export const TESTIMONIALS: Testimonial[] = [
@@ -322,6 +324,8 @@ export const TESTIMONIALS: Testimonial[] = [
       "Fee collection used to take our office team 3 days every month. With Shiksha.cloud, parents get reminders, pay online, and receipts are ready instantly.",
     name: "Anjali Mehta",
     role: "Principal, Bright Minds Academy, Pune",
+    image: "https://ui-avatars.com/api/?name=Anjali+Mehta&background=6366f1&color=fff&size=128",
+    alt: "Portrait of Anjali Mehta",
   },
   {
     id: "t2",
@@ -329,6 +333,8 @@ export const TESTIMONIALS: Testimonial[] = [
       "We run batches like a coaching institute, not a traditional school. The terminology and sections still fit our workflow without forcing us into someone else's structure.",
     name: "Rajesh Kumar",
     role: "Director, Sunrise Learning Centre, Surat",
+    image: "https://ui-avatars.com/api/?name=Rajesh+Kumar&background=6366f1&color=fff&size=128",
+    alt: "Portrait of Rajesh Kumar",
   },
   {
     id: "t3",
@@ -336,6 +342,8 @@ export const TESTIMONIALS: Testimonial[] = [
       "For our junior college, the combination of fee tracking, certificates, notices, and student records removed a lot of repeated office work.",
     name: "Sr. Theresa George",
     role: "Administrator, Holy Cross Junior College, Kolkata",
+    image: "https://ui-avatars.com/api/?name=Sr.+Theresa+George&background=6366f1&color=fff&size=128",
+    alt: "Portrait of Sr. Theresa George",
   },
   {
     id: "t4",
@@ -343,6 +351,8 @@ export const TESTIMONIALS: Testimonial[] = [
       "Lead tracking helped us see every enquiry, follow-up, and admission conversion in one place. That matters as much as academics for a growing institute.",
     name: "Vinod Sharma",
     role: "Admissions Head, CareerPath Academy, Nagpur",
+    image: "https://ui-avatars.com/api/?name=Vinod+Sharma&background=6366f1&color=fff&size=128",
+    alt: "Portrait of Vinod Sharma",
   },
   {
     id: "t5",
@@ -350,6 +360,8 @@ export const TESTIMONIALS: Testimonial[] = [
       "Students can raise sensitive concerns anonymously, and the admin team can resolve them with a proper timeline. It gives parents and students confidence.",
     name: "Priya Iyer",
     role: "Counsellor, St. Xavier's Institute, Chennai",
+    image: "https://ui-avatars.com/api/?name=Priya+Iyer&background=6366f1&color=fff&size=128",
+    alt: "Portrait of Priya Iyer",
   },
   {
     id: "t6",
@@ -357,6 +369,8 @@ export const TESTIMONIALS: Testimonial[] = [
       "We manage multiple branches from one operational view. Attendance, fee collection, leads, and reports are easier to compare before issues become serious.",
     name: "Arun Desai",
     role: "Chairman, Ryan Education Group, Mumbai",
+    image: "https://ui-avatars.com/api/?name=Arun+Desai&background=6366f1&color=fff&size=128",
+    alt: "Portrait of Arun Desai",
   },
 ]
 
@@ -426,6 +440,12 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "What happens if we don't use every module?",
     answer:
       "Every module is included in your plan whether you use it today or not. That means you can roll out fee management first, add attendance next term, enable CRM when admissions open — without ever paying more or signing up for another tool. It's designed to grow with your institution without surprise costs.",
+  },
+  {
+    id: "faq-11",
+    question: "How does the 90-day free trial work?",
+    answer:
+      "You get full access to every feature on your chosen plan for 90 days with no payment required. No credit card needed during sign-up. After the trial ends, you can choose to continue on a paid plan or export your data. Your institution keeps working — we will notify you before the trial expires.",
   },
 ]
 

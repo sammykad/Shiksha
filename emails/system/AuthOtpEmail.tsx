@@ -12,13 +12,13 @@ import {
 export interface AuthOtpEmailProps {
     organizationName: string;
     otp: string;
-    type: "email-verification" | "sign-in" | "forget-password" | "change-email" | string;
+    type: "email-verification" | "sign-in" | "forgot-password" | "change-email" | string;
 }
 
 const OTP_SUBTITLES: Record<string, string> = {
     "email-verification": "Verify your email address to complete your account setup",
     "sign-in": "Enter this code to sign in to your account",
-    "forget-password": "Use this code to reset your password",
+    "forgot-password": "Use this code to reset your password",
     "change-email": "Confirm your email change request",
 };
 

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { PrismaClient } from '../generated/prisma/client';
+import { Pool } from 'pg';
 import {
   NoticeType,
   LeadSource,
@@ -7,6 +8,7 @@ import {
   LeadPriority,
   NoticeStatus,
   NoticePriority,
+  VehicleType,
 } from '../generated/prisma/enums';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { faker } from '@faker-js/faker';
@@ -19,12 +21,13 @@ const adapter = new PrismaPg({
 });
 
 const prisma = new PrismaClient({ adapter });
+const pool = new Pool({ connectionString: process.env.DIRECT_URL });
 
 /* ----------------------------------------------
  * Constants
  * ---------------------------------------------- */
-const ORGANIZATION_ID = 'org_30WQlEXgBepgHNrZYoYzx0xlqJg';
-const ACADEMIC_YEAR_ID = 'cmff3tqm90003vengnf504200';
+const ORGANIZATION_ID = 'cmqpa555u0004psp7trtpac5s';
+const ACADEMIC_YEAR_ID = 'cmqpa55hy0006psp79vw3qpiu';
 
 const organizationIds = [ORGANIZATION_ID];
 const academicYearIds = [ACADEMIC_YEAR_ID];
@@ -303,9 +306,125 @@ async function generateGradesAndSections() {
   console.log("✅ Grades and sections created successfully");
 }
 
+async function seedTransport() {
+  const orgId = ORGANIZATION_ID;
+  const adminUserId = 'cmqpa4tu30001psp77xbsf56j';
+  console.log('🚌 Seeding transport data...');
+
+  let counter = 0;
+  function cuid() {
+    counter++;
+    const ts = Date.now().toString(36);
+    const rand = Math.random().toString(36).substring(2, 8);
+    return 'c' + ts + rand + counter.toString(36).padStart(4, '0');
+  }
+  const now = new Date().toISOString();
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query('DELETE FROM "TransportStop" WHERE "routeId" IN (SELECT id FROM "TransportRoute" WHERE "organizationId" = $1)', [orgId]);
+    await client.query('DELETE FROM "TransportRoute" WHERE "organizationId" = $1', [orgId]);
+    await client.query('DELETE FROM "Helper" WHERE "organizationId" = $1', [orgId]);
+    await client.query('DELETE FROM "Driver" WHERE "organizationId" = $1', [orgId]);
+    await client.query('DELETE FROM "Vehicle" WHERE "organizationId" = $1', [orgId]);
+
+    const driverIds: string[] = [];
+    for (const d of [
+      { name: 'Ramesh Shinde', phone: '9876543210', alternatePhone: '9876543211', licenseNumber: 'MH12A20260012345', licenseExpiry: '2027-06-30' },
+      { name: 'Suresh Kulkarni', phone: '9876543212', alternatePhone: null, licenseNumber: 'MH14B20260067890', licenseExpiry: '2026-12-31' },
+      { name: 'Mahesh Jadhav', phone: '9876543213', alternatePhone: '9876543214', licenseNumber: 'MH02C20260054321', licenseExpiry: '2027-03-15' },
+    ]) {
+      const id = cuid();
+      await client.query(
+        'INSERT INTO "Driver" (id, "organizationId", name, phone, "alternatePhone", "licenseNumber", "licenseExpiry", "isActive", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,true,$8,$8)',
+        [id, orgId, d.name, d.phone, d.alternatePhone, d.licenseNumber, d.licenseExpiry, now]
+      );
+      driverIds.push(id);
+    }
+
+    const helperIds: string[] = [];
+    for (const h of [
+      { name: 'Vikas Pawar', phone: '9876543215', alternatePhone: null },
+      { name: 'Sunil Bhosale', phone: '9876543216', alternatePhone: '9876543217' },
+    ]) {
+      const id = cuid();
+      await client.query(
+        'INSERT INTO "Helper" (id, "organizationId", name, phone, "alternatePhone", "isActive", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,true,$6,$6)',
+        [id, orgId, h.name, h.phone, h.alternatePhone, now]
+      );
+      helperIds.push(id);
+    }
+
+    const vehicleIds: string[] = [];
+    for (const v of [
+      { registrationNo: 'MH12PA1234', type: 'BUS', capacity: 52 },
+      { registrationNo: 'MH12PA5678', type: 'BUS', capacity: 42 },
+      { registrationNo: 'MH12PA9012', type: 'VAN', capacity: 16 },
+    ]) {
+      const id = cuid();
+      await client.query(
+        'INSERT INTO "Vehicle" (id, "organizationId", "registrationNo", type, capacity, "isActive", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,true,$6,$6)',
+        [id, orgId, v.registrationNo, v.type, v.capacity, now]
+      );
+      vehicleIds.push(id);
+    }
+
+    const routes = [
+      {
+        name: 'Kothrud → Deccan (Morning)', code: 'R-M01',
+        vehicleIdx: 0, driverIdx: 0, helperIdx: 0,
+        stops: [
+          { name: 'Kothrud Bus Depot', order: 1, landmark: 'Near Kothrud Depot', pickupTime: '07:00', latitude: 18.5074, longitude: 73.8078, locationSource: 'map' },
+          { name: 'Vanaz Corner', order: 2, landmark: 'Near Vanaz Company', pickupTime: '07:10', latitude: 18.5110, longitude: 73.8152, locationSource: 'map' },
+          { name: 'Paud Road Phata', order: 3, landmark: 'Near DAV School', pickupTime: '07:18', latitude: 18.5167, longitude: 73.8250, locationSource: 'map' },
+          { name: 'Deccan Corner', order: 4, landmark: 'Bal Gandharva Ranga Mandir', pickupTime: '07:30', latitude: 18.5196, longitude: 73.8398, locationSource: 'map' },
+          { name: 'Shiksha School', order: 5, landmark: 'Deccan Gymkhana', pickupTime: '07:40', latitude: 18.5236, longitude: 73.8449, locationSource: 'map' },
+        ],
+      },
+      {
+        name: 'Warje → Kothrud (Morning)', code: 'R-M02',
+        vehicleIdx: 1, driverIdx: 1, helperIdx: 1,
+        stops: [
+          { name: 'Warje Jakat Naka', order: 1, landmark: 'Near Warje bus stop', pickupTime: '07:15', latitude: 18.4800, longitude: 73.7960, locationSource: 'map' },
+          { name: 'Sinhagad Road Nal Stop', order: 2, landmark: 'Ambegaon BK', pickupTime: '07:25', latitude: 18.4875, longitude: 73.8050, locationSource: 'map' },
+          { name: 'Nanded Phata', order: 3, landmark: 'Near Dmart', pickupTime: '07:35', latitude: 18.4930, longitude: 73.8150, locationSource: 'map' },
+          { name: 'Karvenagar', order: 4, landmark: 'Kirloskar Road', pickupTime: '07:45', latitude: 18.4985, longitude: 73.8220, locationSource: 'map' },
+          { name: 'Kothrud Stand', order: 5, landmark: 'Near Kothrud Bus Stand', pickupTime: '07:55', latitude: 18.5050, longitude: 73.8080, locationSource: 'map' },
+        ],
+      },
+    ];
+
+    for (const r of routes) {
+      const routeId = cuid();
+      await client.query(
+        'INSERT INTO "TransportRoute" (id, "organizationId", name, code, "vehicleId", "driverId", "helperId", "createdBy", "isActive", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,$9)',
+        [routeId, orgId, r.name, r.code, vehicleIds[r.vehicleIdx], driverIds[r.driverIdx], helperIds[r.helperIdx], adminUserId, now]
+      );
+      for (const s of r.stops) {
+        const stopId = cuid();
+        await client.query(
+          'INSERT INTO "TransportStop" (id, "routeId", name, "order", landmark, "pickupTime", latitude, longitude, "locationSource") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+          [stopId, routeId, s.name, s.order, s.landmark, s.pickupTime, s.latitude, s.longitude, s.locationSource]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log('✅ Transport seeded');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('❌ Transport seed failed:', e);
+  } finally {
+    client.release();
+  }
+}
+
 async function main() {
   console.log('\n🚀 Seeding Started...\n');
-  await generateGradesAndSections();
+  await seedTransport();
+  // await generateGradesAndSections();
 }
 
 main()

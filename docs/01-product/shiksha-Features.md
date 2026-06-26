@@ -484,7 +484,6 @@ Share Recorded Session ; Youtube URl Proview and all the things, Need 100% Dyanm
 
 ## Unfixed Issues (deferred)
 - **`/dashboard/institution` allows ADMINs in rbac.ts** — should be SuperAdmin-only. Fixable when SuperAdmin role is introduced.
-- **OTP subject typo** (`auth-email.ts:119`): `"forget-password"` → `"forgot-password"`.
 - **`sendAuthEmail()` (Resend) is dead code** in `auth-email.ts` — Brevo is the actual email provider. Remove or consolidate.
 - **Missing env var validation**: `NEXT_PUBLIC_APP_URL` and `BREVO_API_KEY` use `!` assertion — crash silently at module load time.
 - **`getOrganizationId` name collision**: Both `lib/auth.ts` and `lib/organization.ts` export same name — imports split 50/50 across codebase (functionally identical, both call `auth()`).
@@ -518,3 +517,21 @@ Decide What they will See : /dashboard/institution Enitre Data , Give Any permis
 
 RBAC ANd Permisison Setup 
 
+
+
+We are not handiling this 404 Properly 
+
+<!-- Wait there is another problem ive face this in 2 times in 2 weeks GET /api/auth/get-session 404 in 228ms (next.js: 17ms, application-code: 211ms)
+ GET /dashboard/settings 200 in 2.7s (next.js: 8ms, proxy.ts: 7ms, application-code: 2.7s)
+ GET /api/auth/organization/get-full-organization 404 in 233ms (next.js: 15ms, application-code: 219ms)
+ GET /api/auth/organization/list 404 in 213ms (next.js: 13ms, application-code: 200ms)
+ GET /manifest.webmanifest 200 in 15ms (next.js: 4ms, application-code: 11ms)
+ GET /api/auth/get-session 404 in 430ms (next.js: 11ms, application-code: 419ms)
+ GET /dashboard/settings 200 in 1681ms (next.js: 7ms, proxy.ts: 5ms, application-code: 1668ms)
+ GET /api/auth/organization/get-full-organization 404 in 321ms (next.js: 15ms, application-code: 306ms)
+ GET /api/auth/organization/list 404 in 197ms (next.js: 11ms, application-code: 186ms)
+ GET /manifest.webmanifest 200 in 20ms (next.js: 5ms, application-code: 15ms)
+ GET /api/auth/get-session 404 in 307ms (next.js: 9ms, application-code: 299ms)
+ GET /dashboard/settings 200 in 1469ms (next.js: 6ms, proxy.ts: 5ms, application-code: 1458ms)
+ GET /api/auth/organization/get-full-organization 404 in 219ms (next.js: 13ms, application-code: 206ms)
+ GET /api/auth/list-sessions 404 in 193ms (next.js: 12ms, application-code: 181ms)  what is the catch here why its happens ? we can switch or see profoles wehn we get this -->

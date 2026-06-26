@@ -13,11 +13,12 @@ import { BillingCycle } from '@/generated/prisma/enums';
  *   - After the promotional period, currentOfferPrice lifts to standardPrice
  *
  * Plans: Starter / Growth / Scale
- *   - Students
- *   - The same MRP applies to all tiers; tier differentiation is by student
- *     count limit (Starter=100, Growth=500, Scale=3000+)
- *   - Discount depth varies per tier (Scale gets the deepest discount as a
- *     volume incentive)
+ *   - Starter  ₹49/student — entry anchor, makes Growth the obvious choice
+ *   - Growth   ₹29/student — silent hero, best value for 100-500 student schools
+ *   - Scale    ₹19/student — volume pricing for large institutions
+ *
+ * Target: schools and coaching classes with 100+ students. The 90-day free
+ * trial locks them in on Growth before they ever see a bill.
  */
 
 // ─── MRP ────────────────────────────────────────────────────────────────────
@@ -25,8 +26,8 @@ import { BillingCycle } from '@/generated/prisma/enums';
 export const BASE_MONTHLY_PRICE_PER_STUDENT = 79;
 
 // ─── Seasonal Offer ─────────────────────────────────────────────────────────
-// (No constants needed here — the billing engine reads currentOfferPrice from
-// PRICING_TIERS. The public pricing page uses "Early Bird Offer" badge.)
+// (PRICING_TIERS is the single source. Public page and billing engine read
+// currentOfferPrice. Growth is the recommended plan with the lowest price.)
 
 export const PRICING_TIERS = [
   {
@@ -35,7 +36,7 @@ export const PRICING_TIERS = [
     name: 'Starter',
     description: 'For small schools, coaching classes, and academies getting started.',
     standardPrice: BASE_MONTHLY_PRICE_PER_STUDENT,
-    currentOfferPrice: 29,
+    currentOfferPrice: 49,
     studentLimit: 100,
     sortOrder: 10,
   },
@@ -43,9 +44,9 @@ export const PRICING_TIERS = [
     id: 'growth',
     code: 'GROWTH',
     name: 'Growth',
-    description: 'For growing institutions with more operational volume.',
+    description: 'Best value for schools and coaching classes with room to grow — all features, lowest price.',
     standardPrice: BASE_MONTHLY_PRICE_PER_STUDENT,
-    currentOfferPrice: 49,
+    currentOfferPrice: 29,
     studentLimit: 500,
     sortOrder: 20,
   },
@@ -53,9 +54,9 @@ export const PRICING_TIERS = [
     id: 'scale',
     code: 'SCALE',
     name: 'Scale',
-    description: 'For colleges, trusts, and multi-branch education groups.',
+    description: 'For colleges, trusts, and multi-branch education groups needing priority support.',
     standardPrice: BASE_MONTHLY_PRICE_PER_STUDENT,
-    currentOfferPrice: 21,
+    currentOfferPrice: 19,
     studentLimit: 3000,
     sortOrder: 30,
   },
@@ -66,6 +67,7 @@ export type TierId = (typeof PRICING_TIERS)[number]['id'];
 // ─── Annual Billing Discount ────────────────────────────────────────────────
 
 export const ANNUAL_DISCOUNT_PERCENT = 20;
+export const TRIAL_DAYS = 90;
 
 // ─── Derived Helpers ────────────────────────────────────────────────────────
 

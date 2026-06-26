@@ -114,6 +114,11 @@ export const getMenuList = (terminology: TerminologyLabels): Record<string, Grou
           label: 'Documents Verification',
           icon: ShieldCheck,
         },
+        {
+          href: '/dashboard/transport/manage',
+          label: 'Transport Management',
+          icon: Bus,
+        },
       ],
     },
     {

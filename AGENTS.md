@@ -174,9 +174,9 @@ Billing is **per active student per month**. Parents, teachers, and admins are a
 
 | Plan | Code | MRP | Offer Price | Discount | Student Limit |
 |---|---|---|---|---|---|
-| Starter | STARTER | ₹79 | ₹29 | 63% off | Up to 100 |
-| Growth | GROWTH | ₹79 | ₹49 | 38% off | Up to 500 |
-| Scale | SCALE | ₹79 | ₹21 | 73% off | Up to 3,000 |
+| Starter | STARTER | ₹79 | ₹49 | 38% off | Up to 100 |
+| Growth | GROWTH | ₹79 | ₹29 | 63% off | Up to 500 |
+| Scale | SCALE | ₹79 | ₹19 | 76% off | Up to 3,000 |
 
 The billing engine (`PLAN_CATALOG` in `lib/subscription-billing.ts`) uses `currentOfferPrice` for all invoice calculations. When the seasonal offer ends, change `currentOfferPrice` to `standardPrice` in `lib/constants/pricing.ts` and everything updates.
 

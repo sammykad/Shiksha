@@ -1,6 +1,7 @@
 "use client"
 
 import { Fragment, useEffect, useState, useTransition, type ReactNode } from "react"
+import Link from "next/link"
 import {
   BadgeCheck,
   BellRing,
@@ -44,7 +45,6 @@ import {
   formatINR,
   formatStudentLabel,
   type CellValue,
-  type ComparisonRow,
   type Plan,
   type StudentStep,
 } from "@/lib/pricing-data"
@@ -75,12 +75,13 @@ const addonMeta = {
 export function PricingPageClient() {
   return (
     <main className="min-h-screen">
-      <div className="mx-auto max-w-7xl space-y-20 px-4 pb-0 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-10 px-4 pb-0 sm:px-6 lg:px-8">
         <PricingHero />
         <PlansGrid />
         <AddonCards />
-        <FeatureTable />
         <TestimonialsCarousel />
+
+        {/* <FeatureTable /> */}
         <FaqSection />
       </div>
 
@@ -96,7 +97,7 @@ export function PricingPageClient() {
           </>
         }
         description="Start with every Shiksha.cloud module included. Parents, teachers, and admins stay free while your institution only pays for the plan that fits."
-        primaryLabel="Start free trial"
+        primaryLabel="90 days free"
         primaryHref="/sign-up"
         secondaryLabel="Talk to sales"
         secondaryHref="/contact"
@@ -108,7 +109,7 @@ export function PricingPageClient() {
 
 function PricingHero() {
   return (
-    <div className="space-y-5 pt-16 pb-4 text-center">
+    <div className="space-y-5 pt-16 text-center">
       <Badge
         variant="outline"
         className="border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-primary"
@@ -121,9 +122,9 @@ function PricingHero() {
       </h1>
 
       <p className="mx-auto max-w-md text-lg leading-relaxed text-muted-foreground">
-        Pay only for students. Parents, teachers, and admins are always{" "}
-        <span className="font-medium text-foreground">free</span>. No setup
-        fees.
+        90 days free. No card required. Pay only for students. Parents,
+        teachers, and admins are always{" "}
+        <span className="font-medium text-foreground">free</span>.
       </p>
     </div>
   )
@@ -133,6 +134,9 @@ function PlansGrid() {
   const [billing, setBilling] = useState<BillingCycle>(BillingCycle.MONTHLY)
   const [studentCount, setStudentCount] = useState<StudentStep>(STUDENT_STEPS[2])
   const [showAllFeatures, setShowAllFeatures] = useState(false)
+
+  const activePlanId =
+    studentCount <= 100 ? "starter" : studentCount <= 500 ? "growth" : "scale"
 
   return (
     <section className="space-y-10">
@@ -149,8 +153,13 @@ function PlansGrid() {
             billing={billing}
             studentCount={studentCount}
             showAllFeatures={showAllFeatures}
+            active={plan.id === activePlanId}
           />
         ))}
+      </div>
+
+      <div className="mx-auto w-fit rounded-full border border-dashed border-primary/30 bg-primary/[0.04] px-5 py-2 text-center text-sm font-medium text-primary shadow-xs">
+        School Opening Season — free for 90 days. No card required.
       </div>
 
       <button
@@ -166,7 +175,7 @@ function PlansGrid() {
         />
       </button>
 
-      <div className="mx-auto max-w-5xl rounded-xl border border-primary/15 bg-gradient-to-r from-primary/[0.07] via-background to-background px-4 py-3 shadow-sm">
+      {/* <div className="mx-auto max-w-5xl rounded-xl border border-primary/15 bg-gradient-to-r from-primary/[0.07] via-background to-background px-4 py-3 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/5 text-primary">
@@ -195,7 +204,7 @@ function PlansGrid() {
             ))}
           </div>
         </div>
-      </div>
+      </div> */}
     </section>
   )
 }
@@ -306,6 +315,7 @@ interface PlanCardProps {
   billing: BillingCycle
   studentCount: StudentStep
   showAllFeatures: boolean
+  active?: boolean
   className?: string
 }
 
@@ -314,13 +324,18 @@ function PlanCard({
   billing,
   studentCount,
   showAllFeatures,
+  active,
   className,
 }: PlanCardProps) {
-  const isLimitedOffer = plan.id === "starter"
   const effectivePrice =
     plan.pricePerStudent !== undefined
       ? getEffectiveMonthlyPrice(plan.pricePerStudent, billing)
       : null
+
+  const effectiveDiscountPercent =
+    plan.standardPrice && effectivePrice
+      ? Math.round((1 - effectivePrice / plan.standardPrice) * 100)
+      : plan.discountPercent ?? 0
 
   const visibleFeatures = showAllFeatures
     ? plan.features
@@ -329,33 +344,34 @@ function PlanCard({
   return (
     <Card
       className={cn(
-        "relative flex flex-col transition-all duration-200",
-        plan.featured
-          ? "z-10 border-primary bg-card shadow-xl shadow-primary/15 ring-1 ring-primary lg:-translate-y-2"
-          : "border-border bg-card/80 lg:saturate-[0.82] lg:opacity-80 hover:-translate-y-1 hover:border-primary/30 hover:bg-card hover:opacity-100 hover:saturate-100 hover:shadow-sm",
+        "relative flex flex-col transition-all duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]",
+        active
+          ? "z-10 -translate-y-2 border-primary bg-card shadow-xl shadow-primary/15 ring-1 ring-primary"
+          : "border-border/60 bg-card hover:-translate-y-1 hover:border-primary/30 hover:shadow-sm",
         className
       )}
     >
+
       {plan.badge && (
         <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 bg-background px-1.5">
-          <Badge
-            variant={isLimitedOffer ? "secondary" : "default"}
-            className={cn(
-              "whitespace-nowrap border px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wide shadow-sm",
-              isLimitedOffer
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                : "border-primary bg-primary text-primary-foreground"
-            )}
-          >
+          <Badge variant="default" className="whitespace-nowrap font-semibold uppercase">
             {plan.badge}
           </Badge>
         </div>
       )}
 
-      <CardHeader className="space-y-2 pb-3 pt-6">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          {plan.name}
-        </p>
+      <CardHeader className="space-y-2 pb-3 pt-6 relative">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl [mask-image:radial-gradient(65%_60%_at_50%_45%,white,transparent)]">
+          <GridPattern />
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            {plan.name}
+          </p>
+          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200/50 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20">
+            90 days free
+          </span>
+        </div>
 
         <div className="flex items-baseline gap-0.5 leading-none">
           {effectivePrice === 0 ? (
@@ -369,11 +385,11 @@ function PlanCard({
                   </span>
                   <span className="text-sm text-muted-foreground">/student/mo</span>
                 </div>
-                {plan.standardPrice && plan.discountPercent && plan.discountPercent > 0 && (
+                {plan.standardPrice && effectiveDiscountPercent > 0 && (
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="text-[11px] line-through">₹{plan.standardPrice}</span>
                     <span className="font-medium text-emerald-600">
-                      Save {plan.discountPercent}%
+                      Save {effectiveDiscountPercent}%
                     </span>
                   </div>
                 )}
@@ -440,13 +456,13 @@ function PlanCard({
             variant={plan.ctaVariant}
             className={cn(
               "w-full",
-              plan.featured && plan.ctaVariant === "default" && "shadow-sm"
+              active && plan.ctaVariant === "default" && "shadow-sm"
             )}
             asChild
           >
-            <a href={plan.id === "scale" ? "/contact" : `/sign-up?plan=${plan.id}`}>
+            <Link href={`/sign-up?plan=${plan.id}`}>
               {plan.ctaLabel}
-            </a>
+            </Link>
           </Button>
         </div>
       </CardContent>
@@ -548,31 +564,14 @@ function AddonCards() {
 }
 
 function FeatureTable() {
-  const [showAllRows, setShowAllRows] = useState(false)
-
-  function allSame(row: ComparisonRow): boolean {
-    return row.starter === row.growth && row.growth === row.scale
-  }
-
   const allRows = COMPARISON.flatMap((g) => g.rows)
-  const differentiators = allRows.filter((r) => !allSame(r))
-  const commonCount = allRows.filter((r) => allSame(r) && r.starter === true).length
 
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <SectionLabel>Plan differences</SectionLabel>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Only the meaningful differences are shown first.
-          </p>
+          <SectionLabel>Everything included</SectionLabel>
         </div>
-        <Badge
-          variant="outline"
-          className="w-fit border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary"
-        >
-          Growth highlighted
-        </Badge>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -594,14 +593,6 @@ function FeatureTable() {
                     )}
                   >
                     {plan.name}
-                    {i === 1 && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-1.5 border-0 bg-primary/10 px-1.5 py-0 text-[11px] font-semibold text-primary align-middle"
-                      >
-                        Popular
-                      </Badge>
-                    )}
                   </th>
                 ))}
               </tr>
@@ -609,7 +600,7 @@ function FeatureTable() {
 
             <tbody>
               {COMPARISON.map(({ group, rows }) => {
-                const show = showAllRows ? rows : rows.filter((r) => !allSame(r))
+                const show = rows
                 if (show.length === 0) return null
 
                 return (
@@ -636,7 +627,7 @@ function FeatureTable() {
                               className={cn(
                                 "px-4 py-3.5 text-center",
                                 i === 1 &&
-                                  "border-x border-primary/10 bg-primary/[0.035]"
+                                "border-x border-primary/10 bg-primary/[0.035]"
                               )}
                             >
                               <Cell value={row[plan]} highlight={i === 1} />
@@ -648,42 +639,14 @@ function FeatureTable() {
                   </Fragment>
                 )
               })}
-              {showAllRows && (
-                <tr className="bg-muted/10">
-                  <td colSpan={4} className="px-3 py-1.5 text-[11px] text-center text-muted-foreground/50">
-                    All features listed above
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/20 px-3 py-2">
-        <p className="text-xs leading-5 text-muted-foreground">
-          {showAllRows
-            ? `${allRows.length} features across all plans`
-            : `${differentiators.length} key differences`
-          }
-          {!showAllRows && (
-            <> &middot; <span className="text-muted-foreground/60">{commonCount} features included in all plans</span></>
-          )}
-        </p>
-
-        <button
-          onClick={() => setShowAllRows(!showAllRows)}
-          className="flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary"
-        >
-          {showAllRows ? "Collapse" : `Full list (${allRows.length})`}
-          <ChevronDown
-            className={cn(
-              "size-3 transition-transform duration-200",
-              showAllRows && "rotate-180"
-            )}
-          />
-        </button>
-      </div>
+      <p className="text-center text-xs text-muted-foreground">
+        {allRows.length} features included in all plans
+      </p>
     </section>
   )
 }
@@ -827,5 +790,28 @@ function FaqSection() {
         ))}
       </Accordion>
     </section>
+  )
+}
+
+export function GridPattern() {
+  const columns = 41
+  const rows = 11
+  return (
+    <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-px gap-y-px">
+      {Array.from({ length: rows }).map((_, row) =>
+        Array.from({ length: columns }).map((_, col) => {
+          const index = row * columns + col
+          return (
+            <div
+              key={`${col}-${row}`}
+              className={`h-10 w-10 shrink-0 rounded-[2px] ${index % 2 === 0
+                ? "bg-primary/5"
+                : "bg-primary/[0.08]"
+                }`}
+            />
+          )
+        }),
+      )}
+    </div>
   )
 }

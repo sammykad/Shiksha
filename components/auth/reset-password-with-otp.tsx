@@ -76,7 +76,7 @@ type PasswordValues = z.infer<typeof passwordSchema>;
 
 type EmailOtpApi = {
   requestPasswordReset: (input: { email: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
-  checkVerificationOtp: (input: { email: string; type: "forget-password"; otp: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
+  checkVerificationOtp: (input: { email: string; type: "forgot-password"; otp: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
   resetPassword: (input: { email: string; otp: string; password: string }) => Promise<{ error?: { code?: string; message?: string } | null }>;
 };
 
@@ -208,7 +208,7 @@ export function ResetPasswordWithOtp({
     try {
       const { error } = await emailOtp.checkVerificationOtp({
         email,
-        type: "forget-password",
+        type: "forgot-password",
         otp,
       });
       if (error) {
