@@ -26,9 +26,10 @@ import {
   StopLocationPicker,
   type StopLocationValue,
 } from '@/components/dashboard/transport/stop-location-picker'
+import { RoutePreviewMap } from '@/components/dashboard/transport/route-preview-map'
 import { getInitials } from '@/lib/utils'
 import { format } from 'date-fns'
-import { VehicleType } from '@/generated/prisma/enums'
+import { VehicleType, type OrganizationType } from '@/generated/prisma/enums'
 import { useUploadFile } from '@/hooks/use-upload-file'
 
 import {
@@ -386,9 +387,9 @@ function HelperDialog({ helper, onClose }: { helper?: Helper; onClose: () => voi
 }
 
 function RouteDialog({
-  route, drivers, vehicles, helpers, onClose,
+  route, drivers, vehicles, helpers, organizationType, onClose,
 }: {
-  route?: Route; drivers: Driver[]; vehicles: Vehicle[]; helpers: Helper[]; onClose: () => void
+  route?: Route; drivers: Driver[]; vehicles: Vehicle[]; helpers: Helper[]; organizationType?: OrganizationType | null; onClose: () => void
 }) {
   const [open, setOpen] = useState(true)
   const [isPending, startTransition] = useTransition()
@@ -398,6 +399,7 @@ function RouteDialog({
   const [stopLandmark, setStopLandmark] = useState('')
   const [stopPickupTime, setStopPickupTime] = useState('')
   const [stopLocation, setStopLocation] = useState<StopLocationValue | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const splitName = (n: string) => {
     const sep = n.includes(' → ') ? n.split(' → ') : [n, '']
@@ -614,8 +616,19 @@ function RouteDialog({
 
         {route && (
           <div className="border-t pt-4 mt-2">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between gap-2 mb-3">
               <h4 className="text-sm font-medium flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />Stops ({routeStops.length})</h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setPreviewOpen(true)}
+                title="Preview route on map"
+                aria-label="Preview route on map"
+              >
+                <RouteIcon className="h-4 w-4" />
+              </Button>
             </div>
             {routeStops.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-3">No stops added yet</p>
@@ -692,8 +705,38 @@ function RouteDialog({
           </div>
         )}
       </DialogContent>
+      {route && (
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl overflow-hidden p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Route Preview</DialogTitle>
+              <DialogDescription>
+                Map preview for {route.name} with stops, route path, distance, and duration.
+              </DialogDescription>
+            </DialogHeader>
+            <RoutePreviewMap
+              routeId={route.id}
+              routeName={route.name}
+              stops={routeStops}
+              routeGeometry={route.routeGeometry}
+              distanceMeters={route.routeDistanceMeters}
+              durationSeconds={route.routeDurationSeconds}
+              organizationType={organizationType}
+              className="rounded-none border-0"
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   )
+}
+
+interface TransportManagementProps {
+  initialDrivers: Driver[]
+  initialVehicles: Vehicle[]
+  initialHelpers: Helper[]
+  initialRoutes: Route[]
+  organizationType?: OrganizationType | null
 }
 
 export default function TransportManagement({
@@ -701,12 +744,8 @@ export default function TransportManagement({
   initialVehicles,
   initialHelpers,
   initialRoutes,
-}: {
-  initialDrivers: Driver[]
-  initialVehicles: Vehicle[]
-  initialHelpers: Helper[]
-  initialRoutes: Route[]
-}) {
+  organizationType,
+}: TransportManagementProps) {
   const [drivers, setDrivers] = useState(initialDrivers)
   const [vehicles, setVehicles] = useState(initialVehicles)
   const [helpers, setHelpers] = useState(initialHelpers)
@@ -1015,7 +1054,7 @@ export default function TransportManagement({
       {showDriverDialog && <DriverDialog driver={editingDriver} onClose={() => { setShowDriverDialog(false); refresh() }} />}
       {showVehicleDialog && <VehicleDialog vehicle={editingVehicle} onClose={() => { setShowVehicleDialog(false); refresh() }} />}
       {showHelperDialog && <HelperDialog helper={editingHelper} onClose={() => { setShowHelperDialog(false); refresh() }} />}
-      {showRouteDialog && <RouteDialog route={editingRoute} drivers={drivers} vehicles={vehicles} helpers={helpers} onClose={() => { setShowRouteDialog(false); refresh() }} />}
+      {showRouteDialog && <RouteDialog route={editingRoute} drivers={drivers} vehicles={vehicles} helpers={helpers} organizationType={organizationType} onClose={() => { setShowRouteDialog(false); refresh() }} />}
     </div>
   )
 }

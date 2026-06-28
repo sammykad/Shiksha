@@ -19,7 +19,7 @@ import {
   approveLeaveAction,
   rejectLeaveAction,
 } from '@/lib/data/leave/create-leave';
-import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
 import { toast } from 'sonner';
@@ -169,13 +169,16 @@ const ApproveRejectLeave = ({ leaves }: ApproveRejectLeaveProps) => {
                       {/* Profile Image */}
                       <div className="relative group shrink-0">
                         <div className="relative w-20 h-20 sm:w-24 sm:h-24">
-                          <Image
-                            src={currentLeave.appliedBy.profileImage}
-                            alt={currentLeave.appliedBy.firstName}
-                            className="w-full h-full rounded-2xl object-cover ring-4 ring-slate-100 group-hover:ring-red-100 transition-all"
-                            width={96}
-                            height={96}
-                          />
+                          <Avatar className="w-full h-full rounded-2xl ring-4 ring-slate-100 group-hover:ring-red-100 transition-all">
+                            <AvatarImage
+                              src={currentLeave.appliedBy.profileImage || undefined}
+                              alt={currentLeave.appliedBy.firstName}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="rounded-2xl text-2xl font-semibold">
+                              {currentLeave.appliedBy.firstName[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
                           <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1.5 shadow-md border border-slate-100">
                             <Badge
                               variant="PENDING_REVIEW"
@@ -287,7 +290,7 @@ const ApproveRejectLeave = ({ leaves }: ApproveRejectLeaveProps) => {
                 <div className="bg-red-50 rounded-2xl p-4">
                   <div className="mb-4">
                     <div className="inline-block bg-orange-100 text-orange-800 text-xs font-semibold px-3 py-1 rounded mb-3">
-                      {currentLeave.type.toUpperCase()}
+                      {currentLeave.type.charAt(0) + currentLeave.type.slice(1).toLowerCase()}
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
                       {currentLeave.totalDays} Day

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { FeeRecord } from '@/types';
 import { FeeReceiptPDF } from '@/lib/pdf-generator/FeeReceiptPDF';
 import { pdf } from '@react-pdf/renderer';
+import { downloadBlob } from '@/lib/pdf-generator/pdf';
 import { cn } from '@/lib/utils';
 
 
@@ -30,14 +31,7 @@ export function ReceiptDownloadButton({
       try {
         const pdfDoc = <FeeReceiptPDF feeRecord={record} copyType="STUDENT COPY" />;
         const blob = await pdf(pdfDoc).toBlob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `fee-receipt-${record.student.firstName}-${record.student.lastName}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        downloadBlob(blob, `fee-receipt-${record.student.firstName}-${record.student.lastName}.pdf`);
 
       } catch (error) {
         toast.error('Failed to generate receipt');

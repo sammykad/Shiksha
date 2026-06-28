@@ -226,6 +226,13 @@ enum OrganizationType {
   OTHER
 }
 
+enum GuardianType {
+  FATHER
+  MOTHER
+  GUARDIAN
+  OTHER
+}
+
 enum StudentStatus {
   ACTIVE // Currently studying
   INACTIVE // Temporarily inactive (leave, unpaid fees, etc.)
@@ -304,7 +311,7 @@ model Organization {
   drivers              Driver[]
   helpers              Helper[]
   transportRoutes      TransportRoute[]
-  transportEnrollments       TransportEnrollment[]
+  transportEnrollments TransportEnrollment[]
 
   @@index([id])
   @@index([slug])
@@ -650,9 +657,9 @@ model Student {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  idCards        IdCard[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  idCards              IdCard[]
   transportEnrollments TransportEnrollment[]
 
   @@unique([organizationId, rollNumber])
@@ -695,13 +702,13 @@ model Parent {
 }
 
 model ParentStudent {
-  id           String   @id @default(cuid())
-  relationship String
-  student      Student  @relation(fields: [studentId], references: [id])
+  id           String       @id @default(cuid())
+  relationship GuardianType
+  student      Student      @relation(fields: [studentId], references: [id])
   studentId    String
-  parent       Parent   @relation(fields: [parentId], references: [id])
+  parent       Parent       @relation(fields: [parentId], references: [id])
   parentId     String
-  isPrimary    Boolean? @default(false)
+  isPrimary    Boolean?     @default(false)
   // @@unique([studentId, parentId])
 
   @@index([relationship])
@@ -773,7 +780,7 @@ model TeacherProfile {
 
 model TeacherBankAccount {
   id        String  @id @default(cuid())
-  teacherId String @unique
+  teacherId String  @unique
   teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   accountHolderName String
@@ -1836,12 +1843,12 @@ enum LeaveType {
   CASUAL
   ANNUAL
   EMERGENCY
-  OTHER
   VACATION
   MATERNITY
   PATERNITY
   UNPAID
   STUDY
+  OTHER
 }
 
 model Leave {
@@ -1850,7 +1857,7 @@ model Leave {
   endDate          DateTime
   totalDays        Int
   reason           String
-  type             String // New
+  type             LeaveType
   emergencyContact String // Phone number during leave
 
   currentStatus LeaveStatus @default(PENDING)
@@ -2160,20 +2167,20 @@ model AcademicYear {
   isCurrent      Boolean      @default(false)
 
   // Meta Data
-  description        String?
-  complaints         AnonymousComplaint[]
-  notices            Notice[]
-  fees               Fee[]
-  teachingAssignment TeachingAssignment[]
-  studentAttendance  StudentAttendance[]
-  academicCalendar   AcademicCalendar[]
-  examSession        ExamSession[]
-  leaves             Leave[]
-  leads              Lead[]
-  feeCategories      FeeCategory[]
-  notifications      Notification[]
-  certificates       Certificate[]
-  reportCards        ReportCard[]
+  description          String?
+  complaints           AnonymousComplaint[]
+  notices              Notice[]
+  fees                 Fee[]
+  teachingAssignment   TeachingAssignment[]
+  studentAttendance    StudentAttendance[]
+  academicCalendar     AcademicCalendar[]
+  examSession          ExamSession[]
+  leaves               Leave[]
+  leads                Lead[]
+  feeCategories        FeeCategory[]
+  notifications        Notification[]
+  certificates         Certificate[]
+  reportCards          ReportCard[]
   // StudentDocument
   // ScheduledJob
   // NotificationLog
@@ -2182,9 +2189,9 @@ model AcademicYear {
   // ExamEnrollment
   transportEnrollments TransportEnrollment[]
 
-  createdBy          String
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([organizationId, name])
   @@index([organizationId, isCurrent])
@@ -2383,7 +2390,7 @@ model Vehicle {
   registrationNo String
   type           VehicleType
   capacity       Int
-  isActive       Boolean      @default(true)
+  isActive       Boolean     @default(true)
 
   routes TransportRoute[]
 
@@ -2403,7 +2410,7 @@ model Helper {
   phone          String
   alternatePhone String?
   photoUrl       String?
-  isActive       Boolean      @default(true)
+  isActive       Boolean @default(true)
 
   routes TransportRoute[]
 
@@ -2424,7 +2431,7 @@ model Driver {
   licenseNumber  String
   licenseExpiry  DateTime?
   photoUrl       String?
-  isActive       Boolean      @default(true)
+  isActive       Boolean   @default(true)
 
   routes TransportRoute[]
 
@@ -2440,20 +2447,20 @@ model TransportRoute {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  name             String
-  code             String
-  isActive         Boolean @default(true)
+  name     String
+  code     String
+  isActive Boolean @default(true)
 
-  vehicleId   String?
-  vehicle     Vehicle?    @relation(fields: [vehicleId], references: [id])
-  driverId    String?
-  driver      Driver?     @relation(fields: [driverId], references: [id])
-  helperId String?
-  helper   Helper?    @relation(fields: [helperId], references: [id])
+  vehicleId String?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id])
+  driverId  String?
+  driver    Driver?  @relation(fields: [driverId], references: [id])
+  helperId  String?
+  helper    Helper?  @relation(fields: [helperId], references: [id])
 
-  routeGeometry       String?
-  routeDistanceMeters  Float?
-  routeDurationSeconds Int?
+  routeGeometry          String?
+  routeDistanceMeters    Float?
+  routeDurationSeconds   Int?
   routeGeometryUpdatedAt DateTime?
 
   stops       TransportStop[]
@@ -2468,7 +2475,7 @@ model TransportRoute {
 }
 
 model TransportStop {
-  id      String        @id @default(cuid())
+  id      String         @id @default(cuid())
   routeId String
   route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
 
@@ -2477,9 +2484,9 @@ model TransportStop {
   landmark   String?
   pickupTime String?
 
-  latitude             Float?
-  longitude            Float?
-  locationSource       String?
+  latitude               Float?
+  longitude              Float?
+  locationSource         String?
   locationAccuracyMeters Float?
 
   enrollments TransportEnrollment[]
@@ -2489,16 +2496,16 @@ model TransportStop {
 }
 
 model TransportEnrollment {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   studentId String
-  student   Student         @relation(fields: [studentId], references: [id])
+  student   Student        @relation(fields: [studentId], references: [id])
   routeId   String
-  route     TransportRoute  @relation(fields: [routeId], references: [id])
+  route     TransportRoute @relation(fields: [routeId], references: [id])
   stopId    String
-  stop      TransportStop   @relation(fields: [stopId], references: [id])
+  stop      TransportStop  @relation(fields: [stopId], references: [id])
 
   academicYearId String?
   academicYear   AcademicYear? @relation(fields: [academicYearId], references: [id])

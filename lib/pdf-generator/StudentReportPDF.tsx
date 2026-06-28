@@ -366,7 +366,7 @@ export function StudentReportPDF({ academicYear, attendance, attendanceSummary, 
                             </View>
                             {leaves.map((leave, index) => (
                                 <View key={index} style={styles.tableRow}>
-                                    <Text style={[styles.tableCell, { flex: 1.5 }]}>{leave.type}</Text>
+                                    <Text style={[styles.tableCell, { flex: 1.5 }]}>{leave.type.charAt(0) + leave.type.slice(1).toLowerCase()}</Text>
                                     <Text style={[styles.tableCell, { flex: 1.5 }]}>{formatDateIN(leave.startDate)}</Text>
                                     <Text style={[styles.tableCell, { flex: 1.5 }]}>{formatDateIN(leave.endDate)}</Text>
                                     <Text

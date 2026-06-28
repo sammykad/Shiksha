@@ -55,7 +55,7 @@ import { Badge } from '@/components/ui/badge';
 import { createStudent } from '@/lib/data/student/create-student';
 import { Switch } from '@/components/ui/switch';
 import { Grade, Section } from '@/generated/prisma/client';
-import { Gender } from '@/generated/prisma/enums';
+import { Gender, GuardianType } from '@/generated/prisma/enums';
 import { BulkImporter } from '@/components/importers/BulkImporter';
 
 import { useRouter } from 'next/navigation';
@@ -134,7 +134,7 @@ export default function CreateStudentForm({ leadData, leadId, organizationId, ac
             email: '',
             phoneNumber: '',
             whatsAppNumber: '',
-            relationship: 'FATHER',
+            relationship: GuardianType.FATHER,
             isPrimary: true,
           },
         ]
@@ -212,13 +212,6 @@ export default function CreateStudentForm({ leadData, leadId, organizationId, ac
   //     documents.map((doc) => (doc.id === id ? { ...doc, [field]: value } : doc))
   //   );
   // };
-
-  const relationshipOptions = [
-    { id: '1', value: 'FATHER', label: 'Father' },
-    { id: '2', value: 'MOTHER', label: 'Mother' },
-    { id: '3', value: 'GUARDIAN', label: 'Guardian' },
-    { id: '4', value: 'OTHER', label: 'Other' },
-  ];
 
   const documentTypes = [
     { value: 'AADHAAR', label: 'Aadhaar Card' },
@@ -737,7 +730,7 @@ export default function CreateStudentForm({ leadData, leadId, organizationId, ac
                                     />
                                   </FormControl>
                                   <FormLabel className="text-sm font-normal text-slate-700">
-                                    {item}
+                                    {item.charAt(0) + item.slice(1).toLowerCase()}
                                   </FormLabel>
                                 </FormItem>
                               )}
@@ -782,7 +775,7 @@ export default function CreateStudentForm({ leadData, leadId, organizationId, ac
                       email: '',
                       phoneNumber: '',
                       whatsAppNumber: '',
-                      relationship: 'MOTHER',
+                      relationship: GuardianType.MOTHER,
                       isPrimary: false,
                     })
                   }
@@ -892,12 +885,9 @@ export default function CreateStudentForm({ leadData, leadId, organizationId, ac
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {relationshipOptions.map((relation) => (
-                                  <SelectItem
-                                    key={relation.id}
-                                    value={relation.value}
-                                  >
-                                    {relation.label}
+                                {Object.values(GuardianType).map((r) => (
+                                  <SelectItem key={r} value={r}>
+                                    {r.charAt(0) + r.slice(1).toLowerCase()}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

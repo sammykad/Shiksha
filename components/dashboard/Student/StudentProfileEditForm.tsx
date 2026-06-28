@@ -64,7 +64,7 @@ interface StudentProfileEditFormProps {
     whatsAppNumber: string;
     email: string;
     emergencyContact: string;
-    gender: 'MALE' | 'FEMALE' | 'OTHER';
+    gender: Gender;
     grade: string;
     section: string;
     organization: string;
@@ -267,8 +267,8 @@ export function StudentProfileEditForm({
                         </FormControl>
                         <SelectContent>
                           {Object.values(Gender).map((gender) => (
-                            <SelectItem key={gender} value={gender}>
-                              {gender}
+                            <SelectItem key={gender} value={gender} className='capitalize'>
+                              {gender.charAt(0) + gender.slice(1).toLowerCase()}
                             </SelectItem>
                           ))}
                         </SelectContent>

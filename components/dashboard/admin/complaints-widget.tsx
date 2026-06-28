@@ -59,7 +59,7 @@ export function ComplaintsWidget({ complaints, className }: { complaints: Anonym
               return (
                 <Link
                   key={complaint.id}
-                  href={`/dashboard/anonymousComplaints/manage?id=${complaint.trackingId}`}
+                  href={`/dashboard/anonymous-complaints/manage?id=${complaint.id}`}
                   className="group flex gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors last:border-0"
                 >
                   <div className="flex-1 min-w-0">

@@ -7,6 +7,7 @@ import {
   ExamMode,
   ExamStatus,
   Gender,
+  GuardianType,
   LeadActivityType,
   LeadCommunicationPreference,
   LeadPriority,
@@ -89,7 +90,7 @@ export const parentSchema = z.object({
   email: z.string().email('Invalid email address'),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
   whatsAppNumber: z.string().optional(),
-  relationship: z.enum(['FATHER', 'MOTHER', 'GUARDIAN', 'OTHER']),
+  relationship: nativeEnum(GuardianType),
   isPrimary: z.boolean().optional().default(false),
 });
 

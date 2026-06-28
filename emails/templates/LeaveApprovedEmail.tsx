@@ -94,7 +94,7 @@ LeaveApprovedEmail.PreviewProps = {
     startDate: new Date("2026-03-20"),
     endDate: new Date("2026-03-22"),
     totalDays: 3,
-    leaveType: "Casual Leave",
+    leaveType: "CASUAL",
     approvedBy: "Head of Admin",
     approvedAt: new Date("2026-03-17"),
 } satisfies LeaveApprovedVariables;

@@ -1,8 +1,7 @@
 import React from "react";
-import { Document, Text, View } from "@react-pdf/renderer";
-import { PDFPage } from "./PDFPage";
-import { tw, COLORS } from "./tw";
-import { formatCurrencyIN, formatDateIN, numberToWords } from "@/lib/utils";
+import { Document, Page, Text, View, Image } from "@react-pdf/renderer";
+import { tw } from "./tw";
+import { formatCurrencyIN, formatDateIN, numberToWords, formatEnumLabel } from "@/lib/utils";
 import "./fonts";
 
 type InvoiceData = {
@@ -33,14 +32,28 @@ export function SubscriptionInvoicePDF({ data }: { data: InvoiceData }) {
 
   return (
     <Document title={`Invoice-${data.invoiceNumber}`}>
-      <PDFPage
-        title="INVOICE"
-        titleBadge={data.status}
-        titleBadgeColor={isPaid ? COLORS.success : COLORS.warning}
-        orgName={data.organizationName}
-        logoUrl={data.logo}
-        footerText="Thank you for your continued trust in Shiksha.cloud"
-      >
+      <Page size="A4" style={tw("p-7 text-sm text-ink bg-white font-sans")}>
+        <View style={tw("flex-row justify-between items-start pb-3 mb-5 border-b-2 border-b-invoice")}>
+          <View style={tw("flex-row items-start gap-3 flex-1 pr-3")}>
+            {data.logo && <Image style={tw("w-12 h-12 object-contain mt-0.5")} src={data.logo} />}
+            <View style={tw("flex-col flex-1")}>
+              <Text style={tw("font-bold text-xl text-ink")}>{data.organizationName}</Text>
+              {data.organizationEmail && (
+                <Text style={tw("text-xs text-muted mt-0.5")}>{data.organizationEmail}</Text>
+              )}
+            </View>
+          </View>
+          <View style={tw("flex-col items-end shrink-0")}>
+            <Text style={tw("font-bold text-2xl tracking-widest text-invoice")}>INVOICE</Text>
+            <Text style={tw("text-2xs font-mono text-subtle mt-0.5")}>{data.invoiceNumber}</Text>
+            <View style={tw(`px-2 py-0.5 mt-1 rounded ${isPaid ? "bg-success" : "bg-warning"}`)}>
+              <Text style={tw("font-bold text-2xs tracking-wider text-white")}>
+                {isPaid ? "Paid" : formatEnumLabel(data.status)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <ProviderSection />
         <BillTo data={data} />
         <InvoiceDetails data={data} />
@@ -48,18 +61,32 @@ export function SubscriptionInvoicePDF({ data }: { data: InvoiceData }) {
         <TotalsSection data={data} />
         <PaymentSection data={data} />
         <SignatureSection />
-      </PDFPage>
+
+        <View style={tw("items-center pt-3 mt-7 border-t border-t-rule")}>
+          <Text style={tw("text-xs leading-normal text-center text-muted")}>
+            Thank you for your continued trust in Shiksha.cloud
+          </Text>
+          <Text style={tw("text-2xs mt-0.5 text-subtle")}>
+            support@shiksha.cloud | 8459324821
+          </Text>
+          <Text
+            style={tw("text-2xs mt-0.5 text-subtle")}
+            render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `${pageNumber} / ${totalPages}`}
+            fixed
+          />
+        </View>
+      </Page>
     </Document>
   );
 }
 
 function ProviderSection() {
   return (
-    <View style={tw("mb-5 bg-neutral-50 p-3")}>
-      <Text style={tw("text-2xs font-bold tracking-wider text-neutral-500 mb-1")}>FROM</Text>
+    <View style={tw("mb-5 bg-invoiceLight p-3")}>
+      <Text style={tw("text-2xs font-bold tracking-wider text-muted mb-1")}>FROM</Text>
       <Text style={tw("font-bold text-md")}>Shiksha Cloud</Text>
-      <Text style={tw("text-sm text-neutral-500 mt-0.5")}>support@shiksha.cloud</Text>
-      <Text style={tw("text-sm text-neutral-500")}>8459324821</Text>
+      <Text style={tw("text-sm text-muted mt-0.5")}>support@shiksha.cloud</Text>
+      <Text style={tw("text-sm text-muted")}>8459324821</Text>
     </View>
   );
 }
@@ -67,10 +94,10 @@ function ProviderSection() {
 function BillTo({ data }: { data: InvoiceData }) {
   return (
     <View style={tw("mb-5")}>
-      <Text style={tw("text-2xs font-bold tracking-wider text-neutral-500 mb-1")}>BILL TO</Text>
+      <Text style={tw("text-2xs font-bold tracking-wider text-muted mb-1")}>BILL TO</Text>
       <Text style={tw("font-bold text-md")}>{data.organizationName}</Text>
       {data.organizationEmail && (
-        <Text style={tw("text-sm text-neutral-500 mt-0.5")}>{data.organizationEmail}</Text>
+        <Text style={tw("text-sm text-muted mt-0.5")}>{data.organizationEmail}</Text>
       )}
     </View>
   );
@@ -84,10 +111,10 @@ function InvoiceDetails({ data }: { data: InvoiceData }) {
     { label: "Invoice No.", value: data.invoiceNumber },
   ];
   return (
-    <View style={tw("flex flex-row flex-wrap gap-3 mb-5 bg-neutral-50 p-3")}>
+    <View style={tw("flex-row flex-wrap gap-3 mb-5 bg-invoiceLight p-3")}>
       {rows.map((row) => (
-        <View key={row.label} style={{ width: "45%" }}>
-          <Text style={tw("text-2xs font-bold text-neutral-500 tracking-wide mb-0.5")}>{row.label}</Text>
+        <View key={row.label} style={tw("w-[45%]")}>
+          <Text style={tw("text-2xs font-bold text-muted tracking-wide mb-0.5")}>{row.label}</Text>
           <Text style={tw("text-sm")}>{row.value}</Text>
         </View>
       ))}
@@ -100,13 +127,13 @@ function ItemsTable({ data, lineAmount }: { data: InvoiceData; lineAmount: numbe
   const periodStr = `${formatDateIN(data.periodStart)} — ${formatDateIN(data.periodEnd)}`;
   return (
     <View style={tw("mb-5")}>
-      <View style={{ flexDirection: "row", backgroundColor: COLORS.brand, paddingVertical: 4, paddingHorizontal: 8 }}>
+      <View style={tw("flex-row bg-invoice py-1 px-2")}>
         <Text style={tw("font-bold text-2xs text-white tracking-wide w-[40%]")}>DESCRIPTION</Text>
         <Text style={tw("font-bold text-2xs text-white tracking-wide w-[15%] text-right")}>STUDENTS</Text>
         <Text style={tw("font-bold text-2xs text-white tracking-wide w-[20%] text-right")}>RATE</Text>
         <Text style={tw("font-bold text-2xs text-white tracking-wide w-[25%] text-right")}>AMOUNT</Text>
       </View>
-      <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: COLORS.rule, paddingVertical: 6, paddingHorizontal: 8 }}>
+      <View style={tw("flex-row border-b border-b-rule py-1.5 px-2")}>
         <Text style={tw("w-[40%] text-sm")}>
           {data.planName ?? "Subscription"} — {periodStr}
         </Text>
@@ -127,26 +154,26 @@ function ItemsTable({ data, lineAmount }: { data: InvoiceData; lineAmount: numbe
 function TotalsSection({ data }: { data: InvoiceData }) {
   return (
     <View style={tw("mb-5")}>
-      <View style={{ alignSelf: "flex-end", width: "55%" }}>
-        <View style={tw("flex flex-row px-3 py-0.5")}>
+      <View style={tw("self-end w-[55%]")}>
+        <View style={tw("flex-row px-3 py-0.5")}>
           <Text style={tw("flex-1 text-sm text-right mr-2")}>Subtotal</Text>
           <Text style={tw("font-mono text-sm text-right w-[45%]")}>Rs. {formatCurrencyIN(data.subtotal)}</Text>
         </View>
         {data.discount > 0 && (
-          <View style={tw("flex flex-row px-3 py-0.5")}>
+          <View style={tw("flex-row px-3 py-0.5")}>
             <Text style={tw("flex-1 text-sm text-right mr-2")}>Discount</Text>
-            <Text style={{ ...tw("font-mono text-sm text-right w-[45%]"), color: COLORS.success }}>
+            <Text style={tw("font-mono text-sm text-right w-[45%] text-success")}>
               - Rs. {formatCurrencyIN(data.discount)}
             </Text>
           </View>
         )}
-        <View style={{ flexDirection: "row", paddingVertical: 6, paddingHorizontal: 8, borderTopWidth: 2, borderTopColor: COLORS.ink, borderBottomWidth: 2, borderBottomColor: COLORS.ink, marginTop: 2, backgroundColor: COLORS.bgDark }}>
+        <View style={tw("flex-row py-1.5 px-2 mt-0.5 bg-bgDark border-t-[2] border-b-[2] border-ink")}>
           <Text style={tw("flex-1 font-bold text-md text-right mr-2")}>TOTAL</Text>
           <Text style={tw("font-bold text-md text-right w-[45%]")}>Rs. {formatCurrencyIN(data.total)}</Text>
         </View>
       </View>
       <View style={tw("mt-3 px-3")}>
-        <Text style={tw("text-2xs font-bold text-neutral-500 tracking-wide mb-0.5")}>Amount in words</Text>
+        <Text style={tw("text-2xs font-bold text-muted tracking-wide mb-0.5")}>Amount in words</Text>
         <Text style={tw("text-sm italic")}>{numberToWords(data.total / 100)}</Text>
       </View>
     </View>
@@ -154,29 +181,30 @@ function TotalsSection({ data }: { data: InvoiceData }) {
 }
 
 function PaymentSection({ data }: { data: InvoiceData }) {
-  const hasPayment = data.paymentProvider || data.paymentReference || data.paidAt;
-  if (!hasPayment) return null;
+  if (!data.paymentProvider && !data.paidAt) return null;
   return (
     <View style={tw("mb-5")}>
-      <Text style={tw("text-2xs font-bold tracking-wider text-neutral-500 mb-1")}>PAYMENT</Text>
-      {data.paymentProvider && (
-        <View style={tw("flex flex-row py-0.5")}>
-          <Text style={tw("font-bold text-sm text-neutral-500 w-[100px]")}>Method</Text>
-          <Text style={tw("text-sm")}>{data.paymentProvider}</Text>
-        </View>
-      )}
-      {data.paymentReference && (
-        <View style={tw("flex flex-row py-0.5")}>
-          <Text style={tw("font-bold text-sm text-neutral-500 w-[100px]")}>Reference</Text>
-          <Text style={tw("text-sm")}>{data.paymentReference}</Text>
-        </View>
-      )}
-      {data.paidAt && (
-        <View style={tw("flex flex-row py-0.5")}>
-          <Text style={tw("font-bold text-sm text-neutral-500 w-[100px]")}>Paid on</Text>
-          <Text style={tw("text-sm")}>{formatDateIN(data.paidAt)}</Text>
-        </View>
-      )}
+      <Text style={tw("text-2xs font-bold tracking-wider text-muted mb-1")}>PAYMENT</Text>
+      <View style={tw("bg-invoiceLight p-3")}>
+        {data.paymentProvider && (
+          <View style={tw("flex-row py-0.5")}>
+            <Text style={tw("font-bold text-sm text-muted w-[100px]")}>Method</Text>
+            <Text style={tw("text-sm")}>{formatEnumLabel(data.paymentProvider)}</Text>
+          </View>
+        )}
+        {data.paymentReference && (
+          <View style={tw("flex-row py-0.5")}>
+            <Text style={tw("font-bold text-sm text-muted w-[100px]")}>Reference</Text>
+            <Text style={tw("text-sm font-mono")}>{data.paymentReference}</Text>
+          </View>
+        )}
+        {data.paidAt && (
+          <View style={tw("flex-row py-0.5")}>
+            <Text style={tw("font-bold text-sm text-muted w-[100px]")}>Date</Text>
+            <Text style={tw("text-sm")}>{formatDateIN(data.paidAt)}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -184,8 +212,8 @@ function PaymentSection({ data }: { data: InvoiceData }) {
 function SignatureSection() {
   return (
     <View style={tw("mt-7 self-end")}>
-      <View style={{ width: 180, borderTopWidth: 1, borderTopColor: COLORS.ruleDark, marginBottom: 4 }} />
-      <Text style={tw("text-sm text-neutral-500")}>Authorized Signatory</Text>
+      <View style={tw("w-[180px] border-t border-t-ruleDark mb-1")} />
+      <Text style={tw("text-sm text-muted")}>Authorized Signatory</Text>
     </View>
   );
 }
