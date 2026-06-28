@@ -955,4 +955,100 @@ export const NOTIFICATION_REGISTRY: Registry = {
       },
     },
   },
+
+  // ── BILLING ──────────────────────────────────────────────────────────────
+  // BILLING are platform-only (Shiksha Admin) — sent to org admin, not org members
+  BILLING_INVOICE_GENERATED: {
+    type: "FEE",
+    subKey: "invoice_generated",
+    inboxTitle: "New invoice — {{invoiceNumber}}",
+    inboxMessage: "{{organizationName}} · Invoice {{invoiceNumber}} of {{amount}} for {{planName}} ({{studentCount}} students). Due: {{dueDate}}.",
+    channels: {
+      WHATSAPP: {
+        body: "{{organizationName}} · New invoice {{invoiceNumber}} for {{planName}} — {{amount}} for {{studentCount}} students. Due: {{dueDate}}.",
+        template: (v) => ({
+          name: "invoice_generated",
+          language: { code: "en" },
+          components: [
+            { type: "header", parameters: [] },
+            {
+              type: "body",
+              parameters: [
+                txt(v.invoiceNumber),
+                txt(v.planName),
+                txt(formatCurrencyINWithSymbol(v.amount)),
+                txt(formatDateIN(v.dueDate)),
+                txt(String(v.studentCount)),
+                txt(v.organizationName),
+              ],
+            },
+            { type: "footer", parameters: [] },
+          ],
+        }),
+      },
+    },
+  },
+
+  BILLING_INVOICE_PAID: {
+    type: "FEE",
+    subKey: "invoice_paid",
+    inboxTitle: "Invoice paid — {{invoiceNumber}}",
+    inboxMessage: "{{organizationName}} · {{amount}} paid for {{planName}} via {{paymentMethod}}. UTR: {{utr}} on {{paidAt}}.",
+    channels: {
+      WHATSAPP: {
+        body: "{{organizationName}} · Invoice {{invoiceNumber}} paid — {{amount}} for {{planName}} via {{paymentMethod}}. UTR: {{utr}} on {{paidAt}}.",
+        template: (v) => ({
+          name: "invoice_paid",
+          language: { code: "en" },
+          components: [
+            { type: "header", parameters: [] },
+            {
+              type: "body",
+              parameters: [
+                txt(v.organizationName),
+                txt(v.planName),
+                txt(formatCurrencyINWithSymbol(v.amount)),
+                txt(v.paymentMethod),
+                txt(v.invoiceNumber),
+                txt(formatDateIN(v.paidAt)),
+                txt(v.utr),
+              ],
+            },
+            { type: "footer", parameters: [] },
+          ],
+        }),
+      },
+    },
+  },
+
+  BILLING_INVOICE_REMINDER: {
+    type: "FEE",
+    subKey: "invoice_reminder",
+    inboxTitle: "⏰ Invoice due — {{invoiceNumber}}",
+    inboxMessage: "Reminder: Invoice {{invoiceNumber}} of {{amount}} for {{planName}} is due on {{dueDate}}. {{organizationName}} ({{studentCount}} students).",
+    channels: {
+      WHATSAPP: {
+        body: "⏰ Reminder: Invoice {{invoiceNumber}} of {{amount}} for {{planName}} is due {{dueDate}}. {{organizationName}} · {{studentCount}} students enrolled.",
+        template: (v) => ({
+          name: "invoice_due_reminder",
+          language: { code: "en" },
+          components: [
+            { type: "header", parameters: [] },
+            {
+              type: "body",
+              parameters: [
+                txt(v.invoiceNumber),
+                txt(v.planName),
+                txt(formatCurrencyINWithSymbol(v.amount)),
+                txt(formatDateIN(v.dueDate)),
+                txt(String(v.studentCount)),
+                txt(v.organizationName),
+              ],
+            },
+            { type: "footer", parameters: [] },
+          ],
+        }),
+      },
+    },
+  },
 };

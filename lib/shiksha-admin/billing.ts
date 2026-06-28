@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/user";
 import { getOrganizationId } from "@/lib/organization";
 import {
   changeSubscriptionPlan,
+  countBillableStudents,
   createCustomSubscription,
   getActiveSubscription,
 } from "@/lib/subscription-billing";
@@ -213,13 +214,17 @@ export async function recordManualSubscriptionPayment(
     });
 
     if (!invoice) {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      const studentCount = await countBillableStudents(input.organizationId);
       invoice = await prisma.invoice.create({
         data: {
           subscriptionId: subscription.id,
           organizationId: input.organizationId,
-          periodStart: new Date(),
-          periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-          studentCount: 0,
+          periodStart: now,
+          periodEnd,
+          studentCount,
           subtotal: amountInPaise,
           total: amountInPaise,
           status: InvoiceStatus.OPEN,

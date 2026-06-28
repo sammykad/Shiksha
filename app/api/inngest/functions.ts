@@ -6,6 +6,9 @@ import { inngest } from '@/lib/inngest/client';
 import { toISTDate } from '@/lib/utils';
 import { addMonths } from 'date-fns';
 import { createInvoice, handleExpiredTrials } from '@/lib/subscription-billing';
+import { generateSubscriptionInvoicePDFBuffer } from '@/lib/pdf-generator/generate-pdf-buffer';
+import { sendNotification } from '@/lib/notifications/engine';
+import { NotificationChannel } from '@/generated/prisma/enums';
 import {
   BillingCycle,
   ExamStatus,
@@ -160,8 +163,37 @@ export const expireTrials = inngest.createFunction(
   { id: 'expire-trials' },
   { cron: '0 0 * * *' },
   async ({ step }) => {
-    const expiredCount = await step.run('expire-trials', () => handleExpiredTrials());
-    return { expiredCount };
+    const invoices = await step.run('expire-trials', () => handleExpiredTrials());
+
+    for (const inv of invoices) {
+      if (inv.adminUserId) {
+        await step.run(`notify-${inv.subscriptionId}`, async () => {
+          const pdfBuffer = await generateSubscriptionInvoicePDFBuffer(inv.invoiceId);
+          await sendNotification({
+            templateId: 'BILLING_INVOICE_GENERATED',
+            organizationId: inv.organizationId,
+            eventId: `billing:${inv.subscriptionId}:invoice:${inv.invoiceNumber}`,
+            recipients: [{ userId: inv.adminUserId ?? undefined }],
+            channels: [NotificationChannel.WHATSAPP],
+            variables: {
+              planName: inv.planName,
+              amount: inv.amount,
+              dueDate: inv.dueDate,
+              invoiceNumber: inv.invoiceNumber,
+              studentCount: inv.studentCount,
+              organizationName: inv.orgName ?? 'Unknown',
+            },
+            attachment: {
+              filename: `${inv.invoiceNumber}.pdf`,
+              content: pdfBuffer,
+              contentType: 'application/pdf',
+            },
+          });
+        });
+      }
+    }
+
+    return { expiredCount: invoices.length, invoices: invoices.map((i) => i.invoiceNumber) };
   },
 );
 

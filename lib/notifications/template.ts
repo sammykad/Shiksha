@@ -1,4 +1,4 @@
-import { NotificationType } from "@/generated/prisma/enums";
+import { LeaveType, NotificationType } from "@/generated/prisma/enums";
 import React from "react";
 import { WhatsAppTemplatePayload } from "./providers/whatsapp";
 
@@ -115,6 +115,32 @@ export interface PaymentFailedVariables extends BaseVariables {
   failedAt: Date;
 }
 
+export interface BillingInvoiceGeneratedVariables extends BaseVariables {
+  planName: string;
+  amount: number;
+  dueDate: string;
+  invoiceNumber: string;
+  studentCount: number;
+}
+
+export interface BillingInvoicePaidVariables extends BaseVariables {
+  planName: string;
+  amount: number;
+  invoiceNumber: string;
+  paidAt: string;
+  paymentMethod: string;
+  utr: string;
+  studentCount: number;
+}
+
+export interface BillingInvoiceReminderVariables extends BaseVariables {
+  planName: string;
+  amount: number;
+  dueDate: string;
+  invoiceNumber: string;
+  studentCount: number;
+}
+
 export interface PdcChequeRecordedVariables extends BaseVariables {
   studentName: string;
   amount: number;
@@ -192,7 +218,7 @@ export interface UrgentNoticeVariables extends BaseVariables {
 
 export interface LeaveApprovedVariables extends BaseVariables {
   appliedBy: string;
-  leaveType: string;
+  leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
   totalDays: number;
@@ -202,7 +228,7 @@ export interface LeaveApprovedVariables extends BaseVariables {
 
 export interface LeaveRejectedVariables extends BaseVariables {
   appliedBy: string;
-  leaveType: string;
+  leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
   totalDays: number;
@@ -350,6 +376,10 @@ export type TemplateVariablesMap = {
 
   PDC_CHEQUE_RECORDED: PdcChequeRecordedVariables;
   PDC_CHEQUE_BOUNCED: PdcChequeBouncedVariables;
+
+  BILLING_INVOICE_GENERATED: BillingInvoiceGeneratedVariables;
+  BILLING_INVOICE_PAID: BillingInvoicePaidVariables;
+  BILLING_INVOICE_REMINDER: BillingInvoiceReminderVariables;
 };
 
 export type NotificationVariables = TemplateVariablesMap[keyof TemplateVariablesMap];
