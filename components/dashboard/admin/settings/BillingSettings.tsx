@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { downloadSubscriptionInvoicePdf } from "@/lib/data/billing/download-subscription-invoice";
+import { createBlobFromBase64, downloadBlob } from "@/lib/pdf-generator/pdf";
 import {
     AlertTriangle,
     CreditCard,
@@ -301,20 +303,13 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                                                         size="sm"
                                                         onClick={async () => {
                                                             try {
-                                                                const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
-                                                                if (!res.ok) {
-                                                                    const err = await res.json().catch(() => ({}));
-                                                                    throw new Error(err.error || "Download failed");
+                                                                const result = await downloadSubscriptionInvoicePdf(invoice.id);
+                                                                if (!result.success) {
+                                                                    throw new Error(result.error);
                                                                 }
-                                                                const blob = await res.blob();
-                                                                const url = URL.createObjectURL(blob);
-                                                                const a = document.createElement("a");
-                                                                a.href = url;
-                                                                a.download = `${invoice.invoiceNumber ?? "invoice"}.pdf`;
-                                                                document.body.appendChild(a);
-                                                                a.click();
-                                                                document.body.removeChild(a);
-                                                                URL.revokeObjectURL(url);
+                                                                const blob = createBlobFromBase64(result.base64);
+                                                                if (!blob) throw new Error("Invalid PDF data");
+                                                                downloadBlob(blob, result.filename);
                                                             } catch {
                                                                 toast.error("Failed to download invoice PDF");
                                                             }
@@ -572,20 +567,13 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
                                                         size="sm"
                                                         onClick={async () => {
                                                             try {
-                                                                const res = await fetch(`/api/billing/invoice/${invoice.id}/pdf`);
-                                                                if (!res.ok) {
-                                                                    const err = await res.json().catch(() => ({}));
-                                                                    throw new Error(err.error || "Download failed");
+                                                                const result = await downloadSubscriptionInvoicePdf(invoice.id);
+                                                                if (!result.success) {
+                                                                    throw new Error(result.error);
                                                                 }
-                                                                const blob = await res.blob();
-                                                                const url = URL.createObjectURL(blob);
-                                                                const a = document.createElement("a");
-                                                                a.href = url;
-                                                                a.download = `${invoice.invoiceNumber ?? "invoice"}.pdf`;
-                                                                document.body.appendChild(a);
-                                                                a.click();
-                                                                document.body.removeChild(a);
-                                                                URL.revokeObjectURL(url);
+                                                                const blob = createBlobFromBase64(result.base64);
+                                                                if (!blob) throw new Error("Invalid PDF data");
+                                                                downloadBlob(blob, result.filename);
                                                             } catch {
                                                                 toast.error("Failed to download invoice PDF");
                                                             }

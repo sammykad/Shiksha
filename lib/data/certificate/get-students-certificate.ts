@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { getOrganizationId } from "@/lib/organization";
 import { getActiveAcademicYearId } from "@/lib/academicYear";
 import { getFeesSummary } from "@/lib/data/fee/fee-balance";
+import { GuardianType } from "@/generated/prisma/enums";
 
 export interface CertificateStudentData {
   id: string;
@@ -140,9 +141,9 @@ export async function getStudentsForCertificateGenerator(): Promise<{
   const yearLabel = academicYear?.name ?? new Date().getFullYear().toString();
 
   const mappedStudents: CertificateStudentData[] = students.map(student => {
-    const father = student.parents.find(p => p.relationship === 'FATHER')
-      ?? student.parents.find(p => p.relationship === 'GUARDIAN');
-    const mother = student.parents.find(p => p.relationship === 'MOTHER');
+    const father = student.parents.find(p => p.relationship === GuardianType.FATHER)
+      ?? student.parents.find(p => p.relationship === GuardianType.GUARDIAN);
+    const mother = student.parents.find(p => p.relationship === GuardianType.MOTHER);
 
     // Attendance calculation
     const totalDays = student.StudentAttendance.length;

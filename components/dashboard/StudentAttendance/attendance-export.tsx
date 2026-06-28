@@ -21,7 +21,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 import { pdf } from '@react-pdf/renderer';
-import { AttendancePDFReport } from '@/lib/pdf-generator/attendance-pdf-report';
+import { AttendanceReportPDF } from '@/lib/pdf-generator/AttendanceReportPDF';
+import { downloadBlob } from '@/lib/pdf-generator/pdf';
 
 
 import { AttendanceExportProps } from '@/types/attendance-export';
@@ -76,13 +77,7 @@ export function AttendanceExport({
 
             const csv = Papa.unparse(csvData);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `${filename}-${new Date().getTime()}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            downloadBlob(blob, `${filename}-${new Date().getTime()}.csv`);
             toast.success('CSV exported successfully');
         } catch (error) {
             console.error('Export error:', error);
@@ -100,7 +95,7 @@ export function AttendanceExport({
 
         setIsExporting('pdf');
         try {
-            const doc = <AttendancePDFReport
+            const doc = <AttendanceReportPDF
                 records={records}
                 organization={organization}
                 title={title}
@@ -108,13 +103,7 @@ export function AttendanceExport({
             />;
 
             const blob = await pdf(doc).toBlob();
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `${filename}-${new Date().getTime()}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            downloadBlob(blob, `${filename}-${new Date().getTime()}.pdf`);
             toast.success('PDF exported successfully');
         } catch (error) {
             console.error('Export error:', error);

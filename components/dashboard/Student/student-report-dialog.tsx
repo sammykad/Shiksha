@@ -29,6 +29,7 @@ import {
 } from "@/lib/data/student/get-student-report";
 import { pdf } from "@react-pdf/renderer";
 import { StudentReportPDF } from "@/lib/pdf-generator/StudentReportPDF";
+import { downloadBlob } from "@/lib/pdf-generator/pdf";
 
 interface StudentReportDialogProps {
     studentId: string;
@@ -88,15 +89,7 @@ export function StudentReportDialog({
                     />
                 ).toBlob();
 
-                // Download PDF
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `student-report-${reportData.student.rollNumber}-${reportData.academicYear.name}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                downloadBlob(blob, `student-report-${reportData.student.rollNumber}-${reportData.academicYear.name}.pdf`);
 
                 toast.success("Report generated successfully!");
                 setOpen(false);

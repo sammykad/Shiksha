@@ -58,6 +58,7 @@ import {
   Student,
   User,
 } from '@/generated/prisma/client';
+import { Gender, GuardianType } from '@/generated/prisma/enums';
 // import { studentDocumentsDelete } from '@/app/actions';
 // import {
 //   Dialog,
@@ -139,11 +140,7 @@ export default function UpdateStudentForm({
         email: ps.parent.email,
         phoneNumber: ps.parent.phoneNumber,
         whatsAppNumber: ps.parent.whatsAppNumber || '',
-        relationship: ps.relationship as
-          | 'FATHER'
-          | 'MOTHER'
-          | 'GUARDIAN'
-          | 'OTHER',
+        relationship: ps.relationship as GuardianType,
         isPrimary: ps.isPrimary || false,
       })),
     },
@@ -201,11 +198,7 @@ export default function UpdateStudentForm({
               email: ps.parent.email,
               phoneNumber: ps.parent.phoneNumber,
               whatsAppNumber: ps.parent.whatsAppNumber || '',
-              relationship: ps.relationship as
-                | 'FATHER'
-                | 'MOTHER'
-                | 'GUARDIAN'
-                | 'OTHER',
+              relationship: ps.relationship as GuardianType,
               isPrimary: ps.isPrimary || false,
             }))
             : [],
@@ -251,18 +244,7 @@ export default function UpdateStudentForm({
   };
 
 
-  const genderOptions = [
-    { id: 'MALE', label: 'Male' },
-    { id: 'FEMALE', label: 'Female' },
-    { id: 'OTHER', label: 'Other' },
-  ];
 
-  const relationshipOptions = [
-    { id: '1', value: 'FATHER', label: 'Father' },
-    { id: '2', value: 'MOTHER', label: 'Mother' },
-    { id: '3', value: 'GUARDIAN', label: 'Guardian' },
-    { id: '4', value: 'OTHER', label: 'Other' },
-  ];
 
 
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -705,26 +687,26 @@ export default function UpdateStudentForm({
                           Gender
                         </FormLabel>
                         <div className="flex flex-wrap gap-4">
-                          {genderOptions.map((item) => (
+                          {Object.values(Gender).map((g) => (
                             <FormField
-                              key={item.id}
+                              key={g}
                               control={form.control}
                               name="gender"
                               render={({ field }) => (
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                   <FormControl>
                                     <Checkbox
-                                      checked={field.value === item.id}
+                                      checked={field.value === g}
                                       onCheckedChange={(checked) => {
                                         if (checked) {
-                                          field.onChange(item.id);
+                                          field.onChange(g);
                                         }
                                       }}
                                       className="border-slate-300"
                                     />
                                   </FormControl>
                                   <FormLabel className="text-sm font-normal text-slate-700">
-                                    {item.label}
+                                    {g.charAt(0) + g.slice(1).toLowerCase()}
                                   </FormLabel>
                                 </FormItem>
                               )}
@@ -769,7 +751,7 @@ export default function UpdateStudentForm({
                       email: '',
                       phoneNumber: '',
                       whatsAppNumber: '',
-                      relationship: 'MOTHER',
+                      relationship: GuardianType.MOTHER,
                       isPrimary: false,
                     })
                   }
@@ -879,12 +861,9 @@ export default function UpdateStudentForm({
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {relationshipOptions.map((relation) => (
-                                  <SelectItem
-                                    key={relation.id}
-                                    value={relation.value}
-                                  >
-                                    {relation.label}
+                                {Object.values(GuardianType).map((r) => (
+                                  <SelectItem key={r} value={r}>
+                                    {r.charAt(0) + r.slice(1).toLowerCase()}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

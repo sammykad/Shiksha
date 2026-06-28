@@ -863,7 +863,7 @@ export async function createSubscriptionPayment({
 
 // ─── Invoice Generation (for script / manual payments) ────────────────────
 
-async function generateInvoiceNumber(client: BillingClient = prisma): Promise<string> {
+export async function generateInvoiceNumber(client: BillingClient = prisma): Promise<string> {
   const year = new Date().getFullYear();
   const [result] = await client.$queryRawUnsafe<[{ nextval: bigint }]>(
     `SELECT nextval('invoice_number_seq') AS nextval`
@@ -1281,34 +1281,134 @@ export async function getInvoicePDFData(invoiceId: string) {
   };
 }
 
-export async function handleExpiredTrials(client: BillingClient = prisma) {
+export type ExpiredTrialInvoice = {
+  subscriptionId: string;
+  organizationId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  amount: number;
+  dueDate: string;
+  planName: string;
+  studentCount: number;
+  orgName: string;
+  orgEmail: string | null;
+  adminUserId: string | null;
+};
+
+export async function handleExpiredTrials(client: BillingClient = prisma): Promise<ExpiredTrialInvoice[]> {
   const expired = await client.subscription.findMany({
     where: {
       status: SubscriptionStatus.TRIALING,
       trialEndsAt: { lt: new Date() },
     },
-    select: { id: true, organizationId: true },
+    include: {
+      plan: true,
+      offer: true,
+      organization: { select: { name: true, contactEmail: true } },
+      pricingSlabs: {
+        orderBy: { minStudents: "asc" },
+      },
+    },
   });
 
-  if (expired.length > 0) {
-    const now = new Date();
-    await client.subscription.updateMany({
-      where: { id: { in: expired.map((s) => s.id) } },
-      data: {
-        status: SubscriptionStatus.EXPIRED,
-        cancelledAt: now,
-      },
-    });
+  const results: ExpiredTrialInvoice[] = [];
 
-    await client.billingEvent.createMany({
-      data: expired.map((s) => ({
-        subscriptionId: s.id,
-        type: "trial_expired",
-        message: "Trial period ended. Subscription has been expired.",
-        createdAt: now,
-      })),
-    });
+  for (const sub of expired) {
+    const now = new Date();
+    const dueDate = addDays(now, 15);
+
+    try {
+      const studentCount = await countBillableStudents(sub.organizationId, client);
+
+      const amount = calculateSubscriptionAmount({
+        pricingMode: sub.pricingMode,
+        billingMetric: sub.billingMetric,
+        billingCycle: sub.billingCycle,
+        studentCount,
+        monthlyPrice: sub.plan?.monthlyPrice ?? undefined,
+        annualPrice: sub.plan?.annualPrice ?? undefined,
+        customPrice: sub.customPrice,
+        unitPrice: sub.unitPrice,
+        offer: sub.offer ? { fixedPrice: sub.offer.fixedPrice, discountPercent: sub.offer.discountPercent } : undefined,
+        pricingSlabs: sub.pricingSlabs?.map((s) => ({
+          minStudents: s.minStudents,
+          maxStudents: s.maxStudents,
+          pricePerStudent: s.pricePerStudent,
+        })),
+      });
+
+      const periodStart = now;
+      const periodEnd = sub.billingCycle === BillingCycle.ANNUAL
+        ? addMonths(now, 12)
+        : addMonths(now, 1);
+
+      const invoiceNumber = await generateInvoiceNumber(client);
+
+      const invoice = await client.invoice.create({
+        data: {
+          subscriptionId: sub.id,
+          organizationId: sub.organizationId,
+          invoiceNumber,
+          periodStart,
+          periodEnd,
+          studentCount,
+          subtotal: amount.subtotal,
+          discount: amount.discount,
+          usageAmount: 0,
+          total: amount.total,
+          status: InvoiceStatus.OPEN,
+          dueAt: dueDate,
+        },
+      });
+
+      await client.subscription.update({
+        where: { id: sub.id },
+        data: {
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: periodStart,
+          currentPeriodEnd: periodEnd,
+          studentCount,
+        },
+      });
+
+      await client.billingEvent.create({
+        data: {
+          subscriptionId: sub.id,
+          type: "trial_ended",
+          message: `Trial ended. Invoice ${invoiceNumber} created. Amount: ${amount.total}. Due: ${dueDate.toISOString().split("T")[0]}.`,
+          metadata: { invoiceId: invoice.id, invoiceNumber, amount: amount.total, dueDate: dueDate.toISOString() },
+        },
+      });
+
+      const adminMember = await client.membership.findFirst({
+        where: { organizationId: sub.organizationId, role: "ADMIN", status: "ACTIVE" },
+        select: { userId: true },
+      });
+
+      results.push({
+        subscriptionId: sub.id,
+        organizationId: sub.organizationId,
+        invoiceId: invoice.id,
+        invoiceNumber,
+        amount: amount.total,
+        dueDate: dueDate.toISOString(),
+        planName: sub.plan?.name ?? "Custom",
+        studentCount,
+        orgName: sub.organization.name,
+        orgEmail: sub.organization.contactEmail,
+        adminUserId: adminMember?.userId ?? null,
+      });
+    } catch (error) {
+      console.error(`Failed to process trial expiry for ${sub.id}:`, error);
+      await client.billingEvent.create({
+        data: {
+          subscriptionId: sub.id,
+          type: "trial_expiry_failed",
+          message: `Failed to create invoice after trial: ${error instanceof Error ? error.message : "Unknown error"}`,
+        },
+      });
+    }
   }
 
-  return expired.length;
+  return results;
 }

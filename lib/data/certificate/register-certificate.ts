@@ -5,7 +5,7 @@ import { getOrganizationId, getOrganizationType } from "@/lib/organization";
 import { getCurrentAcademicYearId } from "@/lib/academicYear";
 import { getCurrentUser } from "@/lib/user";
 import { Prisma } from "@/generated/prisma/client";
-import { pdf } from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { CertificatePDF, type Lang } from "@/lib/data/certificate/certificate-pdf";
 import { getTerminology } from "@/lib/terminology";
 import type { TerminologyLabels } from "@/lib/terminology";
@@ -138,7 +138,7 @@ export async function registerCertificate(data: {
       const organizationType = await getOrganizationType(organizationId);
       const terms = getTerminology(organizationType);
 
-      const pdfBlob = await pdf(
+      pdfBuffer = await renderToBuffer(
         CertificatePDF({
           data: {
             certType: data.CertificateType.toLowerCase(),
@@ -174,9 +174,7 @@ export async function registerCertificate(data: {
             terms,
           },
         }),
-      ).toBlob();
-
-      pdfBuffer = Buffer.from(await pdfBlob.arrayBuffer());
+      );
     }
 
     // ── Send notification with PDF attached — fire and forget ─────────────────

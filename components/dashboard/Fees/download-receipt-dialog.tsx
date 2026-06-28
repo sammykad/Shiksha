@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { pdf } from "@react-pdf/renderer"
+import { downloadBlob } from "@/lib/pdf-generator/pdf"
 import { DownloadIcon, Loader2, MinusIcon, PlusIcon, FileTextIcon, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -113,14 +114,7 @@ export function DownloadReceiptDialog({ record }: DownloadReceiptDialogProps) {
                 )
 
                 const blob = await pdf(pdfDoc).toBlob()
-                const url = URL.createObjectURL(blob)
-                const link = document.createElement("a")
-                link.href = url
-                link.download = `fee-receipt-${record.student.firstName}-${record.student.lastName}-combined.pdf`
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-                URL.revokeObjectURL(url)
+                downloadBlob(blob, `fee-receipt-${record.student.firstName}-${record.student.lastName}-combined.pdf`)
             } else {
                 // Generate individual PDFs and merge them (or download individually)
                 // The original logic was downloading them individually if blobs.length > 1
@@ -137,14 +131,7 @@ export function DownloadReceiptDialog({ record }: DownloadReceiptDialogProps) {
 
                 // If only one page, download directly
                 if (blobs.length === 1) {
-                    const url = URL.createObjectURL(blobs[0])
-                    const link = document.createElement("a")
-                    link.href = url
-                    link.download = `fee-receipt-${record.student.firstName}-${record.student.lastName}-${record.fee.id.slice(0, 8)}.pdf`
-                    document.body.appendChild(link)
-                    link.click()
-                    document.body.removeChild(link)
-                    URL.revokeObjectURL(url)
+                    downloadBlob(blobs[0], `fee-receipt-${record.student.firstName}-${record.student.lastName}-${record.fee.id.slice(0, 8)}.pdf`)
                 } else {
                     // For multiple copies, download each separately with type label
                     for (let i = 0; i < pages.length; i++) {
@@ -152,16 +139,9 @@ export function DownloadReceiptDialog({ record }: DownloadReceiptDialogProps) {
                         for (let j = 0; j < page.count; j++) {
                             const pdfDoc = <FeeReceiptPDF feeRecord={record} copyType={page.type} />
                             const blob = await pdf(pdfDoc).toBlob()
-                            const url = URL.createObjectURL(blob)
-                            const link = document.createElement("a")
-                            link.href = url
                             const copyLabel = page.type.toLowerCase().replace(" ", "-")
                             const copyNum = page.count > 1 ? `-${j + 1}` : ""
-                            link.download = `fee-receipt-${record.student.firstName}-${record.student.lastName}-${copyLabel}${copyNum}.pdf`
-                            document.body.appendChild(link)
-                            link.click()
-                            document.body.removeChild(link)
-                            URL.revokeObjectURL(url)
+                            downloadBlob(blob, `fee-receipt-${record.student.firstName}-${record.student.lastName}-${copyLabel}${copyNum}.pdf`)
                             // Small delay between downloads
                             await new Promise((resolve) => setTimeout(resolve, 300))
                         }

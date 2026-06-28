@@ -133,7 +133,7 @@ export default function LeaveCard({ leave }: LeaveCardProps) {
               />
               <span className="leading-none">Type:</span>
               <Badge variant="outline" className="ml-1">
-                {leave.type}
+                {leave.type.charAt(0) + leave.type.slice(1).toLowerCase()}
               </Badge>
             </div>
 

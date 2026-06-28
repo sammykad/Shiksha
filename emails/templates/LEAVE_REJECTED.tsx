@@ -80,7 +80,7 @@ LeaveRejectedEmail.PreviewProps = {
     startDate: new Date("2026-03-05"),
     endDate: new Date("2026-03-07"),
     totalDays: 3,
-    leaveType: "Casual Leave",
+    leaveType: "CASUAL",
     rejectedNote: "Department will be understaffed during this period.",
     reason: "Family function out of town.",
     rejectedBy: "Head of Admin",

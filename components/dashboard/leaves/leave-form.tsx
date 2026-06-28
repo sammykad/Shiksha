@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useTransition } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -82,17 +82,17 @@ export function LeaveForm({
 
   const onSubmit = (formData: LeaveCreateFromData) => {
     startTransition(async () => {
-      const res = await createLeaveAction(formData);
+      await createLeaveAction(formData);
       toast.success('Leave created successfully');
       form.reset();
       setOpen(false);
     });
   };
 
-  const startDate = form.watch('startDate');
-  const endDate = form.watch('endDate');
-  const typeValue = form.watch('type');
-  const reasonValue = form.watch('reason') || '';
+  const startDate = useWatch({ control: form.control, name: 'startDate' });
+  const endDate = useWatch({ control: form.control, name: 'endDate' });
+  const typeValue = useWatch({ control: form.control, name: 'type' });
+  const reasonValue = useWatch({ control: form.control, name: 'reason' }) || '';
 
   const totalDays = React.useMemo(() => {
     if (!startDate || !endDate) return null;
@@ -114,7 +114,7 @@ export function LeaveForm({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-2xl overflow-y-auto p-4 sm:w-full sm:p-6">
         {/* Premium header with icon and subtle context */}
         <DialogHeader className="space-y-2">
           <div className="flex items-center gap-2">
@@ -130,27 +130,27 @@ export function LeaveForm({
 
         {/* Summary strip: minimal, informative, Vercel/shadcn vibes */}
         <div className="rounded-lg border bg-muted/30 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-medium">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Badge variant="outline" className="max-w-full truncate font-medium">
                 {typeValue}
               </Badge>
               {totalDays !== null ? (
-                <Badge className="font-medium" variant={'EXAM'}>
+                <Badge className="font-medium" variant="EXAM">
                   {totalDays} {totalDays === 1 ? 'day' : 'days'}
                 </Badge>
               ) : (
                 <Badge
                   variant="GENERAL"
-                  className="font-normal text-muted-foreground"
+                  className="whitespace-nowrap font-normal text-muted-foreground"
                 >
                   Select dates
                 </Badge>
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>
+            <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-muted-foreground sm:justify-end">
+              <span className="min-w-0 leading-snug">
                 {form.getValues('academicYearId')
                   ? 'Academic year ready'
                   : 'Choose academic year'}
@@ -387,13 +387,13 @@ export function LeaveForm({
               </CardContent>
             </Card>
             {/* Action bar */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-xs text-muted-foreground">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs leading-relaxed text-muted-foreground">
                 Changes are saved when you submit. Total days include start and
                 end.
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-2">
                 <Button
                   type="button"
                   variant="secondary"

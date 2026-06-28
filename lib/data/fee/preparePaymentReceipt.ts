@@ -1,6 +1,6 @@
 import prisma from '@/lib/db';
 import { PaymentStatus } from '@/generated/prisma/enums';
-import { generateReceiptBuffer } from '@/lib/pdf-generator/generateReceiptBuffer';
+import { generateReceiptBuffer } from '@/lib/pdf-generator/generate-pdf-buffer';
 import { FeeRecord } from '@/types';
 import { randomUUID } from 'crypto';
 import { getFeeBalance } from './fee-balance';
