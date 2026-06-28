@@ -1,56 +1,22 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
+import { GuardianType } from '@/generated/prisma/enums';
+import {
+  INDIAN_FIRST_NAMES_MALE, INDIAN_FIRST_NAMES_FEMALE, INDIAN_LAST_NAMES,
+  INDIAN_ADDRESSES, INDIAN_CITIES,
+  randomItem, randomInt, generateIndianPhone, generateIndianEmail,
+  generateId, pickParentGender, BLOOD_GROUPS, CASTES,
+} from './constants';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL!,
 });
 
-/* ----------------------------------------------
- * Indian Realistic Data Constants
- * ---------------------------------------------- */
-const INDIAN_FIRST_NAMES_MALE = [
-  'Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Arnav', 'Ayaan', 'Krishna', 'Ishaan',
-  'Rohan', 'Aryan', 'Reyansh', 'Mohammed', 'Dhruv', 'Kabir', 'Shivansh', 'Atharv', 'Karthik', 'Rahul',
-  'Vikram', 'Suresh', 'Rajesh', 'Amit', 'Sanjay', 'Pradeep', 'Manoj', 'Deepak', 'Sunil', 'Anil',
-  'Ravi', 'Mohan', 'Gopal', 'Krishna', 'Ram', 'Shyam', 'Lakshman', 'Bharat', 'Arvind', 'Nitin',
+const pinCodes = [
+  '411001', '411038', '411057', '411045', '411004', '411005', '411009', '411016',
 ];
 
-const INDIAN_FIRST_NAMES_FEMALE = [
-  'Aadhya', 'Ananya', 'Aanya', 'Aaradhya', 'Diya', 'Saanvi', 'Kavya', 'Anika', 'Myra', 'Ira',
-  'Priya', 'Neha', 'Pooja', 'Ritu', 'Sneha', 'Kavita', 'Meera', 'Shreya', 'Riya', 'Tanya',
-  'Lakshmi', 'Saraswati', 'Durga', 'Parvati', 'Radha', 'Sita', 'Gita', 'Uma', 'Jaya', 'Nisha',
-  'Anjali', 'Sunita', 'Rekha', 'Sangeeta', 'Vandana', 'Pallavi', 'Swati', 'Madhuri', 'Asha', 'Komal',
-];
-
-const INDIAN_LAST_NAMES = [
-  'Sharma', 'Verma', 'Gupta', 'Singh', 'Kumar', 'Patel', 'Shah', 'Joshi', 'Iyer', 'Nair',
-  'Reddy', 'Rao', 'Pillai', 'Mukherjee', 'Chatterjee', 'Banerjee', 'Das', 'Mehta', 'Desai', 'Pandey',
-  'Tiwari', 'Dubey', 'Mishra', 'Saxena', 'Agarwal', 'Bansal', 'Goel', 'Tandon', 'Kapoor', 'Malhotra',
-  'Chopra', 'Khanna', 'Sethi', 'Bhatia', 'Arora', 'Saini', 'Chauhan', 'Rathore', 'Thakur', 'Yadav',
-  'Jadhav', 'Patil', 'Kulkarni', 'Deshmukh', 'Gaikwad', 'Pawar', 'More', 'Bhosale', 'Shinde', 'Gore',
-];
-
-const INDIAN_ADDRESSES = [
-  '12, MG Road', '45, Station Road', '78, Gandhi Nagar', '23, Park Street',
-  '56, Nehru Place', '89, Ring Road', '34, Civil Lines', '67, Mall Road',
-  '90, Lake View', '15, Hill Road', '42, Market Street', '88, Temple Road',
-  '21, Shivaji Chowk', '55, Tilak Road', '33, JM Road', '77, FC Road',
-  '11, KP Road', '44, SB Road', '66, Law College Road', '99, Kothrud',
-];
-
-const INDIAN_CITIES = [
-  { city: 'Pune', state: 'Maharashtra', pinCodes: ['411001', '411038', '411057', '411045', '411004', '411005', '411009', '411016'] },
-  { city: 'Mumbai', state: 'Maharashtra', pinCodes: ['400001', '400050', '400060', '400092', '400053', '400067', '400077', '400089'] },
-  { city: 'Nashik', state: 'Maharashtra', pinCodes: ['422001', '422002', '422005', '422009', '422010', '422011', '422012', '422013'] },
-  { city: 'Nagpur', state: 'Maharashtra', pinCodes: ['440001', '440002', '440008', '440010', '440012', '440013', '440015', '440022'] },
-  { city: 'Thane', state: 'Maharashtra', pinCodes: ['400601', '400602', '400603', '400604', '400605', '400606', '400607', '400608'] },
-];
-
-const BLOOD_GROUPS = ['A_POSITIVE', 'A_NEGATIVE', 'B_POSITIVE', 'B_NEGATIVE', 'AB_POSITIVE', 'AB_NEGATIVE', 'O_POSITIVE', 'O_NEGATIVE'];
-const CASTES = ['General', 'OBC', 'SC', 'ST', ''];
-
-const FEE_STRUCTURE_BY_GRADE: Record<string, { tuition: number; transport: number; exam: number; lab: number; annual: number }> = {
-  '1': { tuition: 18000, transport: 12000, exam: 2000, lab: 0, annual: 3000 },
+const FEE_STRUCTURE_BY_GRADE: Record<string, { tuition: number; transport: number; exam: number; lab: number; annual: number }> = { '1': { tuition: 18000, transport: 12000, exam: 2000, lab: 0, annual: 3000 },
   '2': { tuition: 18000, transport: 12000, exam: 2000, lab: 0, annual: 3000 },
   '3': { tuition: 20000, transport: 12000, exam: 2500, lab: 0, annual: 3000 },
   '4': { tuition: 22000, transport: 12000, exam: 2500, lab: 1000, annual: 3500 },
@@ -62,33 +28,7 @@ const FEE_STRUCTURE_BY_GRADE: Record<string, { tuition: number; transport: numbe
   '10': { tuition: 40000, transport: 18000, exam: 5000, lab: 3500, annual: 6000 },
 };
 
-/* ----------------------------------------------
- * Utility Functions
- * ---------------------------------------------- */
-function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
 
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randomDate(start: Date, end: Date): Date {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-}
-
-function generateIndianPhone(): string {
-  const prefixes = ['98', '99', '97', '96', '95', '94', '93', '92', '91', '90', '88', '87', '86', '85', '84', '83', '82', '81', '80', '78', '77', '76', '75', '74', '73', '72', '71', '70'];
-  const prefix = randomItem(prefixes);
-  const rest = String(randomInt(10000000, 99999999));
-  return `+91${prefix}${rest}`;
-}
-
-function generateIndianEmail(firstName: string, lastName: string, seed: number): string {
-  const domains = ['gmail.com', 'yahoo.com', 'rediffmail.com', 'outlook.com'];
-  const name = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${seed.toString(36)}${randomInt(1, 999)}`;
-  return `${name}@${randomItem(domains)}`;
-}
 
 function generateId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -219,7 +159,7 @@ async function main() {
         await pool.query(
           `INSERT INTO "ParentStudent" (id, "studentId", "parentId", relationship, "isPrimary")
            VALUES ($1, $2, $3, $4, $5)`,
-          [generateId(), studentId, parentId, isMale ? 'Mother' : 'Father', true]
+          [generateId(), studentId, parentId, isMale ? GuardianType.MOTHER : GuardianType.FATHER, true]
         );
 
         // Create Membership
