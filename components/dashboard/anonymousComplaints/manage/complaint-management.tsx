@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -88,9 +88,10 @@ interface Filters {
   order: 'asc' | 'desc';
 }
 
-interface ComplaintManagementDashboardProps {
+interface ComplaintManagementProps {
   initialData: ComplaintData;
   filters: Filters;
+  selectedComplaintId?: string;
 }
 
 const statusConfig = {
@@ -130,10 +131,11 @@ const severityConfig = {
   CRITICAL: { color: 'bg-red-100 text-red-800 border-red-200', priority: 4 },
 };
 
-export function ComplaintManagementDashboard({
+export function ComplaintManagement({
   initialData,
   filters,
-}: ComplaintManagementDashboardProps) {
+  selectedComplaintId,
+}: ComplaintManagementProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -144,6 +146,18 @@ export function ComplaintManagementDashboard({
   const [showStatusUpdate, setShowStatusUpdate] = useState(false);
   const [searchQuery, setSearchQuery] = useState(filters.search || '');
   const [activeTab, setActiveTab] = useState('overview');
+
+  const hasAutoSelected = useRef(false);
+
+  useEffect(() => {
+    if (!selectedComplaintId || hasAutoSelected.current) return;
+    const complaint = initialData.complaints.find((c: any) => c.id === selectedComplaintId);
+    if (complaint) {
+      setSelectedComplaint(complaint);
+      setShowDetailModal(true);
+      hasAutoSelected.current = true;
+    }
+  }, [selectedComplaintId, initialData.complaints]);
 
   const updateFilters = (newFilters: Partial<Filters>) => {
     const params = new URLSearchParams(searchParams);

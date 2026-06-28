@@ -100,6 +100,13 @@ export interface TransportMapProps {
      * @default true
      */
     showLiveToggle?: boolean;
+
+    /** Dynamic route data from the server */
+    route?: { id: string; name: string; driver: { name: string; phone: string }; helper: { name: string; phone: string }; timing: string; date: string }
+    stops?: Stop[]
+    roadCoordinates?: [number, number][]
+    totalStudents?: number
+    center?: [number, number]
 }
 
 // ─── Static Data ────────────────────────────────────────────────────────────────
@@ -204,20 +211,6 @@ const ROAD_COORDS: [number, number][] = [
     [73.8478, 18.5236],
 ];
 
-const LIVE_CRUMBS: [number, number][] = [
-    [73.8024, 18.5763],
-    [73.8035, 18.5748],
-    [73.8052, 18.573],
-    [73.8068, 18.571],
-    [73.8085, 18.5692],
-    [73.8102, 18.5675],
-    [73.812, 18.5661],
-    [73.8135, 18.5658],
-    [73.8152, 18.5655],
-];
-
-const TOTAL_STUDENTS = STOPS.reduce((s, x) => s + x.students, 0);
-
 // ─── Accent helpers ──────────────────────────────────────────────────────────────
 
 const ACCENT = {
@@ -295,9 +288,10 @@ interface CallDialogProps {
     onClose: () => void;
     person: { name: string; phone: string };
     role: "Driver" | "Helper";
+    routeId?: string;
 }
 
-function CallDialog({ open, onClose, person, role }: CallDialogProps) {
+function CallDialog({ open, onClose, person, role, routeId }: CallDialogProps) {
     const isDriver = role === "Driver";
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -327,7 +321,7 @@ function CallDialog({ open, onClose, person, role }: CallDialogProps) {
                     <DialogHeader className="text-center space-y-0.5">
                         <DialogTitle className="text-[14px] font-semibold">{person.name}</DialogTitle>
                         <p className="text-[11px] text-muted-foreground">
-                            {role} · Route {ROUTE.id}
+                            {role} · Route {routeId}
                         </p>
                     </DialogHeader>
                 </div>
@@ -430,6 +424,8 @@ interface StopPopupContentProps {
     onClose: () => void;
     onCallDriver: () => void;
     onCallHelper: () => void;
+    driverName?: string;
+    helperName?: string;
 }
 
 function StopPopupContent({
@@ -437,7 +433,10 @@ function StopPopupContent({
     onClose,
     onCallDriver,
     onCallHelper,
-}: StopPopupContentProps) {
+    driverName,
+    helperName,
+    stopsLength,
+}: StopPopupContentProps & { stopsLength?: number }) {
     const a = ACCENT[stop.type];
     return (
         <div className="w-[230px]">
@@ -478,7 +477,7 @@ function StopPopupContent({
                 </div>
                 <div className="flex flex-1 items-center justify-center gap-1.5 py-2 text-muted-foreground">
                     <Navigation className="h-[11px] w-[11px]" />
-                    Stop {stop.id}/{STOPS.length}
+                    Stop {stop.id}/{stopsLength ?? STOPS.length}
                 </div>
             </div>
 
@@ -503,7 +502,7 @@ function StopPopupContent({
                     <div>
                         <p className="text-[10px] font-semibold text-foreground">Driver</p>
                         <p className="text-[9px] text-muted-foreground">
-                            {ROUTE.driver.name.split(" ")[0]}
+                            {driverName}
                         </p>
                     </div>
                 </button>
@@ -515,7 +514,7 @@ function StopPopupContent({
                     <div>
                         <p className="text-[10px] font-semibold text-foreground">Helper</p>
                         <p className="text-[9px] text-muted-foreground">
-                            {ROUTE.helper.name.split(" ")[0]}
+                            {helperName}
                         </p>
                     </div>
                 </button>
@@ -533,6 +532,9 @@ interface SidebarContentProps {
     liveOn: boolean;
     onLiveToggle: () => void;
     showLiveToggle: boolean;
+    driverName?: string;
+    helperName?: string;
+    stops: Stop[];
 }
 
 function SidebarContent({
@@ -542,6 +544,9 @@ function SidebarContent({
     liveOn,
     onLiveToggle,
     showLiveToggle,
+    driverName,
+    helperName,
+    stops,
 }: SidebarContentProps) {
     return (
         <div className="flex flex-col h-full">
@@ -551,7 +556,7 @@ function SidebarContent({
                 <div className="grid grid-cols-2 gap-2">
                     {(["driver", "helper"] as const).map((role) => {
                         const isDriver = role === "driver";
-                        const p = isDriver ? ROUTE.driver : ROUTE.helper;
+                        const name = isDriver ? driverName : helperName;
                         return (
                             <button
                                 key={role}
@@ -580,7 +585,7 @@ function SidebarContent({
                                 <div className="min-w-0">
                                     <p className="text-[11px] font-semibold capitalize text-foreground">{role}</p>
                                     <p className="text-[10px] text-muted-foreground truncate">
-                                        {p.name.split(" ")[0]}
+                                        {name}
                                     </p>
                                 </div>
                             </button>
@@ -640,16 +645,16 @@ function SidebarContent({
             {/* Stop list */}
             <div className="px-4 pt-3 pb-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Route Stops · {STOPS.length} stops
+                    Route Stops · {stops.length} stops
                 </p>
             </div>
             <ScrollArea className="flex-1 px-3 pb-2">
-                {STOPS.map((stop, idx) => (
+                {stops.map((stop, idx) => (
                     <StopCard
                         key={stop.id}
                         stop={stop}
                         selected={selected?.id === stop.id}
-                        isLast={idx === STOPS.length - 1}
+                        isLast={idx === stops.length - 1}
                         onClick={() => onStopClick(stop)}
                     />
                 ))}
@@ -687,7 +692,18 @@ export function TransportMap({
     showRotate = false,
     showLocate = false,
     showLiveToggle = true,
+    route,
+    stops,
+    roadCoordinates,
+    totalStudents,
+    center,
 }: TransportMapProps) {
+    const routeData = route ?? ROUTE;
+    const stopsData = stops ?? STOPS;
+    const roadCoordsData = roadCoordinates ?? ROAD_COORDS;
+    const totalStudentsData = totalStudents ?? stopsData.reduce((s, x) => s + x.students, 0);
+    const centerData = center ?? [73.824, 18.55] as [number, number];
+
     const [selected, setSelected] = useState<Stop | null>(null);
     const [callTarget, setCallTarget] = useState<"driver" | "helper" | null>(null);
     const [liveIdx, setLiveIdx] = useState(0);
@@ -704,12 +720,12 @@ export function TransportMap({
             return;
         }
         intervalRef.current = setInterval(() => {
-            setLiveIdx((i) => (i + 1) % LIVE_CRUMBS.length);
+            setLiveIdx((i) => (i + 1) % roadCoordsData.length);
         }, 1800);
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
         };
-    }, [liveOn]);
+    }, [liveOn, roadCoordsData.length]);
 
     // Fullscreen
     const toggleFullscreen = useCallback(() => {
@@ -739,7 +755,9 @@ export function TransportMap({
         ? { height: typeof height === "number" ? `${height}px` : height }
         : undefined;
 
-    const [liveLng, liveLat] = LIVE_CRUMBS[liveIdx];
+    const [liveLng, liveLat] = roadCoordsData.length > 0
+        ? roadCoordsData[liveIdx % roadCoordsData.length]
+        : [73.824, 18.55] as [number, number];
 
     return (
         <TooltipProvider delayDuration={300}>
@@ -747,14 +765,16 @@ export function TransportMap({
                 <CallDialog
                     open={callTarget === "driver"}
                     onClose={() => setCallTarget(null)}
-                    person={ROUTE.driver}
+                    person={routeData.driver}
                     role="Driver"
+                    routeId={routeData.id}
                 />
                 <CallDialog
                     open={callTarget === "helper"}
                     onClose={() => setCallTarget(null)}
-                    person={ROUTE.helper}
+                    person={routeData.helper}
                     role="Helper"
+                    routeId={routeData.id}
                 />
 
                 <div
@@ -788,10 +808,10 @@ export function TransportMap({
                                             </div>
                                             <div>
                                                 <SheetTitle className="text-[13px] leading-tight">
-                                                    {ROUTE.name}
+                                                    {routeData.name}
                                                 </SheetTitle>
                                                 <p className="text-[10.5px] text-muted-foreground">
-                                                    {ROUTE.id} · {ROUTE.date}
+                                                    {routeData.id} · {routeData.date}
                                                 </p>
                                             </div>
                                         </div>
@@ -804,6 +824,9 @@ export function TransportMap({
                                             liveOn={liveOn}
                                             onLiveToggle={() => setLiveOn((v) => !v)}
                                             showLiveToggle={showLiveToggle}
+                                            driverName={routeData.driver.name.split(" ")[0]}
+                                            helperName={routeData.helper.name.split(" ")[0]}
+                                            stops={stopsData}
                                         />
                                     </div>
                                 </SheetContent>
@@ -815,9 +838,9 @@ export function TransportMap({
                                     <Bus className="h-4 w-4 text-white" strokeWidth={2.5} />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="truncate text-[13px] font-bold leading-tight">{ROUTE.name}</p>
+                                    <p className="truncate text-[13px] font-bold leading-tight">{routeData.name}</p>
                                     <p className="text-[10.5px] text-muted-foreground hidden sm:block">
-                                        {ROUTE.id} · {ROUTE.driver.name} · {ROUTE.date}
+                                        {routeData.id} · {routeData.driver.name} · {routeData.date}
                                     </p>
                                 </div>
                             </div>
@@ -827,11 +850,11 @@ export function TransportMap({
                         <div className="flex shrink-0 items-center gap-1.5">
                             <Badge variant="outline" className="gap-1 text-[10.5px] py-0.5 hidden sm:flex">
                                 <Clock className="h-2.5 w-2.5" />
-                                {ROUTE.timing}
+                                {routeData.timing}
                             </Badge>
                             <Badge variant="secondary" className="gap-1 text-[10.5px] py-0.5">
                                 <Users className="h-2.5 w-2.5" />
-                                {TOTAL_STUDENTS}
+                                {totalStudentsData}
                             </Badge>
 
                             {/* Live indicator (header) — only visible on mobile */}
@@ -888,19 +911,22 @@ export function TransportMap({
                                 liveOn={liveOn}
                                 onLiveToggle={() => setLiveOn((v) => !v)}
                                 showLiveToggle={showLiveToggle}
+                                driverName={routeData.driver.name.split(" ")[0]}
+                                helperName={routeData.helper.name.split(" ")[0]}
+                                stops={stopsData}
                             />
                         </aside>
 
                         {/* ── Map ── */}
                         <div className="relative flex-1">
                             <Map
-                                center={[73.824, 18.55]}
+                                center={centerData}
                                 zoom={13.0}
                                 className="h-full w-full"
                             >
                                 {/* Route glow */}
                                 <MapRoute
-                                    coordinates={ROAD_COORDS}
+                                    coordinates={roadCoordsData}
                                     color="#FDE68A"
                                     width={10}
                                     opacity={0.25}
@@ -908,7 +934,7 @@ export function TransportMap({
                                 />
                                 {/* Route line */}
                                 <MapRoute
-                                    coordinates={ROAD_COORDS}
+                                    coordinates={roadCoordsData}
                                     color="#F59E0B"
                                     width={3}
                                     opacity={0.9}
@@ -917,7 +943,7 @@ export function TransportMap({
                                 />
 
                                 {/* Stop markers */}
-                                {STOPS.map((stop) => (
+                                {stopsData.map((stop) => (
                                     <MapMarker
                                         key={stop.id}
                                         longitude={stop.lng}
@@ -944,10 +970,10 @@ export function TransportMap({
                                         </MarkerContent>
                                         <MarkerTooltip>
                                             <p className="font-semibold text-[12px]">
-                                                Bus {ROUTE.id} · Live
+                                                Bus {routeData.id} · Live
                                             </p>
                                             <p className="text-[10px] opacity-80">
-                                                {ROUTE.driver.name} · On road
+                                                {routeData.driver.name} · On road
                                             </p>
                                         </MarkerTooltip>
                                     </MapMarker>
@@ -967,6 +993,9 @@ export function TransportMap({
                                             onClose={() => setSelected(null)}
                                             onCallDriver={() => setCallTarget("driver")}
                                             onCallHelper={() => setCallTarget("helper")}
+                                            driverName={routeData.driver.name.split(" ")[0]}
+                                            helperName={routeData.helper.name.split(" ")[0]}
+                                            stopsLength={stopsData.length}
                                         />
                                     </MapPopup>
                                 )}

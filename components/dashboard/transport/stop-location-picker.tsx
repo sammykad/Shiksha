@@ -1,13 +1,14 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { LocateFixed, MapPin, Search } from "lucide-react"
+import { LocateFixed, MapPin, Navigation, Search } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Map, MapMarker, MarkerContent } from "@/components/ui/map"
 import { cn } from "@/lib/utils"
 
 export type StopLocationSource = "current-location" | "search"
@@ -267,26 +268,43 @@ export function StopLocationPicker({
       )}
 
       <div className="flex min-w-0 flex-col gap-2">
-        <div className="min-w-0 rounded-md bg-background p-2 text-xs text-muted-foreground">
-          {value ? (
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="font-medium text-foreground">
-                  Location selected
-                </span>
-                <span className="rounded-md bg-background px-1.5 py-0.5 font-mono text-[10px]">
-                  {formatCoordinate(value.latitude)},{" "}
-                  {formatCoordinate(value.longitude)}
-                </span>
-              </div>
-              {value.address && (
-                <span className="line-clamp-1">{value.address}</span>
-              )}
+        {value ? (
+          <>
+            <div className="flex min-w-0 items-center justify-between rounded-md bg-background px-2 py-1.5 text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-foreground">
+                <MapPin className="h-3 w-3" />
+                {value.source === "current-location" ? "Current location" : value.label || "Selected location"}
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {formatCoordinate(value.latitude)}, {formatCoordinate(value.longitude)}
+              </span>
             </div>
-          ) : (
+            {value.address && (
+              <p className="line-clamp-1 text-xs text-muted-foreground px-1">{value.address}</p>
+            )}
+            <div className="h-44 w-full overflow-hidden rounded-md border">
+              <Map
+                center={[value.longitude, value.latitude]}
+                zoom={15}
+                className="h-full w-full"
+              >
+                <MapMarker longitude={value.longitude} latitude={value.latitude}>
+                  <MarkerContent>
+                    <div className="flex flex-col items-center">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-primary/20">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </MarkerContent>
+                </MapMarker>
+              </Map>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-md bg-background p-2 text-xs text-muted-foreground">
             <span>Search a location or use current location.</span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {!value && (

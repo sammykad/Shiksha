@@ -15,14 +15,16 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ChildSwitcher } from './child-switcher';
 import { getChildrenByParent } from '@/lib/data/parent/get-all-children-by-parentId';
 import { getParentNotices } from '@/lib/data/parent/parent-dashboard';
+import { getParentTransportData } from '@/lib/data/transport/parent-transport';
 import { TodayTimeline } from './today-timeline';
 import TransportMap from './transport-map';
 import { NoticesWidget } from './notices-widget';
 
 export default async function ParentDashboard() {
-  const [children, notices] = await Promise.all([
+  const [children, notices, transportData] = await Promise.all([
     getChildrenByParent(),
     getParentNotices(),
+    getParentTransportData(),
   ]);
 
   if (children.length === 0) {
@@ -66,6 +68,11 @@ export default async function ParentDashboard() {
             className="w-full rounded-lg border "
             showFullscreen
             showLocate
+            route={transportData?.route}
+            stops={transportData?.stops}
+            roadCoordinates={transportData?.roadCoordinates}
+            totalStudents={transportData?.totalStudents}
+            center={transportData?.center}
           />
         </div>
 

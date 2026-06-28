@@ -1,20 +1,70 @@
+import { Font } from "@react-pdf/renderer";
 import type { Style } from "@react-pdf/types";
 
+Font.register({
+  family: "Geist",
+  fonts: [
+    { src: "https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/Geist-Regular.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/Geist-Medium.ttf", fontWeight: 500 },
+    { src: "https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/Geist-SemiBold.ttf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/Geist-Bold.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/Geist-Regular.ttf", fontWeight: 400, fontStyle: "italic" },
+  ],
+});
+
 export const COLORS = {
-  brand: "#2563eb",
-  brandLight: "#dbeafe",
-  ink: "#111827",
-  body: "#374151",
-  muted: "#6b7280",
-  subtle: "#9ca3af",
-  rule: "#e5e7eb",
-  ruleDark: "#d1d5db",
-  bg: "#f9fafb",
-  bgDark: "#f3f4f6",
+  // ── Brand ───────────────────────────────────────────
+  brand: "#2563eb",  // primary blue
+  brandLight: "#dbeafe",  // blue tint bg
+  brandDark: "#1d4ed8",  // blue hover/deep
+
+  // ── Text ────────────────────────────────────────────
+  ink: "#111827",  // headings, labels
+  body: "#374151",  // body text
+  muted: "#6b7280",  // secondary text
+  subtle: "#9ca3af",  // placeholders, hints
+
+  // ── Surfaces ────────────────────────────────────────
   white: "#ffffff",
-  success: "#059669",
-  warning: "#d97706",
-  error: "#dc2626",
+  bg: "#f9fafb",  // page background
+  bgDark: "#f3f4f6",  // table row alt, section bg
+  bgDeep: "#e9eaec",  // deep section dividers
+
+  // ── Borders ─────────────────────────────────────────
+  rule: "#e5e7eb",  // light dividers
+  ruleDark: "#d1d5db",  // table borders, strong rules
+
+  // ── Semantic: Status ────────────────────────────────
+  success: "#059669",  // paid, present, pass
+  successLight: "#d1fae5",  // paid badge bg
+  warning: "#d97706",  // pending, partial, late
+  warningLight: "#fef3c7",  // pending badge bg
+  error: "#dc2626",  // overdue, absent, fail
+  errorLight: "#fee2e2",  // overdue badge bg
+  info: "#0284c7",  // neutral info, notes
+  infoLight: "#e0f2fe",  // info badge bg
+
+  // ── Document-specific accents ───────────────────────
+  // SubscriptionInvoicePDF
+  invoice: "#7c3aed",  // purple — billing/SaaS
+  invoiceLight: "#ede9fe",
+
+  // FeeReceiptPDF
+  receipt: "#0891b2",  // cyan — payment confirmed
+  receiptLight: "#cffafe",
+
+  // StudentReportPDF
+  report: "#0d9488",  // teal — academic
+  reportLight: "#ccfbf1",
+
+  // AttendanceReportPDF
+  attendance: "#ea580c",  // orange — attendance
+  attendanceLight: "#ffedd5",
+
+  // HallTicketPDF
+  hallTicket: "#4f46e5",  // indigo — exam/official
+  hallTicketLight: "#e0e7ff",
+
 } as const;
 
 export const FONT_FAMILY = {
@@ -22,7 +72,65 @@ export const FONT_FAMILY = {
   mono: "Courier",
 } as const;
 
-type TwFn = (classes: string) => Style;
+type SpacingKey = keyof typeof SPACING_SCALE;
+type FontSizeKey = keyof typeof FONT_SIZE_MAP;
+
+type KnownColorName =
+  | 'white' | 'black' | 'transparent' | 'current'
+  | keyof typeof COLORS;
+
+type DirSuffix = '' | 'x' | 'y' | 't' | 'r' | 'b' | 'l';
+
+type TwToken =
+  | keyof typeof exact
+  | `text-${KnownColorName | FontSizeKey}`
+  | `bg-${KnownColorName}`
+  | `bg-${KnownColorName}/${'0' | '5' | '10' | '20' | '25' | '30' | '40' | '50' | '60' | '70' | '75' | '80' | '90' | '95' | '100'}`
+  | `decoration-${KnownColorName}`
+  | `font-${'thin' | 'extralight' | 'light' | 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold' | 'black'}`
+  | `font-${'sans' | 'serif' | 'mono'}`
+  | `p${DirSuffix}-${SpacingKey | 'auto'}`
+  | `m${DirSuffix}-${SpacingKey | 'auto'}`
+  | `-m${DirSuffix}-${SpacingKey}`
+  | `w-${SpacingKey | 'full' | 'auto' | 'screen' | 'fit'}`
+  | `h-${SpacingKey | 'full' | 'auto' | 'screen' | 'fit'}`
+  | `min-w-${SpacingKey | 'full' | '0'}`
+  | `max-w-${SpacingKey | 'full' | '0'}`
+  | `min-h-${SpacingKey | 'full' | '0'}`
+  | `max-h-${SpacingKey | 'full' | '0'}`
+  | `gap${'' | '-x' | '-y'}-${SpacingKey}`
+  | `tracking-${'tighter' | 'tight' | 'normal' | 'wide' | 'wider' | 'widest'}`
+  | `leading-${'none' | 'tight' | 'snug' | 'normal' | 'relaxed' | 'loose'}`
+  | 'rounded'
+  | `rounded-${'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full' | SpacingKey}`
+  | `rounded-t-${'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full' | SpacingKey}`
+  | `rounded-b-${'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full' | SpacingKey}`
+  | `rounded-l-${'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full' | SpacingKey}`
+  | `rounded-r-${'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full' | SpacingKey}`
+  | `border-${'0' | '2' | '4' | '8'}`
+  | `border-t-${'0' | '2' | '4' | '8'}` | `border-t`
+  | `border-r-${'0' | '2' | '4' | '8'}` | `border-r`
+  | `border-b-${'0' | '2' | '4' | '8'}` | `border-b`
+  | `border-l-${'0' | '2' | '4' | '8'}` | `border-l`
+  | `border-${KnownColorName}`
+  | `border-t-${KnownColorName}`
+  | `border-r-${KnownColorName}`
+  | `border-b-${KnownColorName}`
+  | `border-l-${KnownColorName}`
+  | `divide-${KnownColorName}`
+  | `inset-${SpacingKey | 'auto'}`
+  | `top-${SpacingKey | 'auto'}`
+  | `right-${SpacingKey | 'auto'}`
+  | `bottom-${SpacingKey | 'auto'}`
+  | `left-${SpacingKey | 'auto'}`
+  | `basis-${SpacingKey | 'full'}`
+  | `z-${SpacingKey | 'auto'}`
+  | `order-${'first' | 'last' | 'none' | SpacingKey}`
+  | `opacity-${'0' | '5' | '10' | '20' | '25' | '30' | '40' | '50' | '60' | '70' | '75' | '80' | '90' | '95' | '100'}`
+  | `scale-${'0' | '50' | '75' | '90' | '95' | '100' | '105' | '110' | '125' | '150'}`
+  | `scale-x-${'0' | '50' | '75' | '90' | '95' | '100' | '105' | '110' | '125' | '150'}`
+  | `scale-y-${'0' | '50' | '75' | '90' | '95' | '100' | '105' | '110' | '125' | '150'}`
+  | `aspect-${'square' | 'video'}`;
 
 const COLOR_MAP: Record<string, string> = {
   white: COLORS.white,
@@ -55,20 +163,20 @@ const colorScales: Record<string, Record<string, string>> = {
   },
 };
 
-const SPACING_SCALE: Record<string, number> = {
+const SPACING_SCALE = {
   "0": 0, "0.5": 2, "1": 4, "1.5": 6, "2": 8, "2.5": 10,
   "3": 12, "3.5": 14, "4": 16, "5": 20, "6": 24, "7": 28,
   "8": 32, "9": 36, "10": 40, "11": 44, "12": 48, "14": 56,
   "16": 64, "20": 80, "24": 96, "28": 112, "32": 128, "36": 144,
   "40": 160, "44": 176, "48": 192, "52": 208, "56": 224,
   "60": 240, "64": 256, "72": 288, "80": 320, "96": 384,
-};
+} as const;
 
-const FONT_SIZE_MAP: Record<string, number> = {
+const FONT_SIZE_MAP = {
   "3xs": 6, "2xs": 7, xs: 8, sm: 9, base: 10, md: 11,
   lg: 12, xl: 14, "2xl": 16, "3xl": 20,
   h3: 16, h2: 18, h1: 24,
-};
+} as const;
 
 const BORDER_WIDTHS: Record<string, number> = { "0": 0, "2": 2, "4": 4, "8": 8 };
 
@@ -86,7 +194,7 @@ const TRACKING_MAP: Record<string, number> = {
 };
 
 function getSpacing(n: string): number | undefined {
-  if (n in SPACING_SCALE) return SPACING_SCALE[n];
+  if (n in SPACING_SCALE) return SPACING_SCALE[n as keyof typeof SPACING_SCALE];
   const parsed = parseFloat(n);
   if (!isNaN(parsed)) return parsed * 4;
   return undefined;
@@ -205,9 +313,6 @@ const FONT_FAMILY_MAP: Record<string, string> = {
   sans: FONT_FAMILY.sans,
   serif: "Times-Roman",
   mono: FONT_FAMILY.mono,
-  geistmono: "GeistMono",
-  jetbrainsmono: "JetBrainsMono",
-  quicksand: "Quicksand",
 };
 
 function spacingValue(dir: string | undefined, val: string, negate: boolean): Style {
@@ -341,7 +446,7 @@ function parseClass(cls: string): Style {
       const opacity = parseInt(val.slice(slashIdx + 1)) / 100;
       if (c && !isNaN(opacity)) return { color: c, opacity: Math.min(Math.max(opacity, 0), 1) };
     }
-    if (val in FONT_SIZE_MAP) return { fontSize: FONT_SIZE_MAP[val] };
+    if (val in FONT_SIZE_MAP) return { fontSize: FONT_SIZE_MAP[val as keyof typeof FONT_SIZE_MAP] };
     if (val.startsWith("[")) {
       const raw = val.slice(1, -1).replace(/_/g, " ");
       const num = parseFloat(raw);
@@ -602,14 +707,13 @@ function insetProps(prop: string, val: string, negate: boolean): Style | undefin
   return result;
 }
 
-export const tw: TwFn = (classes) => {
-  if (!classes) return {};
-  return classes
-    .trim()
-    .split(/\s+/)
+export function tw(...tokens: (TwToken | (string & {}))[]): Style {
+  if (!tokens.length) return {};
+  return tokens
+    .flatMap(c => c.trim().split(/\s+/))
     .filter(Boolean)
     .reduce<Style>((acc, cls) => {
       const style = parseClass(cls.trim());
       return { ...acc, ...style };
     }, {});
-};
+}
