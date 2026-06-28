@@ -901,6 +901,58 @@ export const notify = {
             );
         },
     },
+    billing: {
+        invoiceGenerated(
+            p: NotifyParams<"BILLING_INVOICE_GENERATED", { subscriptionId: string }>,
+        ): Promise<NotifyResult> {
+            return send(
+                "BILLING_INVOICE_GENERATED",
+                {
+                    organizationId: p.organizationId,
+                    academicYearId: p.academicYearId,
+                    eventId: p.eventId ?? `billing:${p.subscriptionId}:invoice_generated`,
+                    recipients: p.recipients,
+                    channels: p.channels,
+                    attachment: p.attachment,
+                },
+                () => p.variables,
+            );
+        },
+
+        invoicePaid(
+            p: NotifyParams<"BILLING_INVOICE_PAID", { subscriptionId: string }>,
+        ): Promise<NotifyResult> {
+            return send(
+                "BILLING_INVOICE_PAID",
+                {
+                    organizationId: p.organizationId,
+                    academicYearId: p.academicYearId,
+                    eventId: p.eventId ?? `billing:${p.subscriptionId}:invoice_paid`,
+                    recipients: p.recipients,
+                    channels: p.channels,
+                    attachment: p.attachment,
+                },
+                () => p.variables,
+            );
+        },
+
+        invoiceReminder(
+            p: NotifyParams<"BILLING_INVOICE_REMINDER", { subscriptionId: string }>,
+        ): Promise<NotifyResult> {
+            return send(
+                "BILLING_INVOICE_REMINDER",
+                {
+                    organizationId: p.organizationId,
+                    academicYearId: p.academicYearId,
+                    eventId: p.eventId ?? `billing:${p.subscriptionId}:invoice_reminder`,
+                    recipients: p.recipients,
+                    channels: p.channels,
+                    attachment: p.attachment,
+                },
+                () => p.variables,
+            );
+        },
+    },
 } as const;
 
 export type { RecipientInfo, NotificationResult };

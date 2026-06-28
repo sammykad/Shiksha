@@ -1,4 +1,4 @@
-import { BloodGroup, Gender, StudentStatus } from "@/generated/prisma/enums"
+import { BloodGroup, Gender, GuardianType, StudentStatus } from "@/generated/prisma/enums"
 
 // ─── Date ─────────────────────────────────────────────────────────────────────
 
@@ -58,11 +58,10 @@ export function parseStudentStatus(val: string): StudentStatus {
 
 // ─── Parent Relationship ──────────────────────────────────────────────────────
 
-export const PARENT_RELATIONSHIPS = ["FATHER", "MOTHER", "GUARDIAN", "OTHER"] as const
-export type ParentRelationship = (typeof PARENT_RELATIONSHIPS)[number]
+const GUARDIAN_VALUES: string[] = Object.values(GuardianType)
 
-const RELATIONSHIP_SET = new Set<string>(PARENT_RELATIONSHIPS)
-
-export function parseRelationship(value: string): ParentRelationship {
-    return RELATIONSHIP_SET.has(value) ? (value as ParentRelationship) : "GUARDIAN"
+export function parseRelationship(val: string): GuardianType {
+    if (!val) return GuardianType.GUARDIAN
+    const normalized = val.trim().toUpperCase()
+    return GUARDIAN_VALUES.includes(normalized) ? (normalized as GuardianType) : GuardianType.GUARDIAN
 }

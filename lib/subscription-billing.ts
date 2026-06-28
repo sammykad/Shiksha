@@ -256,7 +256,7 @@ export async function ensureDefaultBillingCatalog(client: BillingClient = prisma
     });
   }
 
-  await prisma.$executeRawUnsafe(
+  await client.$executeRawUnsafe(
     `CREATE SEQUENCE IF NOT EXISTS invoice_number_seq START 1`
   );
 }
@@ -1258,7 +1258,7 @@ export async function getInvoicePDFData(invoiceId: string) {
 
   const org = await prisma.organization.findUnique({
     where: { id: invoice.organizationId },
-    select: { name: true, contactEmail: true },
+    select: { name: true, contactEmail: true, logo: true },
   });
 
   return {
@@ -1266,6 +1266,7 @@ export async function getInvoicePDFData(invoiceId: string) {
     createdAt: invoice.createdAt,
     organizationName: org?.name ?? "Unknown",
     organizationEmail: org?.contactEmail ?? null,
+    logo: org?.logo ?? null,
     planName: invoice.subscription.plan?.name ?? null,
     studentCount: invoice.studentCount,
     unitPrice: invoice.subscription.unitPrice ?? null,
