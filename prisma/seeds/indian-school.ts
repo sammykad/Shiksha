@@ -1,44 +1,16 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
+import { GuardianType } from '@/generated/prisma/enums';
+import {
+  INDIAN_FIRST_NAMES_MALE, INDIAN_FIRST_NAMES_FEMALE, INDIAN_LAST_NAMES,
+  INDIAN_CITIES, INDIAN_ADDRESSES,
+  randomItem, randomInt, randomDate, generateIndianPhone, generateIndianEmail,
+  generateId, generatePgArray,
+} from './constants';
 
-/* ----------------------------------------------
- * Database Setup (raw pg - bypasses Prisma WASM issue)
- * ---------------------------------------------- */
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL!,
 });
-
-/* ----------------------------------------------
- * Indian Realistic Data Constants
- * ---------------------------------------------- */
-const INDIAN_CITIES = [
-  { city: 'Mumbai', state: 'Maharashtra', pinCodes: ['400001', '400050', '400060', '400092'] },
-  { city: 'Delhi', state: 'Delhi', pinCodes: ['110001', '110025', '110058', '110092'] },
-  { city: 'Bangalore', state: 'Karnataka', pinCodes: ['560001', '560037', '560066', '560100'] },
-  { city: 'Pune', state: 'Maharashtra', pinCodes: ['411001', '411038', '411057', '411045'] },
-  { city: 'Hyderabad', state: 'Telangana', pinCodes: ['500001', '500033', '500081', '500034'] },
-  { city: 'Chennai', state: 'Tamil Nadu', pinCodes: ['600001', '600020', '600042', '600096'] },
-  { city: 'Kolkata', state: 'West Bengal', pinCodes: ['700001', '700027', '700091', '700156'] },
-  { city: 'Ahmedabad', state: 'Gujarat', pinCodes: ['380001', '380006', '380015', '380054'] },
-  { city: 'Jaipur', state: 'Rajasthan', pinCodes: ['302001', '302012', '302017', '302020'] },
-  { city: 'Lucknow', state: 'Uttar Pradesh', pinCodes: ['226001', '226010', '226016', '226024'] },
-];
-
-const INDIAN_FIRST_NAMES_MALE = [
-  'Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Arnav', 'Ayaan', 'Krishna', 'Ishaan',
-  'Rohan', 'Aryan', 'Reyansh', 'Mohammed', 'Dhruv', 'Kabir', 'Shivansh', 'Atharv', 'Karthik', 'Rahul',
-];
-
-const INDIAN_FIRST_NAMES_FEMALE = [
-  'Aadhya', 'Ananya', 'Aanya', 'Aaradhya', 'Diya', 'Saanvi', 'Kavya', 'Anika', 'Myra', 'Ira',
-  'Priya', 'Neha', 'Pooja', 'Ritu', 'Sneha', 'Kavita', 'Meera', 'Shreya', 'Riya', 'Tanya',
-];
-
-const INDIAN_LAST_NAMES = [
-  'Sharma', 'Verma', 'Gupta', 'Singh', 'Kumar', 'Patel', 'Shah', 'Joshi', 'Iyer', 'Nair',
-  'Reddy', 'Rao', 'Pillai', 'Mukherjee', 'Chatterjee', 'Banerjee', 'Das', 'Mehta', 'Desai', 'Pandey',
-  'Tiwari', 'Dubey', 'Mishra', 'Saxena', 'Agarwal', 'Bansal', 'Goel', 'Tandon', 'Kapoor', 'Malhotra',
-];
 
 const INDIAN_SUBJECTS_BY_GRADE: Record<string, string[]> = {
   '1': ['English', 'Hindi', 'Mathematics', 'EVS', 'Art', 'Physical Education'],
@@ -66,11 +38,6 @@ const FEE_STRUCTURE_BY_GRADE: Record<string, { tuition: number; transport: numbe
   '10': { tuition: 40000, transport: 18000, exam: 5000, lab: 3500, annual: 6000 },
 };
 
-const INDIAN_ADDRESSES = [
-  '12, MG Road', '45, Station Road', '78, Gandhi Nagar', '23, Park Street',
-  '56, Nehru Place', '89, Ring Road', '34, Civil Lines', '67, Mall Road',
-];
-
 const INDIAN_HOLIDAYS_2025_26 = [
   { name: 'Gandhi Jayanti', start: '2025-10-02', end: '2025-10-02', reason: 'National Holiday' },
   { name: 'Diwali Break', start: '2025-10-20', end: '2025-10-24', reason: 'Festival Holidays' },
@@ -83,85 +50,20 @@ const INDIAN_HOLIDAYS_2025_26 = [
 ];
 
 const SCHOOL_NOTICES = [
-  {
-    title: 'Annual Day Celebration 2026',
-    summary: 'Annual Day function scheduled for 15th March 2026',
-    content: 'Dear Parents and Students,\n\nWe are delighted to invite you all to our Annual Day Celebration on 15th March 2026 at the school auditorium.',
-    type: 'EVENT',
-    priority: 'HIGH',
-  },
-  {
-    title: 'Mid-Term Examination Schedule - March 2026',
-    summary: 'Mid-term exams for all grades starting 10th March 2026',
-    content: 'Dear Parents and Students,\n\nThe Mid-Term Examinations for Academic Year 2025-26 will commence from 10th March 2026.',
-    type: 'EXAM',
-    priority: 'URGENT',
-  },
-  {
-    title: 'Fee Payment Reminder - Q4 2025-26',
-    summary: 'Last date for Q4 fee payment is 15th February 2026',
-    content: 'Dear Parents,\n\nThis is a gentle reminder that the last date for payment of Q4 fees is 15th February 2026.',
-    type: 'DEADLINE',
-    priority: 'HIGH',
-  },
-  {
-    title: 'Republic Day Celebration',
-    summary: 'Republic Day function on 26th January 2026',
-    content: 'Dear Students and Parents,\n\nThe school will celebrate Republic Day on 26th January 2026 with flag hoisting at 8:00 AM.',
-    type: 'EVENT',
-    priority: 'MEDIUM',
-  },
-  {
-    title: 'Revised Timetable - Winter Session',
-    summary: 'New school timings effective from 1st November 2025',
-    content: 'Dear Parents,\n\nPlease note that the school timings will be revised for the winter session effective 1st November 2025.',
-    type: 'TIMETABLE',
-    priority: 'MEDIUM',
-  },
-  {
-    title: 'Science Exhibition - "Innovation 2026"',
-    summary: 'Science exhibition on 20th February 2026',
-    content: 'Dear Students,\n\nThe annual Science Exhibition "Innovation 2026" will be held on 20th February 2026.',
-    type: 'EVENT',
-    priority: 'MEDIUM',
-  },
-  {
-    title: 'Parent-Teacher Meeting - Term 2',
-    summary: 'PTM scheduled for 8th February 2026',
-    content: 'Dear Parents,\n\nA Parent-Teacher Meeting for Term 2 will be held on 8th February 2026 from 9:00 AM to 1:00 PM.',
-    type: 'GENERAL',
-    priority: 'MEDIUM',
-  },
+  { title: 'Annual Day Celebration 2026', summary: 'Annual Day function scheduled for 15th March 2026', content: 'Dear Parents and Students,\n\nWe are delighted to invite you all to our Annual Day Celebration on 15th March 2026 at the school auditorium.', type: 'EVENT', priority: 'HIGH' },
+  { title: 'Mid-Term Examination Schedule - March 2026', summary: 'Mid-term exams for all grades starting 10th March 2026', content: 'Dear Parents and Students,\n\nThe Mid-Term Examinations for Academic Year 2025-26 will commence from 10th March 2026.', type: 'EXAM', priority: 'URGENT' },
+  { title: 'Fee Payment Reminder - Q4 2025-26', summary: 'Last date for Q4 fee payment is 15th February 2026', content: 'Dear Parents,\n\nThis is a gentle reminder that the last date for payment of Q4 fees is 15th February 2026.', type: 'DEADLINE', priority: 'HIGH' },
+  { title: 'Republic Day Celebration', summary: 'Republic Day function on 26th January 2026', content: 'Dear Students and Parents,\n\nThe school will celebrate Republic Day on 26th January 2026 with flag hoisting at 8:00 AM.', type: 'EVENT', priority: 'MEDIUM' },
+  { title: 'Revised Timetable - Winter Session', summary: 'New school timings effective from 1st November 2025', content: 'Dear Parents,\n\nPlease note that the school timings will be revised for the winter session effective 1st November 2025.', type: 'TIMETABLE', priority: 'MEDIUM' },
+  { title: 'Science Exhibition - "Innovation 2026"', summary: 'Science exhibition on 20th February 2026', content: 'Dear Students,\n\nThe annual Science Exhibition "Innovation 2026" will be held on 20th February 2026.', type: 'EVENT', priority: 'MEDIUM' },
+  { title: 'Parent-Teacher Meeting - Term 2', summary: 'PTM scheduled for 8th February 2026', content: 'Dear Parents,\n\nA Parent-Teacher Meeting for Term 2 will be held on 8th February 2026 from 9:00 AM to 1:00 PM.', type: 'GENERAL', priority: 'MEDIUM' },
 ];
 
 const CONFIG = {
   grades: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'],
-  sectionsPerGrade: {
-    'Grade 1': ['A', 'B'],
-    'Grade 2': ['A', 'B'],
-    'Grade 3': ['A', 'B'],
-    'Grade 4': ['A', 'B'],
-    'Grade 5': ['A', 'B'],
-    'Grade 6': ['A', 'B', 'C'],
-    'Grade 7': ['A', 'B', 'C'],
-    'Grade 8': ['A', 'B', 'C'],
-    'Grade 9': ['A', 'B'],
-    'Grade 10': ['A', 'B'],
-  },
-  studentsPerSection: {
-    'Grade 1': 35,
-    'Grade 2': 35,
-    'Grade 3': 35,
-    'Grade 4': 35,
-    'Grade 5': 35,
-    'Grade 6': 30,
-    'Grade 7': 30,
-    'Grade 8': 30,
-    'Grade 9': 28,
-    'Grade 10': 28,
-  },
-  teachersCount: 45,
-  leadsCount: 50,
+  sectionsPerGrade: { 'Grade 1': ['A', 'B'], 'Grade 2': ['A', 'B'], 'Grade 3': ['A', 'B'], 'Grade 4': ['A', 'B'], 'Grade 5': ['A', 'B'], 'Grade 6': ['A', 'B', 'C'], 'Grade 7': ['A', 'B', 'C'], 'Grade 8': ['A', 'B', 'C'], 'Grade 9': ['A', 'B'], 'Grade 10': ['A', 'B'] },
+  studentsPerSection: { 'Grade 1': 35, 'Grade 2': 35, 'Grade 3': 35, 'Grade 4': 35, 'Grade 5': 35, 'Grade 6': 30, 'Grade 7': 30, 'Grade 8': 30, 'Grade 9': 28, 'Grade 10': 28 },
+  teachersCount: 45, leadsCount: 50,
   examSessions: [
     { title: 'Unit Test 1', start: '2025-08-18', end: '2025-08-22' },
     { title: 'Unit Test 2', start: '2025-11-10', end: '2025-11-14' },
@@ -169,48 +71,6 @@ const CONFIG = {
     { title: 'Final Examination', start: '2026-03-02', end: '2026-03-15' },
   ],
 };
-
-/* ----------------------------------------------
- * Utility Functions
- * ---------------------------------------------- */
-function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randomDate(start: Date, end: Date): Date {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-}
-
-function generateIndianPhone(): string {
-  const prefixes = ['98', '99', '97', '96', '95', '94', '93', '92', '91', '90', '88', '87', '86', '85', '84', '83', '82', '81', '80', '78', '77', '76', '75', '74', '73', '72', '71', '70'];
-  const prefix = randomItem(prefixes);
-  const rest = String(randomInt(10000000, 99999999));
-  return `+91${prefix}${rest}`;
-}
-
-function generateIndianEmail(firstName: string, lastName: string): string {
-  const domains = ['gmail.com', 'yahoo.com', 'rediffmail.com', 'outlook.com'];
-  const name = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now().toString(36)}${randomInt(1, 999)}`;
-  return `${name}@${randomItem(domains)}`;
-}
-
-function generateId(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 25; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-function generatePgArray(arr: string[]): string {
-  return `{${arr.map(s => `"${s}"`).join(',')}}`;
-}
-
 /* ----------------------------------------------
  * Main Seed Function
  * ---------------------------------------------- */
@@ -602,7 +462,7 @@ async function main() {
         await pool.query(
           `INSERT INTO "ParentStudent" (id, "studentId", "parentId", relationship, "isPrimary")
            VALUES ($1, $2, $3, $4, $5)`,
-          [generateId(), studentId, parentId, isMale ? 'Mother' : 'Father', true]
+          [generateId(), studentId, parentId, isMale ? GuardianType.MOTHER : GuardianType.FATHER, true]
         );
 
         // Create Membership
@@ -866,9 +726,9 @@ async function main() {
         riskThresholds: { low: 30, medium: 60, high: 80 },
         channels: { email: true, sms: true, whatsapp: true, voice: false },
         notification: { maxAttempts: 3, voiceCallThreshold: 3, cooldownHours: 24 },
-            report: { deliverTo: [], channels: ['EMAIL'] },
-            llmMaxOutputTokens: 8192,
-            throttle: { monthlyCap: 4, notificationWindow: { startHour: 11, endHour: 19 }, voiceWindow: { startHour: 11, endHour: 19 } },
+        report: { deliverTo: [], channels: ['EMAIL'] },
+        llmMaxOutputTokens: 8192,
+        throttle: { monthlyCap: 4, notificationWindow: { startHour: 11, endHour: 19 }, voiceWindow: { startHour: 11, endHour: 19 } },
       }),
       now, now,
     ]

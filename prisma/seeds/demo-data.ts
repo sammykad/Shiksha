@@ -11,7 +11,7 @@ import {
   Gender,
   Severity,
   CalendarEventType,
-} from '../generated/prisma/client';
+} from '../../generated/prisma/client';
 
 /**
  * Returns tailored demo data configurations based on OrganizationType.
