@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ComplaintManagementDashboard } from '@/components/dashboard/anonymousComplaints/manage/complaint-management-dashboard';
+import { ComplaintManagement } from '@/components/dashboard/anonymousComplaints/manage/complaint-management';
 import { getComplaintsWithFilters } from '@/lib/data/complaints/complaint-actions';
 import { PageHeader } from '@/components/ui/page-header';
 
@@ -18,6 +18,7 @@ interface SearchParams {
   severity?: string;
   category?: string;
   search?: string;
+  id?: string;
   page?: string;
   sort?: string;
   order?: string;
@@ -37,6 +38,7 @@ async function ComplaintManagementContent({
     severity,
     category,
     search,
+    id,
     page = '1',
     sort = 'submittedAt',
     order = 'desc',
@@ -55,9 +57,10 @@ async function ComplaintManagementContent({
   const complaintsData = await getComplaintsWithFilters(filters);
 
   return (
-    <ComplaintManagementDashboard
+    <ComplaintManagement
       initialData={complaintsData}
       filters={filters}
+      selectedComplaintId={id}
     />
   );
 }

@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { tw } from './tw';
 import { formatEnumLabel } from '@/lib/utils';
 import { AttendanceExportRecord, AttendanceExportFilters, Organization } from '@/types/attendance-export';
-import './fonts';
+import './tw';
 
 interface AttendanceReportPDFProps {
   records: AttendanceExportRecord[];

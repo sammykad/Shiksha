@@ -29,7 +29,7 @@ import {
 import { RoutePreviewMap } from '@/components/dashboard/transport/route-preview-map'
 import { getInitials } from '@/lib/utils'
 import { format } from 'date-fns'
-import { VehicleType, type OrganizationType } from '@/generated/prisma/enums'
+import { VehicleType } from '@/generated/prisma/enums'
 import { useUploadFile } from '@/hooks/use-upload-file'
 
 import {
@@ -55,10 +55,6 @@ const driverSchema = z.object({
   licenseNumber: z.string().min(1, 'License number is required'),
   licenseExpiry: z.date().optional(),
 })
-
-const VEHICLE_TYPE_LABELS: Record<string, string> = {
-  BUS: 'Bus', VAN: 'Van', MINI_BUS: 'Mini Bus', AUTO: 'Auto', TEMPO: 'Tempo', OTHER: 'Other',
-}
 
 const vehicleSchema = z.object({
   registrationNo: z.string().min(1, 'Registration number is required'),
@@ -260,9 +256,9 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                       <SelectContent>
-                        {(Object.keys(VehicleType) as Array<keyof typeof VehicleType>).map((key) => (
-                          <SelectItem key={VehicleType[key]} value={VehicleType[key]}>
-                            {VEHICLE_TYPE_LABELS[VehicleType[key]]}
+                        {Object.values(VehicleType).map((v) => (
+                          <SelectItem key={v} value={v}>
+                            {v.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -387,9 +383,9 @@ function HelperDialog({ helper, onClose }: { helper?: Helper; onClose: () => voi
 }
 
 function RouteDialog({
-  route, drivers, vehicles, helpers, organizationType, onClose,
+  route, drivers, vehicles, helpers, onClose,
 }: {
-  route?: Route; drivers: Driver[]; vehicles: Vehicle[]; helpers: Helper[]; organizationType?: OrganizationType | null; onClose: () => void
+  route?: Route; drivers: Driver[]; vehicles: Vehicle[]; helpers: Helper[]; onClose: () => void
 }) {
   const [open, setOpen] = useState(true)
   const [isPending, startTransition] = useTransition()
@@ -721,7 +717,6 @@ function RouteDialog({
               routeGeometry={route.routeGeometry}
               distanceMeters={route.routeDistanceMeters}
               durationSeconds={route.routeDurationSeconds}
-              organizationType={organizationType}
               className="rounded-none border-0"
             />
           </DialogContent>
@@ -736,7 +731,6 @@ interface TransportManagementProps {
   initialVehicles: Vehicle[]
   initialHelpers: Helper[]
   initialRoutes: Route[]
-  organizationType?: OrganizationType | null
 }
 
 export default function TransportManagement({
@@ -744,7 +738,6 @@ export default function TransportManagement({
   initialVehicles,
   initialHelpers,
   initialRoutes,
-  organizationType,
 }: TransportManagementProps) {
   const [drivers, setDrivers] = useState(initialDrivers)
   const [vehicles, setVehicles] = useState(initialVehicles)
@@ -1054,7 +1047,7 @@ export default function TransportManagement({
       {showDriverDialog && <DriverDialog driver={editingDriver} onClose={() => { setShowDriverDialog(false); refresh() }} />}
       {showVehicleDialog && <VehicleDialog vehicle={editingVehicle} onClose={() => { setShowVehicleDialog(false); refresh() }} />}
       {showHelperDialog && <HelperDialog helper={editingHelper} onClose={() => { setShowHelperDialog(false); refresh() }} />}
-      {showRouteDialog && <RouteDialog route={editingRoute} drivers={drivers} vehicles={vehicles} helpers={helpers} organizationType={organizationType} onClose={() => { setShowRouteDialog(false); refresh() }} />}
+      {showRouteDialog && <RouteDialog route={editingRoute} drivers={drivers} vehicles={vehicles} helpers={helpers} onClose={() => { setShowRouteDialog(false); refresh() }} />}
     </div>
   )
 }

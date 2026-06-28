@@ -2,8 +2,6 @@ import React from "react";
 import { Document, Page, Text, View, Image } from "@react-pdf/renderer";
 import { tw } from "./tw";
 import { formatCurrencyIN, formatDateIN, numberToWords, formatEnumLabel } from "@/lib/utils";
-import "./fonts";
-
 type InvoiceData = {
   invoiceNumber: string;
   createdAt: Date;
