@@ -20,6 +20,47 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: "v0.2.1",
+    date: "June 29, 2026",
+    title: "Transport, ID Cards & Fee Receipt Fixes",
+    description:
+      "New transport management module with interactive maps, digital ID card generation for students and teachers, holiday bulk import, subscription billing invoices, and critical bug fixes for fee receipts.",
+    icon: CreditCard,
+    semver: [0, 2, 1],
+    categories: [
+      {
+        type: "new",
+        items: [
+          "ID Card Module — digital ID cards for students & teachers with PDF download and preview",
+          "Transport Management — route management with interactive Mapbox map and stop location picker",
+          "Holiday Management — bulk CSV import and emergency holiday declaration",
+          "Subscription billing — PDF invoice generation with redesigned billing settings",
+          "Public changelog page at /changelog with full release history",
+          "Inngest background automation for billing and notifications",
+        ],
+      },
+      {
+        type: "improvements",
+        items: [
+          "Migrated maps from MapLibre to Mapbox GL JS for better performance",
+          "Redesigned pricing page with tiered plan display (Starter/Growth/Scale)",
+          "Fee receipt PDF optimized for black-and-white printing with proper layout",
+          "Role-based navigation updated for transport, ID cards, and holiday modules",
+        ],
+      },
+      {
+        type: "bugfixes",
+        items: [
+          "Fee receipt no longer shows the oldest payment as \"This Payment\" — now correctly shows the latest",
+          "Amount in words on receipt now reflects the current payment, not the cumulative total",
+          "Fixed unique constraint collision when recording multiple offline payments without transaction ID",
+          "Clear error message shown when a duplicate transaction reference is used",
+          "Removed unsupported React-PDF CSS properties causing silent rendering issues",
+        ],
+      },
+    ],
+  },
+  {
     version: "v0.5.0",
     date: "June 23, 2026",
     title: "Teacher Salary & Payout Settings",
