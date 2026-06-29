@@ -11,6 +11,31 @@ Data source: `lib/data/changelog/changelog-entries.ts`
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-06-29
+
+### Added
+- ID Card Module — digital ID cards for students & teachers with PDF generation and preview
+- Transport Management — route management with interactive map, stop location picker
+- Holiday Management — bulk CSV import, emergency holiday declaration
+- Subscription billing — invoice PDF generation, billing settings UI redesign
+- Public changelog page at /changelog with product update history
+- Inngest background jobs for automated billing and notification workflows
+- Better Auth schema for future auth migration
+
+### Changed
+- Migrated from MapLibre to Mapbox GL JS for map components
+- Redesigned pricing page with new tiered plan display
+- Fee receipt PDF — black-and-white optimized, proper latest payment display
+- Student attendance export improvements
+- Role-based navigation sidebar updated for new modules
+
+### Fixed
+- Fee receipt showing oldest payment instead of latest payment
+- Amount in words showing total paid instead of current payment amount
+- Unique constraint collision on offline payments without transaction ID
+- Receipt PDF now shows proper error message for duplicate transaction refs
+- Removed invalid React-PDF CSS properties (textTransform, overflow, etc.)
+
 ## [0.5.0] — 2026-06-23
 
 ### Added
