@@ -128,6 +128,7 @@ export default function HolidayManagement({
   // Transitions
   const [isAddingEmergency, startEmergencyTransition] = useTransition();
   const [isDeletingHoliday, startDeleteTransition] = useTransition();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isImportingCsv, startCsvImportTransition] = useTransition();
   const [isDeletingAll, startDeleteAllTransition] = useTransition();
 
@@ -184,12 +185,15 @@ Winter Break,2026-12-24,2027-01-01,PLANNED,Year-end Vacation,false`;
 
   // Delete single holiday
   const handleDeleteHoliday = (id: string) => {
+    setDeletingId(id);
     startDeleteTransition(async () => {
       try {
         await deleteSingleHolidayAction(id);
         toast.success('Holiday deleted');
       } catch (error) {
         toast.error('Failed to delete holiday');
+      } finally {
+        setDeletingId(null);
       }
     });
   };
@@ -795,9 +799,9 @@ Winter Break,2026-12-24,2027-01-01,PLANNED,Year-end Vacation,false`;
                         onClick={() => handleDeleteHoliday(holiday.id)}
                         variant={'destructive'}
                         size={'sm'}
-                        disabled={isDeletingHoliday}
+                        disabled={isDeletingHoliday && deletingId === holiday.id}
                       >
-                        {isDeletingHoliday ? (
+                        {isDeletingHoliday && deletingId === holiday.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Trash2 className="h-4 w-4" />

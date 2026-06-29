@@ -383,6 +383,32 @@ export async function createStop(routeId: string, data: {
   revalidatePath('/dashboard/transport')
 }
 
+export async function updateStop(id: string, data: {
+  name?: string
+  order?: number
+  landmark?: string | null
+  pickupTime?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  locationSource?: string | null
+  locationAccuracyMeters?: number | null
+}) {
+  await prisma.transportStop.update({
+    where: { id },
+    data: {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.order !== undefined && { order: data.order }),
+      ...(data.landmark !== undefined && { landmark: data.landmark }),
+      ...(data.pickupTime !== undefined && { pickupTime: data.pickupTime }),
+      ...(data.latitude !== undefined && { latitude: data.latitude }),
+      ...(data.longitude !== undefined && { longitude: data.longitude }),
+      ...(data.locationSource !== undefined && { locationSource: data.locationSource }),
+      ...(data.locationAccuracyMeters !== undefined && { locationAccuracyMeters: data.locationAccuracyMeters }),
+    },
+  })
+  revalidatePath('/dashboard/transport')
+}
+
 export async function deleteStop(id: string) {
   await prisma.transportStop.delete({ where: { id } })
   revalidatePath('/dashboard/transport')

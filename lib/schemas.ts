@@ -453,7 +453,7 @@ export const offlinePaymentSchema = z.object({
     (val) => val !== "ONLINE",
     { message: "ONLINE not allowed for offline payment" }
   ),
-  transactionId: z.string().optional(),
+  transactionId: z.string().optional().transform(v => v || undefined),
   note: z.string().optional(),
   payerId: z.string(),
 });
