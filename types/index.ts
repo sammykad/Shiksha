@@ -9,6 +9,8 @@ import { type ClientUploadedFileData } from 'uploadthing/types';
 
 export interface UploadedFile<T = unknown> extends ClientUploadedFileData<T> { }
 
+export type CopyType = "ORIGINAL" | "STUDENT COPY" | "ACCOUNT COPY";
+
 // In Application Types
 
 export interface FeeRecord {

@@ -12,6 +12,7 @@ import { revalidatePath } from 'next/cache';
 import { notify } from '@/lib/notifications/notify';
 import { preparePaymentReceipt } from './preparePaymentReceipt';
 import { getFeeBalance, syncFeeBalance } from './fee-balance';
+import { PrismaUserError } from '@/lib/prisma-error-extension';
 
 export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
   const userId = await getCurrentUserId();
@@ -67,28 +68,40 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
 
   // ── 2. Persist payment in a transaction ───────────────────────────────────
   const paymentAmount = validatedData.amount;
-  await prisma.$transaction(async (tx) => {
-    // Record the new payment
-    await tx.feePayment.create({
-      data: {
-        feeId: fee.id,
-        amount: paymentAmount,
-        status: PaymentStatus.COMPLETED,
-        receiptNumber,
-        transactionId: validatedData.transactionId,
-        organizationId,
-        note: validatedData.note,
-        paymentMethod: validatedData.method,
-        platformFee: 0,
-        paymentDate: new Date(),
-        payerId: validatedData.payerId,
-        recordedBy: userId,
-      },
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Record the new payment
+      await tx.feePayment.create({
+        data: {
+          feeId: fee.id,
+          amount: paymentAmount,
+          status: PaymentStatus.COMPLETED,
+          receiptNumber,
+          transactionId: validatedData.transactionId,
+          organizationId,
+          note: validatedData.note,
+          paymentMethod: validatedData.method,
+          platformFee: 0,
+          paymentDate: new Date(),
+          payerId: validatedData.payerId,
+          recordedBy: userId,
+        },
+      });
 
-    // Atomically increment paidAmount — prevents lost updates from concurrent payments
-    await syncFeeBalance(fee.id, tx);
-  });
+      // Atomically increment paidAmount — prevents lost updates from concurrent payments
+      await syncFeeBalance(fee.id, tx);
+    });
+  } catch (error) {
+    if (error instanceof PrismaUserError && error.prismaCode === 'P2002' && error.modelName === 'FeePayment') {
+      if (validatedData.transactionId) {
+        throw new Error(
+          `A payment with transaction reference "${validatedData.transactionId}" already exists for this fee. Use a different transaction ID or leave it blank.`,
+        );
+      }
+      throw new Error('A payment with this receipt number already exists. Please try again.');
+    }
+    throw error;
+  }
 
   // ── 3. Prepare receipt — fetches full data, builds FeeRecord, generates PDF ─
   const { feeRecord, pdfBuffer } = await preparePaymentReceipt(fee.id, organizationId, {

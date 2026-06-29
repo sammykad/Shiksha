@@ -84,7 +84,7 @@ export async function generateIdCard(params: {
       pdfBuffer = await renderToBuffer(
         <IdCardPDF
           person={{ firstName: personData!.firstName, lastName: personData!.lastName, profileImage: personData!.profileImage || undefined, details }}
-          organization={{ name: organization.name, logo: organization.logo || undefined, address: undefined, phone: organization.contactPhone || undefined, website: organization.website || undefined }}
+          organization={{ name: organization.name, logo: organization.logo || undefined, phone: organization.contactPhone || undefined, website: organization.website || undefined }}
           cardNumber={cardNumber}
           academicYear={params.academicYear}
           role={role}

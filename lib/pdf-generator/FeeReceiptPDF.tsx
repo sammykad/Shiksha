@@ -1,21 +1,11 @@
 // lib/pdf-generator/FeeReceiptPDF.tsx
 //
-// Design principles:
-//   • Black & white first — looks perfect on xerox / laser print
-//   • No decorative color fills — only structural borders and subtle grays
-//   • Dense but breathable — every field visible, nothing crowded
-//   • Institution-agnostic — school / college / coaching / tuition all work
-//   • Two exports: FeeReceiptPage (single Page) + FeeReceiptPDF (full Document)
+// • Geist registered via pdf-theme.ts — import tw + COLORS + FONT_FAMILY from there
+// • 100% tw() — zero raw style objects
+// • Self-contained, no shared PDFHeader
 
 import React from "react";
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Image,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image } from "@react-pdf/renderer";
 import {
   formatCurrencyIN,
   formatDateIN,
@@ -23,443 +13,136 @@ import {
   numberToWords,
 } from "@/lib/utils";
 import { PaymentStatus } from "@/generated/prisma/enums";
-import { FeeRecord } from "@/types";
-import { CopyType } from "@/components/dashboard/Fees/download-receipt-dialog";
+import { FeeRecord, CopyType } from "@/types";
+import { tw, COLORS, FONT_FAMILY } from "@/lib/pdf-generator/tw";
 
-// ─── Palette ──────────────────────────────────────────────────────────────────
-// Intentionally monochrome so the receipt survives black-and-white printing
-// and photocopying without losing information. Accent (#1a1a1a near-black) is
-// used only for headings and the summary bar — never for decorative fills.
-
-const C = {
-  black: "#000000",
-  ink: "#1a1a1a",   // headings, totals
-  body: "#2d2d2d",   // normal text
-  muted: "#6b6b6b",   // labels, helper text
-  rule: "#b0b0b0",   // light separator lines
-  ruleDark: "#4a4a4a",   // heavier horizontal rules
-  bg: "#f5f5f5",   // very light gray fill (table alternates, summary)
-  bgDark: "#e8e8e8",   // header row background
-  white: "#ffffff",
-};
-
-// ─── Typography ───────────────────────────────────────────────────────────────
-// Helvetica — universally embedded in every PDF reader and printer driver.
-// Using only Helvetica and Helvetica-Bold avoids any font-loading issues.
-
-const F = {
-  regular: "Helvetica",
-  bold: "Helvetica-Bold",
-};
-
-// ─── Sizes ───────────────────────────────────────────────────────────────────
-const S = {
-  xs: 6.5,
-  sm: 7.5,
-  base: 8.5,
-  md: 9.5,
-  lg: 11,
-  xl: 13,
-  h2: 15,
-  h1: 18,
-};
-
-// ─── Spacing ─────────────────────────────────────────────────────────────────
-const GAP = 10;
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-
-  // ── Page ──
-  page: {
-    fontFamily: F.regular,
-    fontSize: S.base,
-    color: C.body,
-    backgroundColor: C.white,
-    paddingTop: 28,
-    paddingBottom: 42,
-    paddingHorizontal: 32,
-  },
-
-  // ── Watermark ──
-  watermark: {
-    position: "absolute",
-    top: "38%",
-    left: "18%",
-    fontSize: 62,
-    fontFamily: F.bold,
-    color: "#e0e0e0",
-    transform: "rotate(-32deg)",
-    letterSpacing: 6,
-    opacity: 0.55,
-  },
-
-  // ── Header ──
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: GAP,
-    paddingBottom: GAP,
-    borderBottomWidth: 1.5,
-    borderBottomColor: C.ink,
-  },
-  logoWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 4,
-    borderWidth: 0.5,
-    borderColor: C.rule,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.bg,
-    marginRight: 10,
-  },
-  logoImg: {
-    width: 52,
-    height: 52,
-    objectFit: "contain",
-  },
-  logoInitial: {
-    fontFamily: F.bold,
-    fontSize: S.h1,
-    color: C.ink,
-  },
-  orgBlock: {
-    flex: 1,
-  },
-  orgName: {
-    fontFamily: F.bold,
-    fontSize: S.h2,
-    color: C.ink,
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  orgMeta: {
-    fontSize: S.sm,
-    color: C.muted,
-    marginBottom: 1,
-  },
-  receiptTitleBlock: {
-    alignItems: "flex-end",
-  },
-  receiptTitle: {
-    fontFamily: F.bold,
-    fontSize: S.xl,
-    color: C.ink,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-  copyBadge: {
-    borderWidth: 0.75,
-    borderColor: C.ruleDark,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 2,
-  },
-  copyBadgeText: {
-    fontSize: S.xs,
-    fontFamily: F.bold,
-    color: C.muted,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-
-  // ── Meta row (receipt#, date, year, status) ──
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderWidth: 0.5,
-    borderColor: C.rule,
-    borderRadius: 2,
-    backgroundColor: C.bg,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    marginBottom: GAP,
-  },
-  metaItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  metaLabel: {
-    fontSize: S.xs,
-    color: C.muted,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    marginBottom: 2,
-  },
-  metaValue: {
-    fontFamily: F.bold,
-    fontSize: S.md,
-    color: C.ink,
-  },
-  metaDivider: {
-    width: 0.5,
-    backgroundColor: C.rule,
-    marginVertical: 2,
-  },
-  statusPill: {
-    borderWidth: 0.75,
-    borderRadius: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    flexShrink: 0,
-  },
-  statusText: {
-    fontFamily: F.bold,
-    fontSize: S.xs,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-
-  // ── Two column info ──
-  twoCol: {
-    flexDirection: "row",
-    gap: GAP,
-    marginBottom: GAP,
-  },
-  infoBox: {
-    flex: 1,
-    borderWidth: 0.5,
-    borderColor: C.rule,
-    borderRadius: 2,
-    padding: 9,
-  },
-  infoBoxTitle: {
-    fontFamily: F.bold,
-    fontSize: S.sm,
-    color: C.ink,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 5,
-    paddingBottom: 4,
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.rule,
-  },
-  infoRow: {
-    flexDirection: "row",
-    marginBottom: 3,
-  },
-  infoLabel: {
-    width: 76,
-    fontSize: S.sm,
-    color: C.muted,
-  },
-  infoValue: {
-    flex: 1,
-    fontSize: S.sm,
-    color: C.body,
-    fontFamily: F.regular,
-  },
-  infoValueBold: {
-    flex: 1,
-    fontSize: S.sm,
-    color: C.ink,
-    fontFamily: F.bold,
-  },
-
-  // ── Payment table ──
-  tableSection: {
-    marginBottom: GAP,
-  },
-  tableTitle: {
-    fontFamily: F.bold,
-    fontSize: S.sm,
-    color: C.ink,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 5,
-  },
-  table: {
-    borderWidth: 0.5,
-    borderColor: C.rule,
-    borderRadius: 2,
-  },
-  tableHead: {
-    flexDirection: "row",
-    backgroundColor: C.bgDark,
-    paddingVertical: 5,
-    paddingHorizontal: 7,
-    borderBottomWidth: 0.75,
-    borderBottomColor: C.ruleDark,
-  },
-  tableHeadCell: {
-    fontFamily: F.bold,
-    fontSize: S.xs,
-    color: C.ink,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 5,
-    paddingHorizontal: 7,
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.rule,
-  },
-  tableRowAlt: {
-    backgroundColor: C.bg,
-  },
-  tableCell: {
-    fontSize: S.sm,
-    color: C.body,
-  },
-  tableCellBold: {
-    fontSize: S.sm,
-    color: C.ink,
-    fontFamily: F.bold,
-  },
-  // Column widths
-  cSno: { width: "5%" },
-  cDate: { width: "14%" },
-  cMethod: { width: "13%" },
-  cTxn: { width: "20%" },
-  cRec: { width: "20%" },
-  cStatus: { width: "14%" },
-  cAmt: { width: "18%", textAlign: "right" as const },
-
-  // ── Summary ──
-  summaryOuter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: GAP,
-  },
-  summaryBox: {
-    width: 210,
-    borderWidth: 0.5,
-    borderColor: C.rule,
-    borderRadius: 2,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 5,
-    paddingHorizontal: 9,
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.rule,
-  },
-  summaryLabel: {
-    fontSize: S.sm,
-    color: C.muted,
-  },
-  summaryVal: {
-    fontSize: S.sm,
-    fontFamily: F.bold,
-    color: C.body,
-  },
-  summaryTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 7,
-    paddingHorizontal: 9,
-    backgroundColor: C.ink,
-    borderRadius: 2,
-  },
-  summaryTotalLabel: {
-    fontSize: S.md,
-    fontFamily: F.bold,
-    color: C.white,
-  },
-  summaryTotalVal: {
-    fontSize: S.lg,
-    fontFamily: F.bold,
-    color: C.white,
-  },
-
-  // ── Amount in words ──
-  amountWords: {
-    borderLeftWidth: 2,
-    borderLeftColor: C.ruleDark,
-    paddingLeft: 9,
-    paddingVertical: 5,
-    marginBottom: GAP,
-    backgroundColor: C.bg,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
-  },
-  amountWordsLabel: {
-    fontSize: S.xs,
-    color: C.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  amountWordsValue: {
-    fontFamily: F.bold,
-    fontSize: S.base,
-    color: C.ink,
-  },
-
-  // ── Footer ──
-  footer: {
-    position: "absolute",
-    bottom: 24,
-    left: 32,
-    right: 32,
-  },
-  footerRule: {
-    borderTopWidth: 0.5,
-    borderTopColor: C.rule,
-    marginBottom: 6,
-  },
-  footerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  footerNotes: {
-    flex: 1,
-  },
-  footerNote: {
-    fontSize: S.xs,
-    color: C.muted,
-    marginBottom: 1.5,
-  },
-  signatureBlock: {
-    alignItems: "center",
-    width: 110,
-  },
-  signatureLine: {
-    width: 100,
-    borderTopWidth: 0.75,
-    borderTopColor: C.ruleDark,
-    marginBottom: 3,
-  },
-  signatureLabel: {
-    fontSize: S.xs,
-    color: C.muted,
-    letterSpacing: 0.3,
-  },
-});
+// ─── Aliases ─────────────────────────────────────────────────────────────────
+// Keep JSX readable — one letter instead of FONT_FAMILY.sans everywhere
+const G = FONT_FAMILY.sans; // "Geist" — registered in pdf-theme.ts via Font.register()
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function statusColors(status: PaymentStatus): { border: string; text: string } {
-  switch (status) {
-    case "COMPLETED": return { border: C.body, text: C.body };
-    case "PENDING": return { border: C.muted, text: C.muted };
-    default: return { border: C.muted, text: C.muted };
-  }
+function orgNameSize(name?: string | null): number {
+  const len = name?.length ?? 0;
+  if (len <= 20) return 14;
+  if (len <= 30) return 12;
+  if (len <= 42) return 10;
+  return 8.5;
 }
 
-function feeStatusLabel(status: string): string {
-  switch (status) {
-    case "PAID": return "PAID";
-    case "UNPAID": return "UNPAID";
-    case "OVERDUE": return "OVERDUE";
-    default: return status;
-  }
+function feeStatusColor(s: string): string {
+  if (s === "PAID") return COLORS.success;
+  if (s === "OVERDUE") return COLORS.error;
+  return COLORS.warning;
+}
+
+function paymentStatusColor(s: PaymentStatus): string {
+  if (s === "COMPLETED") return COLORS.success;
+  if (s === "PENDING") return COLORS.warning;
+  return COLORS.muted;
 }
 
 function methodLabel(m: string): string {
   return m.charAt(0) + m.slice(1).toLowerCase().replace(/_/g, " ");
 }
+
+function copyLabel(copyType: string): string {
+  return copyType.toUpperCase().includes("COPY")
+    ? copyType.toUpperCase()
+    : `${copyType.toUpperCase()} COPY`;
+}
+
+// ─── Micro-components (all tw()) ──────────────────────────────────────────────
+
+function Label({ text }: { text: string }) {
+  return (
+    <Text style={tw("font-normal text-2xs text-muted tracking-wide mb-0.5")}>
+      {text.toUpperCase()}
+    </Text>
+  );
+}
+
+function SectionTitle({ text }: { text: string }) {
+  return (
+    <Text style={tw("font-bold text-xs text-ink tracking-wide mb-2")}>
+      {text.toUpperCase()}
+    </Text>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  bold = false,
+  tiny = false,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  tiny?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <View style={tw(`flex-row${last ? "" : " mb-1"}`)}>
+      <Text style={{ ...tw("font-normal text-xs text-muted"), width: 68 }}>
+        {label}
+      </Text>
+      <Text
+        style={tw(
+          `flex-1 ${tiny ? "text-2xs" : "text-xs"} ${bold ? "font-bold text-ink" : "font-normal text-body"}`
+        )}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function StatusBadge({ label, color }: { label: string; color: string }) {
+  return (
+    <View
+      style={{
+        ...tw("rounded-sm px-1 py-0.5 self-start"),
+        borderWidth: 0.75,
+        borderColor: color,
+      }}
+    >
+      <Text
+        style={{
+          ...tw("font-bold text-2xs tracking-wide"),
+          color,
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function Hairline({ mt = 0, mb = 0 }: { mt?: number; mb?: number }) {
+  return (
+    <View
+      style={{
+        ...tw("border-t border-rule"),
+        marginTop: mt,
+        marginBottom: mb,
+      }}
+    />
+  );
+}
+
+// ─── Table column config ─────────────────────────────────────────────────────
+
+const COLS = [
+  { key: "sno", head: "#", w: "5%", right: false, tiny: false },
+  { key: "date", head: "Date", w: "13%", right: false, tiny: false },
+  { key: "method", head: "Method", w: "13%", right: false, tiny: false },
+  { key: "txn", head: "Transaction ID", w: "22%", right: false, tiny: true },
+  { key: "rec", head: "Receipt No.", w: "22%", right: false, tiny: true },
+  { key: "status", head: "Status", w: "12%", right: false, tiny: false },
+  { key: "amt", head: "Amount", w: "13%", right: true, tiny: false },
+];
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -468,323 +151,315 @@ export interface FeeReceiptPDFProps {
   copyType?: CopyType;
 }
 
-// ─── FeeReceiptPage ───────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function FeeReceiptPage({
-  feeRecord,
-  copyType = "ORIGINAL",
-}: FeeReceiptPDFProps) {
+export function FeeReceiptPage({ feeRecord, copyType = "ORIGINAL" }: FeeReceiptPDFProps) {
   const { fee, student, feeCategory, grade, section, payments } = feeRecord;
 
   const successfulPayments = payments.filter((p) => p.status === "COMPLETED");
-  const latestPayment = successfulPayments[0];
+  const latestPayment = successfulPayments[successfulPayments.length - 1];
   const primaryParent = student.parents?.find((p) => p.isPrimary)?.parent;
+  const thisPayment = latestPayment?.amount ?? fee.paidAmount;
+  const prevPaid = fee.paidAmount - thisPayment;
 
   return (
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={tw("font-sans text-body bg-white px-9 pt-8 pb-12")}>
 
       {/* ── Watermark ── */}
-      <Text style={styles.watermark}>{copyType}</Text>
+      <Text
+        style={{
+          ...tw("absolute font-bold text-[54px] tracking-widest opacity-10"),
+          top: "40%",
+          left: "12%",
+          transform: "rotate(-30deg)",
+          color: COLORS.ruleDark,
+        }}
+      >
+        {copyType.toUpperCase()}
+      </Text>
 
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        {/* Logo / initials */}
-        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-          <View style={styles.logoWrap}>
+      {/* ══════════════════════════════════════
+          1. HEADER
+      ══════════════════════════════════════ */}
+      <View
+        style={{
+          ...tw("flex-row items-center justify-between pb-3 mb-4 border-b-2 border-ink"),
+          minHeight: 60,
+        }}
+      >
+        {/* Logo + org */}
+        <View style={tw("flex-row items-center flex-1")}>
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              flexShrink: 0,
+              marginRight: 12,
+              borderRadius: 4,
+              borderWidth: 0.75,
+              borderColor: COLORS.rule,
+              overflow: "hidden",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             {fee.organizationLogo ? (
-              <Image src={fee.organizationLogo} style={styles.logoImg} />
+              <Image
+                src={fee.organizationLogo}
+                style={{ width: 48 }}
+              />
             ) : (
-              <Text style={styles.logoInitial}>
+              <Text style={{ fontFamily: G, fontWeight: 700, fontSize: 20, color: COLORS.ink }}>
                 {fee.organizationName?.charAt(0)?.toUpperCase() ?? "I"}
               </Text>
             )}
           </View>
-          <View style={styles.orgBlock}>
-            <Text style={styles.orgName}>
+
+          <View style={{ flex: 1, flexShrink: 1 }}>
+            <Text
+              style={{
+                ...tw("font-bold text-ink"),
+                fontSize: orgNameSize(fee.organizationName),
+                lineHeight: 1.3,
+                marginBottom: 3,
+              }}
+            >
               {fee.organizationName ?? "Educational Institution"}
             </Text>
-            {/* {fee.organizationAddress && (
-              <Text style={styles.orgMeta}>{fee.organizationAddress}</Text>
-            )} */}
-
             {fee.organizationEmail && (
-              <Text style={styles.orgMeta}>Email: {fee.organizationEmail}</Text>
+              <Text style={{ ...tw("font-normal text-2xs mb-0.5"), color: COLORS.muted }}>
+                {fee.organizationEmail}
+              </Text>
             )}
             {fee.organizationPhone && (
-              <Text style={styles.orgMeta}>Contact: {fee.organizationPhone}</Text>
+              <Text style={{ ...tw("font-normal text-2xs"), color: COLORS.muted }}>
+                {fee.organizationPhone}
+              </Text>
             )}
           </View>
         </View>
 
-        {/* Title block */}
-        <View style={styles.receiptTitleBlock}>
-          <Text style={styles.receiptTitle}>Fee Receipt</Text>
-          <View style={styles.copyBadge}>
-            <Text style={styles.copyBadgeText}>
-              {copyType.includes("COPY") ? copyType : `${copyType} COPY`}
+        {/* Doc title + copy badge */}
+        <View style={{ ...tw("items-end"), flexShrink: 0, marginLeft: 16 }}>
+          <Text style={tw("font-bold text-2xl text-ink tracking-wide mb-1")}>
+            FEE RECEIPT
+          </Text>
+          <View style={tw("border border-ruleDark rounded-sm px-2 py-0.5")}>
+            <Text style={tw("font-bold text-2xs text-muted tracking-widest")}>
+              {copyLabel(copyType)}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* ── Meta row ── */}
-      <View style={styles.metaRow}>
-        <View style={styles.metaItem}>
-          <Text style={styles.metaLabel}>Receipt No.</Text>
-          <Text style={styles.metaValue}>
-            {latestPayment?.receiptNumber ?? "—"}
-          </Text>
-        </View>
-        <View style={styles.metaDivider} />
-        <View style={styles.metaItem}>
-          <Text style={styles.metaLabel}>Payment Date</Text>
-          <Text style={styles.metaValue}>
-            {latestPayment ? formatDateIN(latestPayment.paymentDate) : "—"}
-          </Text>
-        </View>
-        <View style={styles.metaDivider} />
-        <View style={styles.metaItem}>
-          <Text style={styles.metaLabel}>Academic Year</Text>
-          <Text style={styles.metaValue}>{fee.academicYearName}</Text>
-        </View>
-        <View style={styles.metaDivider} />
-        <View style={[styles.metaItem, { alignItems: "center" }]}>
-          <Text style={styles.metaLabel}>Fee Status</Text>
+      {/* ══════════════════════════════════════
+          2. META STRIP
+      ══════════════════════════════════════ */}
+      <View
+        style={{
+          ...tw("flex-row border border-rule rounded-sm mb-4"),
+          overflow: "hidden",
+        }}
+      >
+        {([
+          { label: "Receipt No.", value: latestPayment?.receiptNumber ?? "—", badge: false },
+          { label: "Payment Date", value: latestPayment ? formatDateIN(latestPayment.paymentDate) : "—", badge: false },
+          { label: "Academic Year", value: fee.academicYearName, badge: false },
+          { label: "Fee Status", value: fee.status, badge: true },
+        ] as const).map(({ label, value, badge }, i, arr) => (
           <View
-            style={[
-              styles.statusPill,
-              { borderColor: C.ruleDark },
-            ]}
+            key={label}
+            style={{
+              ...tw("flex-1 items-center py-2 px-2"),
+              borderRightWidth: i < arr.length - 1 ? 0.75 : 0,
+              borderRightColor: COLORS.rule,
+            }}
           >
-            <Text style={[styles.statusText, { color: C.ink }]}>
-              {feeStatusLabel(fee.status)}
-            </Text>
+            <Label text={label} />
+            {badge
+              ? <StatusBadge label={value} color={feeStatusColor(value)} />
+              : <Text style={tw("font-bold text-md text-ink text-center")}>{value}</Text>
+            }
           </View>
-        </View>
+        ))}
       </View>
 
-      {/* ── Two-column info ── */}
-      <View style={styles.twoCol}>
+      {/* ══════════════════════════════════════
+          3. TWO-COLUMN INFO
+      ══════════════════════════════════════ */}
+      <View style={tw("flex-row gap-5 mb-4")}>
 
         {/* Student */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoBoxTitle}>Student Details</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Name</Text>
-            <Text style={styles.infoValueBold}>
-              {student.firstName} {student.lastName}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Roll No.</Text>
-            <Text style={styles.infoValue}>{student.rollNumber ?? "—"}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Grade / Sec.</Text>
-            <Text style={styles.infoValue}>
-              {grade.grade} – {section.name}
-            </Text>
-          </View>
-          {student.phoneNumber && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Contact</Text>
-              <Text style={styles.infoValue}>{student.phoneNumber}</Text>
-            </View>
-          )}
-          {student.email && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{student.email}</Text>
-            </View>
-          )}
+        <View style={tw("flex-1")}>
+          <SectionTitle text="Student Details" />
+          <InfoRow label="Name" value={`${student.firstName} ${student.lastName}`} bold />
+          <InfoRow label="Roll No." value={student.rollNumber ?? "—"} />
+          <InfoRow label="Grade / Sec" value={`${grade.grade} – ${section.name}`} />
+          {student.phoneNumber && <InfoRow label="Contact" value={student.phoneNumber} />}
+          {student.email && <InfoRow label="Email" value={student.email} />}
           {primaryParent && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Parent</Text>
-              <Text style={styles.infoValue}>
-                {primaryParent.firstName} {primaryParent.lastName}
-              </Text>
-            </View>
+            <InfoRow
+              label="Parent"
+              value={`${primaryParent.firstName} ${primaryParent.lastName}`}
+              last
+            />
           )}
         </View>
+
+        {/* Vertical divider */}
+        <View style={{ ...tw("border-l border-rule"), marginVertical: 0 }} />
 
         {/* Fee */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoBoxTitle}>Fee Details</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Category</Text>
-            <Text style={styles.infoValueBold}>{feeCategory.name}</Text>
-          </View>
-          {feeCategory.description && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Description</Text>
-              <Text style={styles.infoValue}>{feeCategory.description}</Text>
-            </View>
-          )}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Total Fee</Text>
-            <Text style={styles.infoValue}>
-              {formatCurrencyIN(fee.totalFee)}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Due Date</Text>
-            <Text style={styles.infoValue}>{formatDateIN(fee.dueDate)}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Fee ID</Text>
-            <Text style={[styles.infoValue, { fontSize: S.xs }]}>
-              {fee.id}
-            </Text>
-          </View>
+        <View style={tw("flex-1")}>
+          <SectionTitle text="Fee Details" />
+          <InfoRow label="Category" value={feeCategory.name} bold />
+          {feeCategory.description && <InfoRow label="Description" value={feeCategory.description} />}
+          <InfoRow label="Total Fee" value={formatCurrencyIN(fee.totalFee)} />
+          <InfoRow label="Due Date" value={formatDateIN(fee.dueDate)} />
+          <InfoRow label="Fee ID" value={fee.id} tiny />
           {latestPayment?.transactionId && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Txn ID</Text>
-              <Text style={[styles.infoValue, { fontSize: S.xs }]}>
-                {latestPayment.transactionId}
-              </Text>
-            </View>
+            <InfoRow label="Txn ID" value={latestPayment.transactionId} tiny last />
           )}
         </View>
       </View>
 
-      {/* ── Payment history table ── */}
-      <View style={styles.tableSection}>
-        <Text style={styles.tableTitle}>Payment History</Text>
-        <View style={styles.table}>
+      <Hairline mb={16} />
 
-          {/* Head */}
-          <View style={styles.tableHead}>
-            <Text style={[styles.tableHeadCell, styles.cSno]}>#</Text>
-            <Text style={[styles.tableHeadCell, styles.cDate]}>Date</Text>
-            <Text style={[styles.tableHeadCell, styles.cMethod]}>Method</Text>
-            <Text style={[styles.tableHeadCell, styles.cTxn]}>Transaction ID</Text>
-            <Text style={[styles.tableHeadCell, styles.cRec]}>Receipt No.</Text>
-            <Text style={[styles.tableHeadCell, styles.cStatus]}>Status</Text>
-            <Text style={[styles.tableHeadCell, styles.cAmt]}>Amount</Text>
-          </View>
+      {/* ══════════════════════════════════════
+          4. PAYMENT HISTORY TABLE
+      ══════════════════════════════════════ */}
+      <SectionTitle text="Payment History" />
 
-          {/* Rows */}
-          {payments.length > 0 ? (
-            payments.map((p, i) => {
-              const ps = statusColors(p.status);
-              return (
-                <View
-                  key={p.id}
-                  style={[
-                    styles.tableRow,
-                    i % 2 === 1 ? styles.tableRowAlt : {},
-                    i === payments.length - 1
-                      ? { borderBottomWidth: 0 }
-                      : {},
-                  ]}
-                >
-                  <Text style={[styles.tableCell, styles.cSno]}>{i + 1}</Text>
-                  <Text style={[styles.tableCell, styles.cDate]}>
-                    {formatDateIN(p.paymentDate)}
-                  </Text>
-                  <Text style={[styles.tableCell, styles.cMethod]}>
-                    {methodLabel(p.paymentMethod)}
-                  </Text>
-                  <Text style={[styles.tableCell, styles.cTxn, { fontSize: S.xs }]}>
-                    {p.transactionId ?? "—"}
-                  </Text>
-                  <Text style={[styles.tableCell, styles.cRec, { fontSize: S.xs }]}>
-                    {p.receiptNumber ?? "—"}
-                  </Text>
-                  <View style={[styles.cStatus, { justifyContent: "center" }]}>
-                    <View
-                      style={[
-                        styles.statusPill,
-                        { borderColor: ps.border },
-                      ]}
-                    >
-                      <Text style={[styles.statusText, { color: ps.text }]}>
-                        {p.status}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.tableCellBold, styles.cAmt]}>
-                    {formatCurrencyIN(p.amount)}
-                  </Text>
-                </View>
-              );
-            })
-          ) : (
-            <View style={[styles.tableRow, { justifyContent: "center" }]}>
-              <Text style={[styles.tableCell, { textAlign: "center" }]}>
-                No payment records found.
+      <View
+        style={{
+          ...tw("border border-rule rounded-sm mb-4"),
+          overflow: "hidden",
+        }}
+      >
+        {/* Head */}
+        <View style={tw("flex-row bg-bgDark py-1.5 px-2.5 border-b border-ruleDark")}>
+          {COLS.map(({ key, head, w, right }) => (
+            <Text
+              key={key}
+              style={{
+                ...tw("font-bold text-2xs text-muted tracking-wide"),
+                width: w,
+                textAlign: right ? "right" : "left",
+              }}
+            >
+              {head.toUpperCase()}
+            </Text>
+          ))}
+        </View>
+
+        {/* Rows */}
+        {payments.length > 0 ? (
+          payments.map((p, i) => (
+            <View
+              key={p.id}
+              style={{
+                ...tw("flex-row items-center py-1.5 px-2.5"),
+                borderBottomWidth: i < payments.length - 1 ? 0.5 : 0,
+                borderBottomColor: COLORS.rule,
+              }}
+            >
+              <Text style={{ ...tw("text-xs text-muted"), width: "5%" }}>{i + 1}</Text>
+              <Text style={{ ...tw("text-xs text-body"), width: "13%" }}>{formatDateIN(p.paymentDate)}</Text>
+              <Text style={{ ...tw("text-xs text-body"), width: "13%" }}>{methodLabel(p.paymentMethod)}</Text>
+              <Text style={{ ...tw("text-2xs text-body"), width: "22%" }}>{p.transactionId ?? "—"}</Text>
+              <Text style={{ ...tw("text-2xs text-body"), width: "22%" }}>{p.receiptNumber ?? "—"}</Text>
+              <View style={{ width: "12%" }}>
+                <StatusBadge label={p.status} color={paymentStatusColor(p.status)} />
+              </View>
+              <Text
+                style={{
+                  ...tw("font-bold text-xs text-ink"),
+                  width: "13%",
+                  textAlign: "right",
+                }}
+              >
+                {formatCurrencyIN(p.amount)}
               </Text>
             </View>
-          )}
+          ))
+        ) : (
+          <View style={tw("py-4 items-center")}>
+            <Text style={tw("text-xs text-muted")}>No payment records found.</Text>
+          </View>
+        )}
+      </View>
+
+      {/* ══════════════════════════════════════
+          5. AMOUNT IN WORDS + SUMMARY
+      ══════════════════════════════════════ */}
+      <View style={tw("flex-row items-start gap-5")}>
+
+        {/* Amount in words — left */}
+        <View style={tw("flex-1 pt-2")}>
+          <Label text="Amount in words" />
+          <Text style={tw("font-bold text-xs text-ink mt-1")}>
+            {numberToWords(thisPayment).toUpperCase()} ONLY
+          </Text>
+        </View>
+
+        {/* Summary — right, fixed 200pt */}
+        <View style={{ width: 200 }}>
+          {([
+            { label: "Total Fee", value: formatCurrencyIN(fee.totalFee) },
+            { label: "Previously Paid", value: formatCurrencyIN(prevPaid) },
+            { label: "This Payment", value: formatCurrencyIN(thisPayment) },
+            { label: "Balance Due", value: formatCurrencyIN(fee.pendingAmount) },
+          ]).map(({ label, value }, i) => (
+            <View
+              key={label}
+              style={{
+                ...tw(`flex-row justify-between px-2.5 py-1.5 ${i % 2 === 1 ? "bg-bg" : "bg-white"}`),
+                borderTopWidth: i === 0 ? 0.75 : 0.5,
+                borderTopColor: COLORS.rule,
+                borderLeftWidth: 0.75,
+                borderLeftColor: COLORS.rule,
+                borderRightWidth: 0.75,
+                borderRightColor: COLORS.rule,
+              }}
+            >
+              <Text style={tw("text-xs text-muted")}>{label}</Text>
+              <Text style={tw("font-semibold text-xs text-body")}>{value}</Text>
+            </View>
+          ))}
+
+          {/* Dark total bar */}
+          <View
+            style={{
+              ...tw("flex-row justify-between items-center px-2.5 py-2 bg-ink"),
+              borderBottomLeftRadius: 4,
+              borderBottomRightRadius: 4,
+            }}
+          >
+            <Text style={tw("font-bold text-xs text-white")}>NET RECEIVED</Text>
+            <Text style={tw("font-bold text-lg text-white")}>{formatCurrencyIN(fee.paidAmount)}</Text>
+          </View>
         </View>
       </View>
 
-      {/* ── Summary ── */}
-      <View style={styles.summaryOuter}>
-        <View style={styles.summaryBox}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Fee Amount</Text>
-            <Text style={styles.summaryVal}>
-              {formatCurrencyIN(fee.totalFee)}
-            </Text>
+      {/* ══════════════════════════════════════
+          6. FOOTER
+      ══════════════════════════════════════ */}
+      <View style={{ position: "absolute", bottom: 24, left: 36, right: 36 }}>
+        <Hairline mb={6} />
+        <View style={tw("flex-row justify-between items-end")}>
+          <View style={tw("flex-1")}>
+            {[
+              "This is a computer-generated receipt. No signature required.",
+              "Please retain this receipt for your records.",
+              `Queries: ${fee.organizationEmail ?? "accounts@institution.edu"}`,
+              `Generated: ${formatDateTimeIN(new Date())}`,
+            ].map((note, i) => (
+              <Text key={i} style={tw("text-2xs text-subtle mb-0.5")}>{note}</Text>
+            ))}
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Previously Paid</Text>
-            <Text style={styles.summaryVal}>
-              {formatCurrencyIN(fee.paidAmount - (latestPayment?.amount ?? 0))}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>This Payment</Text>
-            <Text style={styles.summaryVal}>
-              {formatCurrencyIN(latestPayment?.amount ?? fee.paidAmount)}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Balance Due</Text>
-            <Text style={styles.summaryVal}>
-              {formatCurrencyIN(fee.pendingAmount)}
-            </Text>
-          </View>
-          <View style={styles.summaryTotalRow}>
-            <Text style={styles.summaryTotalLabel}>Net Received</Text>
-            <Text style={styles.summaryTotalVal}>
-              {formatCurrencyIN(fee.paidAmount)}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ── Amount in words ── */}
-      <View style={styles.amountWords}>
-        <Text style={styles.amountWordsLabel}>Amount in Words</Text>
-        <Text style={styles.amountWordsValue}>
-          {numberToWords(fee.paidAmount).toUpperCase()}
-        </Text>
-      </View>
-
-      {/* ── Footer ── */}
-      <View style={styles.footer}>
-        <View style={styles.footerRule} />
-        <View style={styles.footerRow}>
-          <View style={styles.footerNotes}>
-            <Text style={styles.footerNote}>
-              • This is a system-generated receipt and does not require a physical stamp.
-            </Text>
-            <Text style={styles.footerNote}>
-              • Please retain this receipt for your records.
-            </Text>
-            <Text style={styles.footerNote}>
-              • For queries contact:{" "}
-              {fee.organizationEmail ?? "accounts@institution.edu"}
-            </Text>
-            <Text style={[styles.footerNote, { marginTop: 3 }]}>
-              Generated: {formatDateTimeIN(new Date())}
-            </Text>
-          </View>
-          <View style={styles.signatureBlock}>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureLabel}>Authorised Signatory</Text>
+          <View style={tw("items-center")}>
+            <View style={{ width: 90, ...tw("border-t border-muted mb-0.5") }} />
+            <Text style={tw("text-2xs text-muted tracking-wide")}>Authorised Signatory</Text>
           </View>
         </View>
       </View>
@@ -793,7 +468,7 @@ export function FeeReceiptPage({
   );
 }
 
-// ─── FeeReceiptPDF ─────────────────────────────────────────────────────────
+// ─── Document ─────────────────────────────────────────────────────────────────
 
 export function FeeReceiptPDF(props: FeeReceiptPDFProps) {
   return (

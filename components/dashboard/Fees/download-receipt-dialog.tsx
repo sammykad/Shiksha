@@ -17,13 +17,11 @@ import {
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FeeReceiptPDF, FeeReceiptPage } from "@/lib/pdf-generator/FeeReceiptPDF"
-import type { FeeRecord } from "@/types"
+import type { FeeRecord, CopyType } from "@/types"
 
 interface DownloadReceiptDialogProps {
     record: FeeRecord
 }
-
-export type CopyType = "ORIGINAL" | "STUDENT COPY" | "ACCOUNT COPY"
 
 export interface CopySelection {
     original: number
@@ -182,7 +180,7 @@ export function DownloadReceiptDialog({ record }: DownloadReceiptDialogProps) {
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
-                    {copyTypes.map(({ key, label, type }) => (
+                    {copyTypes.map(({ key, label }) => (
                         <div
                             key={key}
                             className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
