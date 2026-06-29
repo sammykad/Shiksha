@@ -955,18 +955,23 @@ export const NOTIFICATION_REGISTRY: Registry = {
           components: [
             {
               type: "header",
-              parameters: [txt(v.title)],
+              parameters: [],
             },
             {
               type: "body",
               parameters: [
                 txt(v.teacherName),
                 txt(v.title),
-                txt(v.videoUrl),
                 txt(v.organizationName),
               ],
             },
             { type: "footer", parameters: [] },
+            {
+              type: "button",
+              sub_type: "url",
+              index: "0",
+              parameters: [txt(getYouTubeVideoId(v.videoUrl))],
+            },
           ],
         }),
       },
