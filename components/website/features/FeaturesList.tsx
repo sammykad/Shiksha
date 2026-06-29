@@ -6,6 +6,7 @@ import {
   Shield, BarChart3, GraduationCap, Star, Zap, LineChart,
   Bell, BookOpen, FileText, ClipboardCheck, FileBadge, Sparkles,
   ArrowUpRight,
+  Brain,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -156,6 +157,15 @@ const features = [
     link: "/features/ai-reports",
     tag: 'AI',
   },
+  {
+    icon: Brain,
+    title: 'AI Agents',
+    subtitle: 'FeeSense & Attendance AI',
+    description: 'Intelligent AI agents that monitor fee risks, detect absentee patterns, and send smart reminders automatically.',
+    impact: '24/7 automation',
+    link: '/features/ai-agents',
+    tag: 'AI',
+  },
 ];
 
 /* ═══════════════════ TAG COLORS ═══════════════════ */
@@ -304,40 +314,7 @@ export default function FeaturesList() {
           </div>
         </section>
 
-        {/* ── Bottom CTA ── */}
-        <section className="pb-24 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="bg-neutral-900 rounded-3xl px-10 py-14 text-center relative overflow-hidden"
-            >
-              <div className="absolute inset-0 pointer-events-none opacity-[0.06] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:3rem_3rem]" />
-              <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3.5 py-1.5 rounded-full mb-7">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#d9f972]" />
-                  <span className="text-xs font-semibold tracking-widest text-white/60 uppercase">Get Started</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-white mb-4 leading-[1.15]">
-                  See All Features Live —<br />Free for 30 Days
-                </h2>
-                <p className="text-white/50 text-base max-w-lg mx-auto mb-9 leading-relaxed">
-                  No credit card. No setup fee. Your school up and running in one day.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link href="/select-organization" className="w-full sm:w-auto bg-[#d9f972] hover:bg-[#cff550] text-neutral-900 font-semibold px-8 py-3.5 rounded-full text-sm transition-colors inline-flex items-center justify-center">
-                    Start Free Trial
-                  </Link>
-                  <Link href="/contact" className="w-full sm:w-auto bg-transparent hover:bg-white/10 border border-white/20 text-white font-medium px-8 py-3.5 rounded-full text-sm transition-colors inline-flex items-center justify-center">
-                    Schedule a Demo
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </section>
+
 
       </div>
     </div>

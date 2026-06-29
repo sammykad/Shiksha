@@ -122,6 +122,15 @@ export const FEATURES: Record<string, FeatureConfig> = {
     primaryUseCase: 'Personalized experience for each user role',
     icon: 'Users',
   },
+  'ai-agents': {
+    slug: 'ai-agents',
+    name: 'AI Agents',
+    description: 'Intelligent AI agents for fee risk detection and attendance pattern analysis',
+    relatedFeatures: ['ai-reports', 'attendance', 'notification-engine'],
+    relatedIndustries: ['k-12-schools', 'colleges-higher-education', 'coaching-centers'],
+    primaryUseCase: 'Automate school operations with intelligent agents',
+    icon: 'Bot',
+  },
 };
 
 /**
