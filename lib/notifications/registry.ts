@@ -902,7 +902,7 @@ export const NOTIFICATION_REGISTRY: Registry = {
           name: "pdc_cheque_bounced",
           language: { code: "en" },
           components: [
-            { type: "header", parameters: [txt("Payment Alert")] },
+            { type: "header", parameters: [] },
             {
               type: "body",
               parameters: [

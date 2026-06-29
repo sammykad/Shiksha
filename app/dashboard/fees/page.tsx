@@ -117,7 +117,7 @@ async function PaymentStatusContent({
   const { role } = await getCurrentUserByRole();
   const feesUrl = getFeesUrl(role);
 
-  /* ── Missing transaction ID ── */
+  /* ── No lookup key ── */
   if (!transactionId || typeof transactionId !== 'string') {
     return (
       <StatusShell>
@@ -139,7 +139,7 @@ async function PaymentStatusContent({
     );
   }
 
-  /* ── Fetch current local status. Verification happens via callback/retry route. ── */
+  /* ── Fetch current local status. ── */
   const payment = await getOnlinePaymentStatus(transactionId);
 
   const config = getStatusConfig(payment?.status);
