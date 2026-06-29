@@ -23,6 +23,17 @@
     "git-review": {
       "description": "Reviews git-changed files one by one with root-cause analysis"
     },
+    "pdf-agent": {
+      "description": "Builds the PDF Generation Agent — from NL request to rendered PDF download",
+      "mode": "subagent",
+      "temperature": 0.1,
+      "color": "#2563eb",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      },
+      "prompt": "You are implementing the PDF Generation Agent for Shiksha.cloud. This is an AI agent that accepts natural language requests (e.g. \"generate fee receipt for Arjun Sharma\") and produces a PDF by fetching data and rendering a @react-pdf/renderer component.\n\n## Existing infrastructure to use\n\n| Piece | Location |\n|---|---|\n| PDF components | `lib/pdf-generator/*PDF.tsx` (6 components) |\n| Render engine | `renderToBuffer()` from `@react-pdf/renderer` |\n| Download utility | `downloadBase64()` in `lib/pdf-generator/pdf.ts` |\n| Agent registry | `lib/ai-agents/registry.ts` |\n| Agent runner pattern | `lib/ai-agents/runner.ts` (FeeSense pattern) |\n| Tools pattern | `lib/ai-agents/tools/fee-sense/*.ts` |\n| Execution logging | `AiAgentExecutionLog` + `AiAgentReport` Prisma models |\n| LLM | Vercel AI SDK + Gemini (existing in `generate-daily-report.ts`) |\n| Inngest | `app/api/inngest/functions.ts` |\n| Plan | `docs/08-ai-agents/ai-agents-guide.md` (#13 PDF Generation Agent) |\n\n## Build steps\n\n1. **Register** in `lib/ai-agents/registry.ts` — key: `pdf-generator`, name: `PDF Generator`\n2. **Create runner** in `lib/ai-agents/runners/pdf-generator.ts` — LLM classifies intent, picks template, fetches data, calls renderToBuffer, returns/stores\n3. **Create tools** in `lib/ai-agents/tools/pdf-generator/`:\n   - `fetch-data.ts` — queries Prisma for student, fee, exam, attendance\n   - `resolve-template.ts` — LLM maps NL request to PDF component\n   - `render.ts` — calls renderToBuffer with resolved component + data\n4. **Wire to Inngest** in `app/api/inngest/functions.ts` — cron for scheduled PDF gen\n5. **Run `npm run lint`** after every change\n\n## Architecture\n\n```\nUser request -> Agent (LLM classifies intent)\n  -> resolve-template tool -> picks FeeReceiptPDF | IdCardPDF | HallTicketPDF | etc.\n  -> fetch-data tool -> queries Prisma\n  -> render tool -> renderToBuffer(<Component />) -> base64\n  -> Return download or save as AiAgentReport\n```\n\n## Rules\n\n- Follow FeeSense agent pattern exactly (registry, runner, tools, execution logs)\n- All new files in `lib/ai-agents/` following established structure\n- Use Vercel AI SDK (`ai`) for LLM calls, not raw API\n- Store results in `AiAgentExecutionLog` and `AiAgentReport`\n- Every tool must have a Zod schema for typed input/output\n- Register so agent appears in `/dashboard/agents` automatically\n- Do NOT add comments to code unless explaining a non-obvious decision"
+    },
     "campaign-manager": {
       "description": "WhatsApp outreach campaign manager for 20-school acquisition. Knows the 3 MARKETING templates, 14-day send sequence, bucket segmentation, and call scripts.",
       "mode": "subagent",

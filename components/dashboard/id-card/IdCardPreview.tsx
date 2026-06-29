@@ -72,7 +72,7 @@ export default function IdCardPreview({ person, organization, cardNumber, academ
                     </span>
                   )}
                   {orgWebsite && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 truncate">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
                         <circle cx="12" cy="12" r="10" />
                         <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
@@ -97,7 +97,7 @@ export default function IdCardPreview({ person, organization, cardNumber, academ
         {/* Body */}
         <div className="flex gap-4 p-5">
           {/* Photo */}
-          <div className="w-20 h-24 rounded-xl overflow-hidden flex-shrink-0 border-2" style={{ borderColor: s.primary + '40', backgroundColor: s.light }}>
+          <div className="w-20 h-24 rounded-xl overflow-hidden flex-shrink-0 ">
             {person.profileImage ? (
               <img src={person.profileImage} alt="" className="w-full h-full object-cover" />
             ) : (

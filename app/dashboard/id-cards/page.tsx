@@ -29,14 +29,14 @@ export default async function IdCardsRoute() {
     }),
     orgRole === 'ADMIN'
       ? prisma.teacher.findMany({
-          where: { organizationId: orgId },
-          select: {
-            id: true,
-            employeeCode: true,
-            user: { select: { firstName: true, lastName: true, profileImage: true } },
-          },
-          orderBy: { user: { firstName: 'asc' } },
-        })
+        where: { organizationId: orgId },
+        select: {
+          id: true,
+          employeeCode: true,
+          user: { select: { firstName: true, lastName: true, profileImage: true } },
+        },
+        orderBy: { user: { firstName: 'asc' } },
+      })
       : Promise.resolve([]),
     prisma.organization.findUnique({
       where: { id: orgId },

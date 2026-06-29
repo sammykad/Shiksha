@@ -11,6 +11,7 @@ import { generateBulkIdCards } from '@/lib/data/id-card/generate-bulk-id-cards';
 import { getAllIdCards, getExistingCardStatus } from '@/lib/data/id-card/get-id-card';
 import { revokeIdCard } from '@/lib/data/id-card/revoke-id-card';
 import { downloadIdCardPdf } from '@/lib/data/id-card/download-id-card-pdf';
+import { downloadBase64 } from '@/lib/pdf-generator/pdf';
 import IdCardPreview from '@/components/dashboard/id-card/IdCardPreview';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -393,13 +394,7 @@ export default function IdCardsClient({
     setDownloadingCardId(cardId);
     try {
       const result = await downloadIdCardPdf(cardId);
-      if (result.success) {
-        const link = document.createElement('a');
-        link.href = `data:application/pdf;base64,${result.base64}`;
-        link.download = result.filename || 'id-card.pdf';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      if (result.success && downloadBase64(result.base64, result.filename || 'id-card.pdf')) {
         toast.success('PDF downloaded');
       } else {
         toast.error(result.error || 'Failed to generate PDF');
