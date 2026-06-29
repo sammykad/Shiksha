@@ -357,6 +357,8 @@ git merge feature/my-feature
 # test everything
 
 # 3. Ship to production
+# ⚠️ REMINDER: Switch .env to production values before deploying
+# ⚠️ REMINDER: Run `npx prisma migrate deploy` if schema changed
 git checkout main
 git merge develop
 npm version patch   # or minor
@@ -384,6 +386,7 @@ avoid API Route so use server actions
 9. **Exam module is untested** — treat it as fragile. Do not modify exam results, grading, or hall ticket logic without careful review and explicit instruction.
 10. **Anonymous complaints = no traceability** — never add any logging, metadata, or DB field that could link a complaint to the reporter
 11. **Zero enforcement until 20 schools** — no student limit enforcement until we hit 20 onboarded orgs. Dashboard reminders/notifications are fine for visibility, but nothing should block or error. After 20 orgs, flip to full enforcement (payment + student limits). `createCustomDeal`, `recordManualSubscriptionPayment`, and `POST /api/billing/generate-invoice` are Shiksha Admin only (password-gated). `getManageableOrganizations`, PDF invoice download, and `changePlan` are org-admin accessible via session auth.
+12. **Deploy checklist — always ask before shipping** — before every `npm version patch`: (a) confirm `.env` is switched to production, (b) run `npx prisma migrate deploy` if schema changed, (c) update changelog first. This is not optional — remind the user every time.
 
 ---
 
