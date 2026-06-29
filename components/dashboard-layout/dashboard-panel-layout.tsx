@@ -19,14 +19,10 @@ export default function AdminPanelLayout({
   const { getOpenState, settings } = sidebar;
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="">
       <Sidebar role={role} />
       <main
         className={cn(
-          'min-h-[calc(100dvh-56px)] transition-all duration-300 ease-in-out',
-          'bg-gradient-to-br from-white/80 via-slate-50/50 to-white/80',
-          'dark:bg-gradient-to-br dark:from-slate-900/80 dark:via-slate-800/50 dark:to-slate-900/80',
-          'backdrop-blur-sm',
           !settings.disabled && (!getOpenState() ? 'lg:ml-[90px]' : 'lg:ml-72')
         )}
       >

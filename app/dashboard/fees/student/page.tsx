@@ -24,6 +24,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import PayFeeButton from '@/components/dashboard/Fees/PayFeeButton';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { getFeeBalance, getFeesSummary } from '@/lib/data/fee/fee-balance';
+import { PaymentStatus } from '@/generated/prisma/enums';
 
 async function getStudentFeesByStudentId(studentId: string) {
   const academicYearId = await getActiveAcademicYearId();
@@ -52,7 +53,7 @@ async function getStudentFeesByStudentId(studentId: string) {
         },
       },
       payments: {
-        where: { status: 'COMPLETED' },
+        where: { status: PaymentStatus.COMPLETED },
         include: {
           payer: {
             select: {

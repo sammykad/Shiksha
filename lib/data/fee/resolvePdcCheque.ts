@@ -142,7 +142,6 @@ export const resolvePdcCheque = async (input: ResolvePdcInput) => {
         feeName: fee.feeCategory.name,
         amount: feePayment.amount,
         paidAt: new Date(),
-        receiptUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/fees`,
       },
     });
   } else if (resolution === 'BOUNCED') {

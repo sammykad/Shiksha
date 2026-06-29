@@ -38,6 +38,22 @@ function txt(text: string | number | undefined | null): { type: "text"; text: st
   return { type: "text", text: String(text ?? "") };
 }
 
+function img(link: string): { type: "image"; image: { link: string } } {
+  return { type: "image", image: { link } };
+}
+
+function getYouTubeThumbnail(url: string): string | null {
+  const p = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/;
+  const m = url.match(p);
+  return m ? `https://img.youtube.com/vi/${m[1]}/maxresdefault.jpg` : null;
+}
+
+function getYouTubeVideoId(url: string): string | null {
+  const p = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/;
+  const m = url.match(p);
+  return m ? m[1] : null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // REGISTRY
 // ─────────────────────────────────────────────────────────────────────────────
@@ -902,7 +918,7 @@ export const NOTIFICATION_REGISTRY: Registry = {
           name: "pdc_cheque_bounced",
           language: { code: "en" },
           components: [
-            { type: "header", parameters: [txt("Payment Alert")] },
+            { type: "header", parameters: [] },
             {
               type: "body",
               parameters: [
@@ -915,6 +931,47 @@ export const NOTIFICATION_REGISTRY: Registry = {
               ],
             },
             { type: "footer", parameters: [] },
+          ],
+        }),
+      },
+    },
+  },
+
+  RECORDED_SESSION_SHARED: {
+    type: "GENERAL",
+    subKey: "recorded_session_shared",
+    inboxTitle: "Recorded Session: {{title}}",
+    inboxMessage: "{{teacherName}} shared a recording — {{title}}",
+    channels: {
+      PUSH: {
+        subject: "New Recorded Session",
+        body: "{{teacherName}} shared: {{title}}",
+      },
+      WHATSAPP: {
+        body: "{{teacherName}} shared a recorded session:\n\n*{{title}}*\n\nWatch here: {{videoUrl}}\n\n{{#if message}}{{message}}\n\n{{/if}}— {{organizationName}}",
+        template: (v) => ({
+          name: "recorded_session_shared",
+          language: { code: "en" },
+          components: [
+            {
+              type: "header",
+              parameters: [],
+            },
+            {
+              type: "body",
+              parameters: [
+                txt(v.teacherName),
+                txt(v.title),
+                txt(v.organizationName),
+              ],
+            },
+            { type: "footer", parameters: [] },
+            {
+              type: "button",
+              sub_type: "url",
+              index: "0",
+              parameters: [txt(getYouTubeVideoId(v.videoUrl))],
+            },
           ],
         }),
       },
