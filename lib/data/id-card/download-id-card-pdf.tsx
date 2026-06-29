@@ -2,8 +2,9 @@
 
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
-import { pdf } from '@react-pdf/renderer';
-import { IdCardPDF } from './id-card-pdf';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { IdCardPDF, ROLE_COLORS } from './id-card-pdf';
+import '@/lib/pdf-generator/tw';
 import { generateVerificationQRCode } from './qr-code-generator';
 import { ID_CARD_MOTTO } from '@/constants';
 
@@ -42,38 +43,32 @@ export async function downloadIdCardPdf(cardId: string) {
 
     const personData = isStudent
       ? {
-          firstName: idCard.student?.firstName ?? '',
-          lastName: idCard.student?.lastName ?? '',
-          profileImage: idCard.student?.profileImage ?? undefined,
-        }
+        firstName: idCard.student?.firstName ?? '',
+        lastName: idCard.student?.lastName ?? '',
+        profileImage: idCard.student?.profileImage ?? undefined,
+      }
       : {
-          firstName: idCard.teacher?.user.firstName ?? '',
-          lastName: idCard.teacher?.user.lastName ?? '',
-          profileImage: idCard.teacher?.user.profileImage ?? undefined,
-        };
+        firstName: idCard.teacher?.user.firstName ?? '',
+        lastName: idCard.teacher?.user.lastName ?? '',
+        profileImage: idCard.teacher?.user.profileImage ?? undefined,
+      };
 
     const details: Record<string, string> = isStudent
       ? {
-          'Grade': `${idCard.student?.grade?.grade ?? '?'} - ${idCard.student?.section?.name ?? '?'}`,
-          'Roll No.': idCard.student?.rollNumber ?? 'N/A',
-          'Card No.': idCard.cardNumber,
-        }
+        'Grade': `${idCard.student?.grade?.grade ?? '?'} - ${idCard.student?.section?.name ?? '?'}`,
+        'Roll No.': idCard.student?.rollNumber ?? 'N/A',
+        'Card No.': idCard.cardNumber,
+      }
       : {
-          'Employee Code': idCard.teacher?.employeeCode ?? 'N/A',
-          'Department': idCard.teacher?.profile?.qualification ?? 'N/A',
-          'Card No.': idCard.cardNumber,
-        };
+        'Employee Code': idCard.teacher?.employeeCode ?? 'N/A',
+        'Department': idCard.teacher?.profile?.qualification ?? 'N/A',
+        'Card No.': idCard.cardNumber,
+      };
 
-    const ROLE_COLORS: Record<string, { primary: string }> = {
-      STUDENT: { primary: '#059669' },
-      TEACHER: { primary: '#2563eb' },
-      ADMIN: { primary: '#7c3aed' },
-      PARENT: { primary: '#d97706' },
-    };
     const qrColor = ROLE_COLORS[role]?.primary || '#0f172a';
     const qrCodeDataUrl = await generateVerificationQRCode(idCard.cardNumber, qrColor);
 
-    const pdfDoc = pdf(
+    const pdfBuffer = await renderToBuffer(
       <IdCardPDF
         person={{ firstName: personData.firstName, lastName: personData.lastName, profileImage: personData.profileImage, details }}
         organization={{
@@ -90,16 +85,9 @@ export async function downloadIdCardPdf(cardId: string) {
       />
     );
 
-    const pdfStream = await pdfDoc.toBuffer();
-    const chunks: Uint8Array[] = [];
-    for await (const chunk of pdfStream) {
-      chunks.push(chunk as Uint8Array);
-    }
-    const pdfBuffer = Buffer.concat(chunks);
-
     const base64 = pdfBuffer.toString('base64');
 
-    return { success: true, base64, filename: `${idCard.cardNumber}.pdf` };
+    return { success: true, base64: `data:application/pdf;base64,${base64}`, filename: `${idCard.cardNumber}.pdf` };
   } catch (err) {
     console.error('PDF download error:', err);
     return { success: false, error: 'Failed to generate PDF.' };

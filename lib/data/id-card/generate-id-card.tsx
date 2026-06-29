@@ -2,9 +2,10 @@
 
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
-import { pdf } from '@react-pdf/renderer';
+import { renderToBuffer } from '@react-pdf/renderer';
 import { UTApi, UTFile } from 'uploadthing/server';
-import { IdCardPDF } from './id-card-pdf';
+import { IdCardPDF, ROLE_COLORS } from './id-card-pdf';
+import '@/lib/pdf-generator/tw';
 import { generateVerificationQRCode } from './qr-code-generator';
 import { ID_CARD_MOTTO } from '@/constants';
 
@@ -18,6 +19,10 @@ export async function generateIdCard(params: {
   try {
     const { userId, orgId, orgRole } = await auth();
     const organizationId = orgId;
+
+    if (!params.studentId && !params.teacherId) {
+      return { success: false, error: 'Either studentId or teacherId is required' };
+    }
 
     if (orgRole === 'STUDENT' && params.studentId) {
       const student = await prisma.student.findUnique({ where: { id: params.studentId, organizationId } });
@@ -36,7 +41,7 @@ export async function generateIdCard(params: {
     if (params.studentId) {
       const student = await prisma.student.findUnique({
         where: { id: params.studentId, organizationId },
-        select: { firstName: true, lastName: true, profileImage: true, rollNumber: true, dateOfBirth: true, bloodGroup: true, grade: { select: { grade: true } }, section: { select: { name: true } } },
+        select: { firstName: true, lastName: true, profileImage: true, rollNumber: true, grade: { select: { grade: true } }, section: { select: { name: true } } },
       });
       if (!student) return { success: false, error: 'Student not found' };
       role = 'STUDENT';
@@ -47,7 +52,7 @@ export async function generateIdCard(params: {
     if (params.teacherId) {
       const teacher = await prisma.teacher.findUnique({
         where: { id: params.teacherId, organizationId },
-        select: { employeeCode: true, joinedAt: true, user: { select: { firstName: true, lastName: true, profileImage: true } }, profile: { select: { qualification: true } } },
+        select: { employeeCode: true, user: { select: { firstName: true, lastName: true, profileImage: true } }, profile: { select: { qualification: true } } },
       });
       if (!teacher) return { success: false, error: 'Teacher not found' };
       role = 'TEACHER';
@@ -71,18 +76,12 @@ export async function generateIdCard(params: {
       ? existingCard.cardNumber
       : `${prefix}-${params.academicYear}-${type}-${String(await prisma.idCard.count({ where: { organizationId } }) + 1).padStart(5, '0')}`;
 
-    const ROLE_COLORS: Record<string, { primary: string }> = {
-      STUDENT: { primary: '#059669' },
-      TEACHER: { primary: '#2563eb' },
-      ADMIN: { primary: '#7c3aed' },
-      PARENT: { primary: '#d97706' },
-    };
     const qrColor = ROLE_COLORS[role]?.primary || '#0f172a';
     const qrCodeDataUrl = await generateVerificationQRCode(cardNumber, qrColor);
 
     let pdfBuffer: Buffer;
     try {
-      const pdfDoc = pdf(
+      pdfBuffer = await renderToBuffer(
         <IdCardPDF
           person={{ firstName: personData!.firstName, lastName: personData!.lastName, profileImage: personData!.profileImage || undefined, details }}
           organization={{ name: organization.name, logo: organization.logo || undefined, address: undefined, phone: organization.contactPhone || undefined, website: organization.website || undefined }}
@@ -93,13 +92,6 @@ export async function generateIdCard(params: {
           qrCodeDataUrl={qrCodeDataUrl}
         />
       );
-
-      const pdfStream = await pdfDoc.toBuffer();
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of pdfStream) {
-        chunks.push(chunk as Uint8Array);
-      }
-      pdfBuffer = Buffer.concat(chunks);
     } catch (pdfErr) {
       console.error('PDF generation failed:', pdfErr);
       return { success: false, error: 'Failed to generate PDF.' };

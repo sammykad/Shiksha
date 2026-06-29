@@ -55,3 +55,10 @@ export function downloadBlob(blob: Blob, fileName: string) {
   downloadFile({ url, fileName });
   revokeBlobUrl({ url });
 }
+
+export function downloadBase64(dataURI: string | null | undefined, fileName: string) {
+  const blob = createBlobFromBase64(dataURI);
+  if (!blob) return false;
+  downloadBlob(blob, fileName);
+  return true;
+}

@@ -27,6 +27,7 @@ Comprehensive guide for building AI agents for Shiksha.cloud - organized by use 
 | Teacher Assistant Agent    | 🟡 Medium | Medium     | High   |
 | Transport Optimizer        | 🟡 Medium | High       | Medium |
 | Exam Scheduler Agent       | 🟢 Low    | High       | Medium |
+| **PDF Generation Agent**   | 🟢 Low    | Medium     | Medium |
 
 ---
 
@@ -1338,6 +1339,46 @@ Thank you for bringing this to our attention.
 ### 12. **Staff Hiring Assistant** 👥
 
 **Purpose:** Screen teacher applications, schedule interviews
+
+### 13. **PDF Generation Agent** 📄 *(Planned)*
+
+**Purpose:** Generate any school document as PDF on demand — receipts, certificates, ID cards, hall tickets, reports — via natural language request.
+
+**How it works:**
+
+```
+User: "Generate fee receipt for Arjun Sharma, Class 5A"
+                        ↓
+Agent LLM classifies intent → maps to FeeReceiptPDF template
+                        ↓
+Agent fetches student fee data from DB
+                        ↓
+Agent calls renderToBuffer(<FeeReceiptPDF data={...} />)
+                        ↓
+Returns PDF for download or stores in AiAgentReport
+```
+
+**Capabilities:**
+
+- Accept natural language requests (*"ID card for teacher Priya"*, *"Hall ticket for exam next week"*)
+- Auto-detect which PDF template to use from 6+ existing components
+- Fetch required data from Prisma (student, fee, exam, attendance records)
+- Render via `@react-pdf/renderer` using existing components
+- Support bulk generation (*"All students in Class 10"*)
+- Store generated PDFs as `AiAgentReport` for later retrieval
+
+**Existing infrastructure it leverages:**
+
+| Piece | Status |
+|---|---|
+| 6 PDF components (`FeeReceiptPDF`, `IdCardPDF`, `HallTicketPDF`, etc.) | ✅ Live |
+| `renderToBuffer()` from `@react-pdf/renderer` | ✅ Live |
+| `downloadBase64()` in `lib/pdf-generator/pdf.ts` | ✅ Live |
+| Agent registry + runner pattern (`lib/ai-agents/`) | ✅ Live |
+| `AiAgentExecutionLog` + `AiAgentReport` models | ✅ Live |
+| Vercel AI SDK for LLM tool calling | ✅ Live |
+
+**Dependencies:** None beyond what's already in the codebase.
 
 ---
 

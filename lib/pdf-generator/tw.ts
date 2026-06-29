@@ -539,7 +539,7 @@ function parseClass(cls: string): Style {
   if (posMatch) {
     const negate = !!posMatch[1];
     const prop = posMatch[2];
-    const val = posMatch[4];
+    const val = posMatch[5];
     const props = insetProps(prop, val, negate);
     if (props) return props;
   }

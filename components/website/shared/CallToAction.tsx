@@ -83,7 +83,7 @@ const DEFAULTS = {
     </>
   ),
   description:
-    "Begin your 30-day free trial to fully explore every feature Shiksha Cloud has to offer.",
+    "Start with 90 days free — every feature, no credit card required.",
   primaryLabel: "Get Started",
   primaryHref: "/select-organization",
   secondaryLabel: "Talk to an Expert",
