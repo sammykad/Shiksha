@@ -12,7 +12,6 @@ import {
     Send,
     Bell,
     MessageSquare,
-    Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +31,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useQueryState } from "nuqs";
-import { getStudentsForRecording } from "@/lib/data/recorded-sessions/recorded-session-data";
+import { getStudentsForRecording, sendRecordedSessionAction } from "@/lib/data/recorded-sessions/recorded-session-data";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Grade {
@@ -86,8 +85,18 @@ export default function RecordedSessionForm({ grades }: RecordedSessionFormProps
         "Hi! Sharing today's class recording so you don't miss anything. Please watch it before tomorrow's session.",
     );
     const [notify, setNotify] = useState(true);
+    const [sending, setSending] = useState(false);
 
     const videoId = useMemo(() => parseYouTube(link), [link]);
+
+    // Auto-fetch video title from YouTube oEmbed (free, no API key)
+    useEffect(() => {
+        if (!videoId) return;
+        fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => { if (data?.title) setTitle(data.title); })
+            .catch(() => { });
+    }, [videoId]);
 
     // Fetch students when section changes
     useEffect(() => {
@@ -136,10 +145,39 @@ export default function RecordedSessionForm({ grades }: RecordedSessionFormProps
         }
     };
 
-    const handleSend = () => {
-        toast.info("Recorded session sharing is not available yet", {
-            description: "The class, students, and message are ready, but notification sending is not connected yet.",
-        });
+    const handleSend = async () => {
+        if (!notify) {
+            toast.error("Enable WhatsApp notifications to share");
+            return;
+        }
+        if (selected.size === 0) {
+            toast.error("Select at least one student");
+            return;
+        }
+        if (!videoId) {
+            toast.error("Enter a valid YouTube link");
+            return;
+        }
+        setSending(true);
+        try {
+            const result = await sendRecordedSessionAction({
+                studentIds: Array.from(selected),
+                title,
+                videoUrl: link,
+                message,
+            });
+            if (result.success) {
+                const parts = [`Recording shared to ${result.sent} students`];
+                if (result.failed > 0) parts.push(`${result.failed} failed`);
+                toast.success(parts.join(" — "));
+            } else {
+                toast.error("Failed to send. Try again.");
+            }
+        } catch {
+            toast.error("Something went wrong");
+        } finally {
+            setSending(false);
+        }
     };
 
     const currentGrade = grades.find(g => g.id === gradeId);
@@ -160,11 +198,11 @@ export default function RecordedSessionForm({ grades }: RecordedSessionFormProps
                         </Button>
                         <Button
                             onClick={handleSend}
-                            disabled
+                            disabled={sending || selected.size === 0 || !videoId}
                             className="rounded-full px-5 h-9 text-[13px] bg-neutral-900 hover:bg-neutral-800 text-white shadow-none gap-1.5"
                         >
                             <Send className="w-3.5 h-3.5" />
-                            Sending unavailable
+                            {sending ? "Sending..." : `Send to ${selected.size}`}
                         </Button>
                     </>
                 }
@@ -346,26 +384,20 @@ export default function RecordedSessionForm({ grades }: RecordedSessionFormProps
                         </div>
 
                         <div className="grid grid-cols-[280px_1fr] gap-5 items-start">
-                            <div className="relative aspect-video rounded-xl overflow-hidden bg-neutral-900 group">
+                            <div className="relative aspect-video rounded-xl overflow-hidden bg-neutral-900">
                                 {videoId ? (
-                                    <img
-                                        src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-                                        alt="Video thumbnail"
-                                        className="w-full h-full object-cover opacity-95"
+                                    <iframe
+                                        src={`https://www.youtube.com/embed/${videoId}`}
+                                        title={title}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        className="w-full h-full"
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center">
                                         <Video className="w-7 h-7 text-neutral-500" />
                                     </div>
                                 )}
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-md group-hover:scale-105 transition">
-                                        <Play className="w-4 h-4 text-neutral-900 fill-neutral-900 ml-0.5" />
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-2 right-2 text-[10.5px] text-white bg-black/70 rounded px-1.5 py-0.5 font-medium">
-                                    42:18
-                                </div>
                             </div>
 
                             <div className="flex flex-col h-full min-w-0">
@@ -373,7 +405,7 @@ export default function RecordedSessionForm({ grades }: RecordedSessionFormProps
                                     {title || "Untitled recording"}
                                 </p>
                                 <p className="text-[12px] text-neutral-500 mt-1">
-                                    Recorded today · 42 min · Class {currentGrade?.name || "10-A"} · Mathematics
+                                    Recorded today · Class {currentGrade?.name}
                                 </p>
 
                                 <div className="mt-3 rounded-lg bg-neutral-50 border border-neutral-100 p-3">
@@ -393,14 +425,13 @@ export default function RecordedSessionForm({ grades }: RecordedSessionFormProps
                                     <div className="flex items-center gap-2 min-w-0">
                                         <Bell className="w-3.5 h-3.5 text-violet-600 shrink-0" />
                                         <p className="text-[12.5px] text-violet-900 truncate font-medium">
-                                            Notification sending unavailable for{" "}
+                                            Send WhatsApp notification to{" "}
                                             <span className="font-bold">{selected.size} students</span>
                                         </p>
                                     </div>
                                     <Switch
                                         checked={notify}
                                         onCheckedChange={setNotify}
-                                        disabled
                                         className="data-[state=checked]:bg-violet-600"
                                     />
                                 </div>
@@ -408,7 +439,7 @@ export default function RecordedSessionForm({ grades }: RecordedSessionFormProps
                         </div>
 
                         <p className="text-[11.5px] text-neutral-400 mt-4 pt-3 border-t border-neutral-100">
-                            Delivery will be enabled after recorded-session notifications are connected.
+                            Parents will receive the recording link via WhatsApp.
                         </p>
                     </div>
                 </section>

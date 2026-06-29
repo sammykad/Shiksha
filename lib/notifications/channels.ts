@@ -10,8 +10,11 @@ import {
   type WhatsAppTemplate,
   type WhatsAppWirePayload,
   type HeaderComponent,
+  type ButtonComponent,
   type DocumentParameter,
+  type ImageParameter,
   type TemplateComponent,
+  type TextParameter,
   uploadBufferToMeta,
 } from "./providers/whatsapp";
 
@@ -175,27 +178,18 @@ class SMSProvider implements ChannelProvider {
 function isHeaderComponent(c: TemplateComponent): c is HeaderComponent {
   return c.type === "header";
 }
-function injectDocumentIntoHeader(
+function injectIntoHeader(
   components: TemplateComponent[],
-  documentParam: DocumentParameter
+  param: DocumentParameter | ImageParameter
 ): TemplateComponent[] {
-  // Deep-clone so concurrent sends of the same template never share state
   const cloned = components.map((c) => ({ ...c })) as TemplateComponent[];
-
   const header = cloned.find(isHeaderComponent);
-
   if (header) {
-    header.parameters = [documentParam];
+    header.parameters = [param];
   } else {
-    // Registry defined no header — prepend one
-    cloned.unshift({ type: "header", parameters: [documentParam] });
+    (cloned as any).unshift({ type: "header", parameters: [param] });
   }
-
   return cloned;
-}
-
-function stripHeader(components: TemplateComponent[]): TemplateComponent[] {
-  return components.filter((c) => !isHeaderComponent(c));
 }
 
 function normalizeWhatsAppRecipient(to: string, countryCode: string): string {
@@ -247,68 +241,64 @@ class WhatsAppProvider implements ChannelProvider {
         text: { body: String(body) },
       };
 
-    // ── 3. Inject PDF attachment into template header ────────────────────────
-    // When an attachment is present and we're sending a template, upload the
-    // PDF buffer to Meta's /media endpoint to get a media ID, then inject it
-    // into the template's header component so Meta can deliver the document.
-    if (attachment && isTemplate && wirePayload.type === "template") {
+    // ── 3. Inject media into template header ──────────────────────────
+    if (isTemplate && wirePayload.type === "template") {
       const tpl = wirePayload.template;
 
-      let documentParam: DocumentParameter | null = null;
+      // 3a. Document header (PDF receipt for payment_success)
+      if (tpl.name === "payment_success" && attachment) {
+        let docParam: DocumentParameter | null = null;
 
-      try {
-        const buf = Buffer.isBuffer(attachment.content)
-          ? attachment.content
-          : Buffer.from(attachment.content as string, "base64");
+        try {
+          const buf = Buffer.isBuffer(attachment.content)
+            ? attachment.content
+            : Buffer.from(attachment.content as string, "base64");
 
-        const mediaId = await uploadBufferToMeta(
-          buf,
-          attachment.filename,
-          attachment.contentType ?? "application/pdf",
-          p
+          const mediaId = await uploadBufferToMeta(
+            buf, attachment.filename,
+            attachment.contentType ?? "application/pdf", p
+          );
+
+          docParam = {
+            type: "document",
+            document: { id: mediaId, filename: attachment.filename },
+          };
+        } catch (err) {
+          console.error(`${p} ✗ Meta upload failed:`, (err as Error).message);
+          return {
+            success: false,
+            error: "Payment success WhatsApp template requires a receipt PDF attachment",
+          };
+        }
+
+        wirePayload = {
+          ...wirePayload,
+          template: {
+            ...tpl,
+            components: injectIntoHeader(tpl.components, docParam),
+          },
+        };
+      }
+
+      // 3b. Image header (YouTube thumbnail for recorded_session_shared)
+      if (tpl.name === "recorded_session_shared") {
+        const buttonComp = tpl.components.find(
+          (c): c is ButtonComponent => c.type === "button"
         );
+        const videoId = (buttonComp?.parameters[0] as TextParameter | undefined)?.text;
 
-        documentParam = {
-          type: "document",
-          document: { id: mediaId, filename: attachment.filename },
-        };
-      } catch (err) {
-        console.error(`${p} ✗ Meta upload failed:`, (err as Error).message);
-      }
-
-      if (!documentParam && requiresDocumentHeader) {
-        return {
-          success: false,
-          error: "Payment success WhatsApp template requires a receipt PDF document header",
-        };
-      }
-
-      const updatedComponents = documentParam
-        ? injectDocumentIntoHeader(tpl.components, documentParam)
-        : stripHeader(tpl.components);
-
-      if (!documentParam) {
-        console.warn(`${p} Header stripped — template will send without document`);
-      }
-
-      wirePayload = {
-        ...wirePayload,
-        template: { ...tpl, components: updatedComponents },
-      };
-    }
-
-    if (requiresDocumentHeader && wirePayload.type === "template") {
-      const hasDocumentHeader = wirePayload.template.components.some(
-        (component) =>
-          component.type === "header" &&
-          component.parameters?.some((parameter) => parameter.type === "document")
-      );
-
-      if (!hasDocumentHeader) {
-        return {
-          success: false,
-          error: "Payment success WhatsApp template requires a receipt PDF attachment",
-        };
+        if (videoId) {
+          wirePayload = {
+            ...wirePayload,
+            template: {
+              ...tpl,
+              components: injectIntoHeader(tpl.components, {
+                type: "image",
+                image: { link: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` },
+              }),
+            },
+          };
+        }
       }
     }
 

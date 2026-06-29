@@ -884,6 +884,24 @@ export const notify = {
         },
     },
 
+    recordedSession: {
+        shared(
+            p: NotifyParams<"RECORDED_SESSION_SHARED", { sessionId: string }>,
+        ): Promise<NotifyResult> {
+            return send(
+                "RECORDED_SESSION_SHARED",
+                {
+                    organizationId: p.organizationId,
+                    academicYearId: p.academicYearId,
+                    eventId: p.eventId ?? `session:${p.sessionId}`,
+                    recipients: p.recipients,
+                    channels: p.channels,
+                },
+                () => p.variables,
+            );
+        },
+    },
+
     holiday: {
         emergency(
             p: NotifyParams<"EMERGENCY_HOLIDAY", { holidayId: string }>,
