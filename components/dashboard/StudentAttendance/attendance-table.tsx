@@ -89,9 +89,10 @@ interface AttendanceRecord {
 interface AttendanceRecordsProps {
   records: AttendanceRecord[];
   organization?: Organization | null;
+  totalCount?: number;
 }
 
-export function AttendanceTable({ records, organization }: AttendanceRecordsProps) {
+export function AttendanceTable({ records, organization, totalCount }: AttendanceRecordsProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
@@ -254,9 +255,9 @@ export function AttendanceTable({ records, organization }: AttendanceRecordsProp
                 <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">{stats.total}</div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">{totalCount ?? stats.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Attendance records loaded
+              {totalCount ? `Page shows ${stats.total} of ${totalCount}` : 'Attendance records loaded'}
             </p>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent pointer-events-none" />
           </CardContent>
@@ -318,7 +319,7 @@ export function AttendanceTable({ records, organization }: AttendanceRecordsProp
             <div>
               <CardTitle>Attendance Records</CardTitle>
               <CardDescription>
-                Showing {records.length} records • {selectedIds.length} selected
+                Showing {records.length} of {totalCount ?? records.length} records • {selectedIds.length} selected
                 {records.length > 0 && (
                   <span className="block text-xs text-muted-foreground mt-1">
                     Note: Students may appear multiple times (one record per attendance date)

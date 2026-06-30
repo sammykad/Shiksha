@@ -96,7 +96,7 @@ export async function getAttendanceCompletionStats(
         name: `${student.firstName} ${student.lastName}`,
         rollNumber: student.rollNumber || 'N/A',
         attendanceStatus,
-        notes: attendance?.note,
+        note: attendance?.note,
       };
     });
 

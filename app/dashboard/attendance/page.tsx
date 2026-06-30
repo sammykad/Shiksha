@@ -1,5 +1,6 @@
 import { AttendanceTable } from '@/components/dashboard/StudentAttendance/attendance-table';
 import AttendanceFilters from '@/components/dashboard/StudentAttendance/attendance-filter';
+import DataTablePagination from '@/components/ui/data-table-pagination';
 import { PageHeader } from '@/components/ui/page-header';
 import { searchParamsCache } from '@/lib/searchParams';
 import { SearchParams } from 'nuqs';
@@ -69,7 +70,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
 async function AttendanceData({ searchParams }: PageProps) {
   const organization = await getDatabaseOrganization(await getOrganizationId());
 
-  const { search, sectionId, status, gradeId, endDate, startDate } =
+  const { search, sectionId, status, gradeId, endDate, startDate, pageIndex, pageSize } =
     await searchParamsCache.parse(searchParams);
 
   const records = await FilterAttendance({
@@ -79,9 +80,16 @@ async function AttendanceData({ searchParams }: PageProps) {
     status: status as AttendanceStatus,
     startDate: startDate ? toISTDate(new Date(startDate)) : undefined,
     endDate: endDate ? toISTDate(new Date(endDate)) : undefined,
+    page: pageIndex,
+    pageSize,
   });
 
-  return <AttendanceTable records={records || []} organization={organization} />;
+  return (
+    <>
+      <AttendanceTable records={records?.records || []} organization={organization} totalCount={records?.totalCount ?? 0} />
+      <DataTablePagination currentPage={pageIndex} totalPages={records?.totalPages ?? 1} totalCount={records?.totalCount ?? 0} />
+    </>
+  );
 }
 
 async function ExportButton({ searchParams }: PageProps) {
@@ -102,7 +110,7 @@ async function ExportButton({ searchParams }: PageProps) {
 
   return (
     <AttendanceExport
-      records={records || []}
+      records={records?.records || []}
       organization={organization}
       title="Attendance History Report"
       filename="attendance-history"

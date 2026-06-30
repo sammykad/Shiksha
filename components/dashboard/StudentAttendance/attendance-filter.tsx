@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarIcon, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +21,6 @@ import { cn, sortByNaturalText } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useQueryState } from 'nuqs';
 import { fetchGradesAndSections } from '@/app/actions';
-import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { DateRange } from 'react-day-picker';
 import { format, isValid } from 'date-fns';
@@ -46,18 +45,18 @@ export default function AttendanceFilters({
   organizationId,
 }: AttendanceFiltersProps) {
   const [grades, setGrades] = useState<GradeAndSection[]>([]);
-  const [isLoading, startTransition] = useTransition();
-  const router = useRouter();
 
-  // Query state hooks
   const [selectedGrade, setGrade] = useQueryState('gradeId', {
     defaultValue: 'all',
+    shallow: false,
   });
   const [selectedSection, setSection] = useQueryState('sectionId', {
     defaultValue: 'all',
+    shallow: false,
   });
   const [status, setStatus] = useQueryState('status', {
     defaultValue: 'all',
+    shallow: false,
   });
   const [searchQuery, setSearchQuery] = useQueryState('search', {
     defaultValue: '',
@@ -65,17 +64,16 @@ export default function AttendanceFilters({
   });
   const [startDateStr, setStartDate] = useQueryState('startDate', {
     defaultValue: '',
+    shallow: false,
   });
   const [endDateStr, setEndDate] = useQueryState('endDate', {
     defaultValue: '',
+    shallow: false,
   });
 
-  // Local state for date range
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
-  const [activeFilters, setActiveFilters] = useState(0);
 
-  // Load grades and sections on component mount
   useEffect(() => {
     const loadGrades = async () => {
       try {
@@ -93,14 +91,11 @@ export default function AttendanceFilters({
         console.error('Failed to load grades and sections:', error);
       }
     };
-
     loadGrades();
   }, [organizationId]);
 
-  // Reset section when grade changes
   useEffect(() => {
     if (selectedGrade !== 'all') {
-      // Only reset if we're changing to a different grade that's not 'all'
       const currentGrade = grades.find((g) => g.id === selectedGrade);
       if (
         currentGrade &&
@@ -111,12 +106,10 @@ export default function AttendanceFilters({
     }
   }, [selectedGrade, grades]);
 
-  // Initialize date range from URL params
   useEffect(() => {
     if (startDateStr && endDateStr) {
       const start = new Date(startDateStr);
       const end = new Date(endDateStr);
-
       if (isValid(start) && isValid(end)) {
         setDateRange({ from: start, to: end });
       }
@@ -125,130 +118,15 @@ export default function AttendanceFilters({
     }
   }, [startDateStr, endDateStr]);
 
-  // Count active filters
-  useEffect(() => {
-    let count = 0;
-    if (selectedGrade !== 'all') count++;
-    if (selectedSection !== 'all') count++;
-    if (status !== 'all') count++;
-    if (searchQuery) count++;
-    if (startDateStr && endDateStr) count++;
-
-    setActiveFilters(count);
-  }, [
-    selectedGrade,
-    selectedSection,
-    status,
-    searchQuery,
-    startDateStr,
-    endDateStr,
-  ]);
-
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(debouncedSearch);
     }, 300);
-
     return () => clearTimeout(timer);
   }, [debouncedSearch, setSearchQuery]);
 
-  // Handle date range selection
-  const handleDateRangeSelect = useCallback(
-    (range: DateRange | undefined) => {
-      setDateRange(range);
-
-      if (range?.from) {
-        // Use IST timezone to avoid off-by-one date errors
-        setStartDate(formatInTimeZone(range.from, 'Asia/Kolkata', 'yyyy-MM-dd'));
-      } else {
-        setStartDate('');
-      }
-
-      if (range?.to) {
-        // Use IST timezone to avoid off-by-one date errors
-        setEndDate(formatInTimeZone(range.to, 'Asia/Kolkata', 'yyyy-MM-dd'));
-      } else {
-        setEndDate('');
-      }
-    },
-    [setStartDate, setEndDate]
-  );
-
-  // Apply filters
-  const applyFilters = useCallback(() => {
-    startTransition(() => {
-      router.refresh();
-    });
-  }, [router]);
-
-  // Reset filters
-  const resetFilters = useCallback(() => {
-    setGrade('all');
-    setSection('all');
-    setStatus('all');
-    setSearchQuery('');
-    setStartDate('');
-    setEndDate('');
-    setDateRange(undefined);
-    setDebouncedSearch('');
-
-    startTransition(() => {
-      router.refresh();
-    });
-  }, [
-    setGrade,
-    setSection,
-    setStatus,
-    setSearchQuery,
-    setStartDate,
-    setEndDate,
-    router,
-  ]);
-
-  // Clear individual filter
-  const clearFilter = useCallback(
-    (type: string) => {
-      switch (type) {
-        case 'grade':
-          setGrade('all');
-          setSection('all');
-          break;
-        case 'section':
-          setSection('all');
-          break;
-        case 'status':
-          setStatus('all');
-          break;
-        case 'search':
-          setSearchQuery('');
-          setDebouncedSearch('');
-          break;
-        case 'date':
-          setStartDate('');
-          setEndDate('');
-          setDateRange(undefined);
-          break;
-      }
-
-      startTransition(() => {
-        router.refresh();
-      });
-    },
-    [
-      setGrade,
-      setSection,
-      setStatus,
-      setSearchQuery,
-      setStartDate,
-      setEndDate,
-      router,
-    ]
-  );
-
   return (
     <div className="space-y-6">
-      {/* Search and Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2 md:col-span-2">
           <Label className="text-sm font-medium">Student</Label>
@@ -292,7 +170,6 @@ export default function AttendanceFilters({
         </div>
       </div>
 
-      {/* Grade, Section, and Date Range */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="grade">Grade</Label>
@@ -373,7 +250,19 @@ export default function AttendanceFilters({
                 mode="range"
                 defaultMonth={dateRange?.from}
                 selected={dateRange}
-                onSelect={handleDateRangeSelect}
+                onSelect={(range) => {
+                  setDateRange(range);
+                  if (range?.from) {
+                    setStartDate(formatInTimeZone(range.from, 'Asia/Kolkata', 'yyyy-MM-dd'));
+                  } else {
+                    setStartDate('');
+                  }
+                  if (range?.to) {
+                    setEndDate(formatInTimeZone(range.to, 'Asia/Kolkata', 'yyyy-MM-dd'));
+                  } else {
+                    setEndDate('');
+                  }
+                }}
                 numberOfMonths={2}
               />
             </PopoverContent>
@@ -382,8 +271,6 @@ export default function AttendanceFilters({
       </div>
 
       <div className="flex items-center justify-between">
-        {/* Active Filters */}
-
         <div className="flex flex-wrap gap-2 pt-2">
           {selectedGrade !== 'all' && (
             <Badge variant="secondary" className="gap-1">
@@ -392,7 +279,7 @@ export default function AttendanceFilters({
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 ml-1"
-                onClick={() => clearFilter('grade')}
+                onClick={() => { setGrade('all'); setSection('all'); }}
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove grade filter</span>
@@ -412,7 +299,7 @@ export default function AttendanceFilters({
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 ml-1"
-                onClick={() => clearFilter('section')}
+                onClick={() => setSection('all')}
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove section filter</span>
@@ -427,7 +314,7 @@ export default function AttendanceFilters({
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 ml-1"
-                onClick={() => clearFilter('status')}
+                onClick={() => setStatus('all')}
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove status filter</span>
@@ -437,15 +324,12 @@ export default function AttendanceFilters({
 
           {searchQuery && (
             <Badge variant="secondary" className="gap-1">
-              Search:{' '}
-              {searchQuery.length > 15
-                ? `${searchQuery.substring(0, 15)}...`
-                : searchQuery}
+              Search: {searchQuery.length > 15 ? `${searchQuery.substring(0, 15)}...` : searchQuery}
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 ml-1"
-                onClick={() => clearFilter('search')}
+                onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }}
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove search filter</span>
@@ -461,27 +345,13 @@ export default function AttendanceFilters({
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 ml-1"
-                onClick={() => clearFilter('date')}
+                onClick={() => { setStartDate(''); setEndDate(''); setDateRange(undefined); }}
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove date filter</span>
               </Button>
             </Badge>
           )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-2">
-          <Button
-            variant="outline"
-            onClick={resetFilters}
-            disabled={activeFilters === 0 || isLoading}
-          >
-            Reset All
-          </Button>
-          <Button onClick={applyFilters} disabled={isLoading}>
-            Apply Filters
-          </Button>
         </div>
       </div>
     </div>

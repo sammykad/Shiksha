@@ -14,7 +14,7 @@ export const searchParams = {
   limit: parseAsIndex.withDefault(2),
 
   // For Fee Assignment Page
-  pageSize: parseAsInteger.withDefault(20),
+  pageSize: parseAsInteger.withDefault(30),
   pageIndex: parseAsInteger.withDefault(1),
   search: parseAsString.withDefault(''),
   sectionId: parseAsString.withDefault('all'),

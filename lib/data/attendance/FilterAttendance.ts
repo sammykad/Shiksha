@@ -15,6 +15,8 @@ interface FilterAttendanceProps {
   gradeId?: string;
   startDate?: Date;
   endDate?: Date;
+  page?: number;
+  pageSize?: number;
 }
 
 export const FilterAttendance = cache(async ({
@@ -24,6 +26,8 @@ export const FilterAttendance = cache(async ({
   gradeId,
   startDate,
   endDate,
+  page,
+  pageSize,
 }: FilterAttendanceProps) => {
   const organizationId = await getOrganizationId();
   const academicYearId = await getActiveAcademicYearId();
@@ -63,8 +67,21 @@ export const FilterAttendance = cache(async ({
   };
 
 
+  const totalCount = await prisma.studentAttendance.count({ where: whereClause });
+
+  let safePage = 1;
+  let safePageSize = 30;
+
+  if (page && pageSize) {
+    safePageSize = Math.min(Math.max(1, pageSize), 200);
+    const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+    safePage = Math.min(Math.max(1, page), totalPages);
+  }
+
   const records = await prisma.studentAttendance.findMany({
     where: whereClause,
+    skip: page && pageSize ? (safePage - 1) * safePageSize : undefined,
+    take: page && pageSize ? safePageSize : undefined,
     include: {
       student: {
         select: {
@@ -73,26 +90,29 @@ export const FilterAttendance = cache(async ({
           lastName: true,
           rollNumber: true,
           profileImage: true,
-          section: {
-            select: { name: true },
-          },
-          grade: {
-            select: {
-              grade: true,
-              id: true,
-            },
-          },
+          section: { select: { name: true } },
+          grade: { select: { grade: true, id: true } },
         },
       },
       section: true,
     },
-    orderBy: {
-      date: 'desc',
-    },
+    orderBy: [{ date: 'desc' }, { id: 'asc' }],
   });
-  return records.map((record) => ({
+
+  const mapped = records.map((record) => ({
     ...record,
     grade: record.student.grade,
   }));
+
+  if (page && pageSize) {
+    return {
+      records: mapped,
+      totalCount,
+      totalPages: Math.max(1, Math.ceil(totalCount / safePageSize)),
+      page: safePage,
+      pageSize: safePageSize,
+    };
+  }
+  return { records: mapped, totalCount };
 });
 

@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { sortByNaturalText } from '@/lib/utils';
+import { useTerminology } from '@/context/terminology';
 
 type GradeAndSection = {
   id: string;
@@ -31,12 +32,11 @@ type Section = {
   name: string;
 };
 
-interface AttendanceFiltersProps {
+interface FeeAssignmentFilterProps {
   organizationId: string;
 }
-import { useTerminology } from '@/context/terminology';
 
-const FeeAssignmentFilter = ({ organizationId }: AttendanceFiltersProps) => {
+const FeeAssignmentFilter = ({ organizationId }: FeeAssignmentFilterProps) => {
   const [grades, setGrades] = useState<GradeAndSection[]>([]);
   const terms = useTerminology();
 

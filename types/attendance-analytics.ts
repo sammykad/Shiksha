@@ -3,7 +3,7 @@ export interface StudentAnalytics {
     name: string;
     rollNumber: string;
     attendanceStatus: 'PRESENT' | 'ABSENT' | 'LATE' | 'NOT_MARKED';
-    notes?: string;
+    note?: string;
 }
 
 export interface SectionAttendanceDetails {
