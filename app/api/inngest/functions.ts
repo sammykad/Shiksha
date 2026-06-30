@@ -35,13 +35,16 @@ export const updateOverdueFeesAutomation = inngest.createFunction(
   },
 );
 
-export const updatePaymentStatus = inngest.createFunction(
-  { id: 'payment-status-update' },
+export const failStalePendingPayments = inngest.createFunction(
+  { id: 'fail-stale-pending-payments' },
   { cron: '30 22 * * *' },
   async ({ step }) => {
     const count = await step.run('fail-pending', async () => {
       const r = await prisma.feePayment.updateMany({
-        where: { status: PaymentStatus.PENDING },
+        where: {
+          status: PaymentStatus.PENDING,
+          createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
         data: { status: PaymentStatus.FAILED },
       });
       return r.count;

@@ -2,7 +2,7 @@ import { inngest } from '@/lib/inngest/client';
 import { serve } from 'inngest/next';
 import {
   updateOverdueFeesAutomation,
-  updatePaymentStatus,
+  failStalePendingPayments,
   scheduledFeeReminder,
   updateExamStatuses,
   updateNoticeStatuses,
@@ -14,7 +14,7 @@ export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
     updateOverdueFeesAutomation,
-    updatePaymentStatus,
+    failStalePendingPayments,
     scheduledFeeReminder,
     updateExamStatuses,
     updateNoticeStatuses,

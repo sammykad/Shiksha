@@ -5,6 +5,7 @@ import { ChequeStatus, PaymentMethod, PaymentStatus } from '@/generated/prisma/e
 import { getCurrentUserId } from '@/lib/user';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { getOrganizationId } from '@/lib/organization';
 import { getCurrentUserByRole } from '@/lib/auth';
 import { notify } from '@/lib/notifications/notify';
@@ -178,8 +179,14 @@ export const getPdcCheques = async () => {
     throw new Error('Only admins can view PDC cheques');
   }
   const organizationId = await getOrganizationId();
+  const academicYearId = await getActiveAcademicYearId();
   const pdcCheques = await prisma.chequeDetail.findMany({
-    where: { feePayment: { organizationId } },
+    where: {
+      feePayment: {
+        organizationId,
+        fee: { academicYearId },
+      },
+    },
     orderBy: { chequeDate: 'asc' },
     include: {
       feePayment: {

@@ -32,7 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCostINR, formatCurrencyINWithSymbol, formatDateIN } from "@/lib/utils";
 import { BILLING_CONTACT } from "@/constants";
-import { BillingCycle, InvoiceStatus, SubscriptionPaymentStatus, SubscriptionStatus } from "@/generated/prisma/enums";
+import { BillingCycle, BillingMetric, InvoiceStatus, SubscriptionPaymentStatus, SubscriptionStatus } from "@/generated/prisma/enums";
 import BillingSummary, { type BillingSummaryData } from "./BillingSummary";
 
 export type BillingPlanOption = {
@@ -100,14 +100,13 @@ export default function BillingSettings({ billingSummary, plans }: BillingSettin
         ? (subscriptionCycle === BillingCycle.ANNUAL ? activePlan.annualPrice : activePlan.monthlyPrice)
         : 0;
 
-    const subscriptionPricingMode = subscription?.pricingMode;
     const subscriptionBillingMetric = subscription?.billingMetric;
 
-    const unitLabel = subscriptionBillingMetric === "STUDENT"
+    const unitLabel = subscriptionBillingMetric === BillingMetric.STUDENT
         ? "/student/"
-        : subscriptionPricingMode === "CUSTOM_PER_USER"
+        : subscriptionBillingMetric === BillingMetric.USER
             ? "/user/"
-            : "/";
+        : "/";
 
     const cycleSuffix = subscriptionCycle === BillingCycle.ANNUAL ? "year" : "month";
 

@@ -69,8 +69,9 @@ import { getOrganizationId } from '@/lib/organization';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from '@/lib/user';
 import { notify } from '@/lib/notifications/notify';
-import { preparePaymentReceipt } from './preparePaymentReceipt';
-import { getFeeBalance, syncFeeBalance } from './fee-balance';
+import { preparePaymentReceipt } from '@/lib/data/fee/preparePaymentReceipt';
+import { getFeeBalance, syncFeeBalance } from '@/lib/data/fee/fee-balance';
+import { generateReceiptNumber } from '@/lib/data/fee/receipt-number';
 import { PLATFORM_FEE_PERCENT } from '@/constants';
 import type { FeeRecord } from '@/types';
 
@@ -193,7 +194,7 @@ export const phonePayInitPayment = async (
       responseData.success &&
       responseData.data?.instrumentResponse?.redirectInfo?.url
     ) {
-      const receiptNumber = `REC-${randomUUID().slice(0, 8).toUpperCase()}`;
+      const receiptNumber = await generateReceiptNumber(organizationId, 'REC');
       // Only create database record AFTER successful PhonePe response
       await prisma.feePayment.create({
         data: {

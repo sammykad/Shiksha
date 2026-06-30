@@ -7,10 +7,10 @@ import { getOrganizationId } from '@/lib/organization';
 import { pdcPaymentSchema, PdcPaymentFormData } from '@/lib/schemas';
 import { getCurrentUserId } from '@/lib/user';
 import { formatCurrencyIN } from '@/lib/utils';
-import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { notify } from '@/lib/notifications/notify';
-import { getFeeBalance } from './fee-balance';
+import { getFeeBalance } from '@/lib/data/fee/fee-balance';
+import { generateReceiptNumber } from '@/lib/data/fee/receipt-number';
 
 export const recordPdcPayment = async (data: PdcPaymentFormData) => {
   const userId = await getCurrentUserId();
@@ -71,7 +71,7 @@ export const recordPdcPayment = async (data: PdcPaymentFormData) => {
     throw new Error('Payer must be the student or one of their parents');
   }
 
-  const receiptNumber = `PDC-${randomUUID().slice(0, 8).toUpperCase()}`;
+  const receiptNumber = await generateReceiptNumber(organizationId, 'PDC');
 
   // ── 2. Persist in transaction ────────────────────────────────────────────
   // Fee status stays UNPAID — PDC is not credited until cheque is CLEARED.

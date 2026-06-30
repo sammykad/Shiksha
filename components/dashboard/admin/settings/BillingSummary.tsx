@@ -3,7 +3,7 @@
 import { Progress } from "@/components/ui/progress";
 import { formatCostINR } from "@/lib/utils";
 import React from "react";
-import { NotificationChannel } from "@/generated/prisma/enums";
+import { BillingCycle, BillingMetric, NotificationChannel, PricingMode } from "@/generated/prisma/enums";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,12 +21,12 @@ export type BillingSummaryData = {
   subscription: {
     id: string;
     status: string;
-    pricingMode: string;
+    pricingMode: PricingMode;
     planName: string;
     planCode: string | null;
     offerName: string | null;
-    billingCycle: string;
-    billingMetric: string;
+    billingCycle: BillingCycle;
+    billingMetric: BillingMetric;
     studentCount: number;
     studentLimit: number | null;
     price: number | null;

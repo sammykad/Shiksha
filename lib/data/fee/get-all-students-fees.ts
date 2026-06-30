@@ -5,13 +5,12 @@ import { getOrganizationId } from '@/lib/organization';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { getFeeBalance } from './fee-balance';
 
-export async function getFeeRecords(count: number = 50): Promise<FeeRecord[]> {
+export async function getFeeRecords(): Promise<FeeRecord[]> {
   try {
 
     const organizationId = await getOrganizationId()
     const academicYearId = await getActiveAcademicYearId()
     const fees = await prisma.fee.findMany({
-      take: count,
       where: {
         organizationId,
         academicYearId

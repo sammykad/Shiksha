@@ -282,14 +282,20 @@ export function calculateSubscriptionAmount(
         throw new Error("Plan price is not configured for the selected billing cycle.");
       }
       const effectivePrice = offer?.fixedPrice ?? basePrice;
-      unitPrice = input.billingMetric === BillingMetric.STUDENT ? effectivePrice : null;
-      subtotal =
-        input.billingMetric === BillingMetric.STUDENT
-          ? effectivePrice * studentCount
-          : effectivePrice;
-      breakdown = input.billingMetric === BillingMetric.STUDENT
-        ? `₹${effectivePrice}/student × ${studentCount} students`
-        : `₹${effectivePrice}/${billingCycle === BillingCycle.ANNUAL ? "year" : "month"}`;
+      if (input.billingMetric === BillingMetric.STUDENT) {
+        unitPrice = effectivePrice;
+        subtotal = effectivePrice * studentCount;
+        breakdown = `₹${effectivePrice}/student × ${studentCount} students`;
+      } else if (input.billingMetric === BillingMetric.USER) {
+        const count = input.userCount ?? 0;
+        unitPrice = effectivePrice;
+        subtotal = effectivePrice * count;
+        breakdown = `₹${effectivePrice}/user × ${count} users`;
+      } else {
+        unitPrice = null;
+        subtotal = effectivePrice;
+        breakdown = `₹${effectivePrice}/${billingCycle === BillingCycle.ANNUAL ? "year" : "month"}`;
+      }
       break;
     }
 

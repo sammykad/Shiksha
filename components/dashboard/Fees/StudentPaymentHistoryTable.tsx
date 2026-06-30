@@ -534,7 +534,7 @@ function FilterControls({
 
   return (
     <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 mb-4">
-      <TabsList className="flex-wrap">
+      <TabsList className="flex-wrap mb-5">
         {['all', 'paid', 'unpaid', 'overdue'].map((tab) => (
           <TabsTrigger
             key={tab}
@@ -1384,7 +1384,7 @@ const FeeDetailsContent = ({
             </div>
           )}
 
-          <DialogFooter className="gap-2 grid grid-cols-2 ">
+          <DialogFooter className={`gap-2 grid ${selectedRecord.fee.status === 'PAID' && selectedRecord.payments?.length > 0 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {selectedRecord.fee.status !== 'PAID' && (
               <Dialog
                 open={isRecordPaymentOpen}
@@ -1415,32 +1415,35 @@ const FeeDetailsContent = ({
             )}
             {/* ── NEW: post-dated cheque ───────────────────────────────── */}
             {selectedRecord.fee.status !== 'PAID' && (
-            <Dialog open={isPdcOpen} onOpenChange={setIsPdcOpen}>
-              <DialogTrigger asChild>
-                <Button aria-label="Record post-dated cheque" variant="outline">
-                  <FileTextIcon className="h-4 w-4 mr-2" />
-                  PDC Cheque
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Record PDC Cheque</DialogTitle>
-                  <DialogDescription>
-                    Record a post-dated cheque for{' '}
-                    {`${selectedRecord.student.firstName} ${selectedRecord.student.lastName}`}.
-                    Fee will be credited only after the cheque is marked as cleared.
-                  </DialogDescription>
-                </DialogHeader>
-                <RecordPdcPaymentCard
-                  selectedRecord={selectedRecord}
-                  onSuccess={() => setIsPdcOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
+              <Dialog open={isPdcOpen} onOpenChange={setIsPdcOpen}>
+                <DialogTrigger asChild>
+                  <Button aria-label="Record post-dated cheque" variant="outline">
+                    <FileTextIcon className="h-4 w-4 mr-2" />
+                    PDC Cheque
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Record PDC Cheque</DialogTitle>
+                    <DialogDescription>
+                      Record a post-dated cheque for{' '}
+                      {`${selectedRecord.student.firstName} ${selectedRecord.student.lastName}`}.
+                      Fee will be credited only after the cheque is marked as cleared.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <RecordPdcPaymentCard
+                    selectedRecord={selectedRecord}
+                    onSuccess={() => setIsPdcOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             )}
-            <DownloadReceiptDialog
-              record={selectedRecord}
-            />
+
+            {selectedRecord.payments?.length > 0 && (
+              <DownloadReceiptDialog
+                record={selectedRecord}
+              />
+            )}
             {/* 
             {selectedRecord.fee.status !== 'PAID' && (
               <Dialog>

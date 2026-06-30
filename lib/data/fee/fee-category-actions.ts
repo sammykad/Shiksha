@@ -51,6 +51,14 @@ export async function updateFeeCategory(id: string, data: FeeCategoryData) {
 export async function deleteFeeCategory(id: string) {
   try {
     const organizationId = await getOrganizationId();
+    const feeCount = await prisma.fee.count({
+      where: { feeCategoryId: id, organizationId },
+    });
+    if (feeCount > 0) {
+      throw new Error(
+        `Cannot delete this category. ${feeCount} fee record${feeCount === 1 ? '' : 's'} ${feeCount === 1 ? 'is' : 'are'} assigned to it. Remove or reassign the fees first.`
+      );
+    }
     await prisma.feeCategory.delete({
       where: { id, organizationId },
     });
@@ -58,6 +66,7 @@ export async function deleteFeeCategory(id: string) {
     revalidatePath('/dashboard/fees/admin/fee-categories');
     return { success: true };
   } catch (error) {
+    if (error instanceof Error) throw error;
     console.error('Failed to delete fee category:', error);
     throw new Error('Failed to delete fee category');
   }

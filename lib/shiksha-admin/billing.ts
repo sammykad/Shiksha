@@ -104,7 +104,9 @@ export async function createCustomDeal(
       billingMetric:
         input.pricingMode === PricingMode.CUSTOM_PER_STUDENT || input.pricingMode === PricingMode.CUSTOM_SLAB
           ? BillingMetric.STUDENT
-          : BillingMetric.FLAT,
+          : input.pricingMode === PricingMode.CUSTOM_PER_USER
+            ? BillingMetric.USER
+            : BillingMetric.FLAT,
       customPrice: input.customPrice,
       unitPrice: input.unitPrice,
       contractReference: input.contractReference,

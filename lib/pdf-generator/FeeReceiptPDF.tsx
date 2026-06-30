@@ -103,14 +103,14 @@ function StatusBadge({ label, color }: { label: string; color: string }) {
   return (
     <View
       style={{
-        ...tw("rounded-sm px-1 py-0.5 self-start"),
+        ...tw("rounded-sm px-1 py-0.5 self-center items-center"),
         borderWidth: 0.75,
         borderColor: color,
       }}
     >
       <Text
         style={{
-          ...tw("font-bold text-2xs tracking-wide"),
+          ...tw("font-bold text-2xs tracking-wide text-center"),
           color,
         }}
       >

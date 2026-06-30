@@ -511,6 +511,8 @@ async function main() {
   // ==========================================
   console.log('📄 Creating Fee Records...');
   let feeCount = 0;
+  const feeRecordsToPay: Array<{ id: string; paidAmount: number }> = [];
+  const paymentMethods = ['CASH', 'UPI', 'ONLINE', 'BANK_TRANSFER'];
 
   for (const student of studentRecords) {
     const gradeName = CONFIG.grades.find(g => gradeRecords[g] === student.gradeId) || 'Grade 1';
@@ -530,19 +532,45 @@ async function main() {
       const isPaid = Math.random() > 0.35;
       const paidAmount = isPaid ? ft.amount : ft.amount * 0.5;
       const pendingAmount = isPaid ? 0 : ft.amount * 0.5;
+      const feeId = generateId();
 
       await pool.query(
         `INSERT INTO "Fee" (id, "totalFee", "paidAmount", "pendingAmount", "dueDate", status, "studentId", "feeCategoryId", "organizationId", "academicYearId", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
-          generateId(), ft.amount, paidAmount, pendingAmount, ft.due,
+          feeId, ft.amount, paidAmount, pendingAmount, ft.due,
           isPaid ? 'PAID' : 'UNPAID', student.id, feeCategoryIds[ft.cat], orgId, academicYearId, now, now
         ]
       );
       feeCount++;
+
+      if (paidAmount > 0) {
+        feeRecordsToPay.push({ id: feeId, paidAmount });
+      }
     }
   }
   console.log(`   ✅ ${feeCount} Fee Records created`);
+
+  // Create FeePayment records for fees with paidAmount > 0
+  console.log('💳 Creating Fee Payments...');
+  let payCount = 0;
+  for (const fr of feeRecordsToPay) {
+    const payMethod = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
+    const recNum = `SVM-RCP-${String(1000 + payCount)}`;
+    const payId = generateId();
+    const paymentDate = randomDate(new Date('2025-04-01'), new Date('2026-03-31'));
+
+    await pool.query(
+      `INSERT INTO "FeePayment" (id, "feeId", amount, status, "paymentMethod", "paymentDate", "receiptNumber", "payerId", "organizationId", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [
+        payId, fr.id, fr.paidAmount, 'COMPLETED', payMethod,
+        paymentDate, recNum, adminId, orgId, now, now,
+      ]
+    );
+    payCount++;
+  }
+  console.log(`   ✅ ${payCount} Fee Payments created`);
 
   // ==========================================
   // 16. Create Academic Calendar Events

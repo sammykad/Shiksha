@@ -1,0 +1,62 @@
+{
+  "invoice_generated": {
+    "name": "invoice_generated",
+    "language": "en",
+    "category": "TRANSACTIONAL",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "New Invoice Generated"
+      },
+      {
+        "type": "BODY",
+        "text": "New invoice {{1}} for {{2}} — {{3}} for {{4}} students.\nDue by: {{5}}\n\n{{6}}"
+      },
+      {
+        "type": "FOOTER",
+        "text": "System alert • Shiksha.cloud"
+      }
+    ]
+  },
+  "invoice_paid": {
+    "name": "invoice_paid",
+    "language": "en",
+    "category": "TRANSACTIONAL",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "Payment Received ✓"
+      },
+      {
+        "type": "BODY",
+        "text": "{{1}} · Invoice {{5}} paid\n\nPlan: {{2}}\nAmount: {{3}}\nPaid via: {{4}}\nUTR: {{7}}\nDate: {{6}}"
+      },
+      {
+        "type": "FOOTER",
+        "text": "System alert • Shiksha.cloud"
+      }
+    ]
+  },
+  "invoice_due_reminder": {
+    "name": "invoice_due_reminder",
+    "language": "en",
+    "category": "TRANSACTIONAL",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "⏰ Payment Reminder"
+      },
+      {
+        "type": "BODY",
+        "text": "Reminder: Invoice {{1}} of {{3}} for {{2}} is due {{4}}.\n\n{{6}} · {{5}} students enrolled."
+      },
+      {
+        "type": "FOOTER",
+        "text": "System alert • Shiksha.cloud"
+      }
+    ]
+  }
+}

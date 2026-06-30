@@ -791,7 +791,7 @@ async function main() {
    * ===================================================================== */
   console.log('💳 Creating Fee Payments & Cheque Details...');
   const allFees = (await pool.query(
-    `SELECT id, "totalFee", "paidAmount", "studentId", "feeCategoryId" FROM "Fee" WHERE "organizationId" = $1 AND "paidAmount" > 0 LIMIT 200`,
+    `SELECT id, "totalFee", "paidAmount", "studentId", "feeCategoryId" FROM "Fee" WHERE "organizationId" = $1 AND "paidAmount" > 0`,
     [orgId])).rows;
 
   let payCount = 0;

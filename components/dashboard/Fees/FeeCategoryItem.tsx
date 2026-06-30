@@ -50,10 +50,9 @@ export function FeeCategoryItem({ category }: FeeCategoryItemProps) {
         toast.success('Fee category deleted successfully');
         router.refresh();
       } catch (error) {
-        toast.warning('Failed to delete fee category', {
-          description:
-            'You can not delete Fee Category Please try again or contact support.',
-        });
+        toast.warning(
+          error instanceof Error ? error.message : 'Failed to delete fee category',
+        );
       }
     });
   }

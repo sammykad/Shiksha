@@ -26,6 +26,7 @@ enum BillingCycle {
 
 enum BillingMetric {
   STUDENT
+  USER
   FLAT
 }
 
@@ -1343,6 +1344,7 @@ model FeePayment {
   // @@index([isReconciled, paymentDate])
   @@unique([organizationId, receiptNumber])
   @@unique([feeId, transactionId])
+  @@index([transactionId])
   @@index([feeId])
   @@index([paymentDate])
   @@index([payerId])

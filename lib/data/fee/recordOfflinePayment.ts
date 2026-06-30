@@ -7,11 +7,11 @@ import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import { offlinePaymentFormData, offlinePaymentSchema } from '@/lib/schemas';
 import { getCurrentUserId } from '@/lib/user';
 import { formatCurrencyIN } from '@/lib/utils';
-import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { notify } from '@/lib/notifications/notify';
-import { preparePaymentReceipt } from './preparePaymentReceipt';
-import { getFeeBalance, syncFeeBalance } from './fee-balance';
+import { preparePaymentReceipt } from '@/lib/data/fee/preparePaymentReceipt';
+import { getFeeBalance, syncFeeBalance } from '@/lib/data/fee/fee-balance';
+import { generateReceiptNumber } from '@/lib/data/fee/receipt-number';
 import { PrismaUserError } from '@/lib/prisma-error-extension';
 
 export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
@@ -64,7 +64,7 @@ export const recordOfflinePayment = async (data: offlinePaymentFormData) => {
     if (!payer) throw new Error(`Payer ID '${validatedData.payerId}' does not exist.`);
   }
 
-  const receiptNumber = `REC-${randomUUID().slice(0, 8).toUpperCase()}`;
+  const receiptNumber = await generateReceiptNumber(organizationId, 'REC');
 
   // ── 2. Persist payment in a transaction ───────────────────────────────────
   const paymentAmount = validatedData.amount;
