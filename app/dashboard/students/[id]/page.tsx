@@ -25,13 +25,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatCurrencyIN, formatDateIN } from '@/lib/utils';
+import { formatCurrencyIN, formatDateIN, toISTDate } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { StudentDashboardStatsCards } from '@/components/dashboard/Student/StudentDashboardStatsCards';
 import { StudentAttendanceCalendar } from '@/components/dashboard/StudentAttendance/attendance-calendar';
 import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import { getOrganizationId } from '@/lib/organization';
 import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
+import { countWorkingDays } from '@/lib/data/attendance/attendance-utils';
 import { getCurrentUserByRole } from '@/lib/auth';
 import { DocumentCard } from '@/components/dashboard/Student/documents/DocumentCard';
 import StudentAcademicPerformance from '@/components/dashboard/Student/StudentAcademicPerformance';
@@ -41,55 +42,67 @@ import StudentSubjectsRadar from '@/components/dashboard/Student/student-subject
 import { getFeesSummary } from '@/lib/data/fee/fee-balance';
 
 const getStudentFullDetails = async (studentId: string, organizationId: string, academicYearId: string) => {
-  const student = await prisma.student.findUnique({
-    where: { id: studentId, organizationId },
-    include: {
-      grade: true,
-      section: {
-        include: {
-          classTeacher: { include: { user: true } },
-        },
-      },
-      user: true,
-      organization: true,
-      parents: {
-        include: { parent: true },
-      },
-      StudentDocument: {
-        where: { isDeleted: false },
-        orderBy: { createdAt: 'desc' },
-      },
-      Fee: {
-        where: { academicYearId },
-        include: {
-          feeCategory: true,
-          payments: {
-            include: { payer: true },
-            orderBy: { paymentDate: 'desc' },
+  const [student, weekendDays, holidays, academicYear] = await Promise.all([
+    prisma.student.findUnique({
+      where: { id: studentId, organizationId },
+      include: {
+        grade: true,
+        section: {
+          include: {
+            classTeacher: { include: { user: true } },
           },
         },
+        user: true,
+        organization: true,
+        parents: {
+          include: { parent: true },
+        },
+        StudentDocument: {
+          where: { isDeleted: false },
+          orderBy: { createdAt: 'desc' },
+        },
+        Fee: {
+          where: { academicYearId },
+          include: {
+            feeCategory: true,
+            payments: {
+              include: { payer: true },
+              orderBy: { paymentDate: 'desc' },
+            },
+          },
+        },
+        StudentAttendance: {
+          where: { academicYearId },
+          orderBy: { date: 'desc' },
+        },
       },
-      StudentAttendance: {
-        where: { academicYearId },
-        orderBy: { date: 'desc' },
-      },
-    },
-  });
+    }),
+    getOrganizationWeekendDays(),
+    prisma.academicCalendar.findMany({
+      where: { organizationId, academicYearId },
+      select: { startDate: true, endDate: true },
+    }),
+    prisma.academicYear.findUnique({
+      where: { id: academicYearId },
+      select: { startDate: true },
+    }),
+  ]);
 
   if (!student) return null;
 
-
-
-  // Calculate stats from the fetched data
-  const totalAttendance = student.StudentAttendance.length;
+  // Calculate stats using expected working days
+  const todayIST = toISTDate(new Date());
+  const yearStart = academicYear?.startDate;
+  const workingDays = yearStart ? countWorkingDays(yearStart, todayIST, weekendDays, holidays) : student.StudentAttendance.length;
   const presentAttendance = student.StudentAttendance.filter((a) => a.status === 'PRESENT' || a.status === 'LATE').length;
-  const attendanceRate = totalAttendance > 0 ? Math.round((presentAttendance / totalAttendance) * 100) : 0;
+  const attendanceRate = workingDays > 0 ? Math.round((presentAttendance / workingDays) * 100) : 0;
 
   const feeSummary = getFeesSummary(student.Fee);
 
   return {
     student,
     attendanceRate,
+    workingDays,
     totalFees: feeSummary.totalAmount,
     paidFees: feeSummary.paidAmount,
     pendingFees: feeSummary.dueAmount,
@@ -169,14 +182,14 @@ const StudentDetailsPage = async ({
     );
   }
 
-  const { student, attendanceRate, totalFees, paidFees, pendingFees } = studentData;
+  const { student, attendanceRate, workingDays, totalFees, paidFees, pendingFees } = studentData;
   const { academicYears, examSessions, holidayData } = orgMeta;
 
   // Prepare stats for the stats card to avoid extra DB call
   const dashboardStats = {
     attendanceRate,
     attendancePresent: student.StudentAttendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length,
-    attendanceTotal: student.StudentAttendance.length,
+    attendanceTotal: workingDays,
     gpa: performanceData.reportCards[0]?.cgpa || 0,
     grade: performanceData.reportCards[0]?.overallGrade || 'N/A',
     upcomingExams: performanceData.upcomingExams,

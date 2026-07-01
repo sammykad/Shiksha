@@ -6,3 +6,6 @@ infra
 ecosystem
 pristine
 shikshacloud.in
+One 
+Prime
+Edge

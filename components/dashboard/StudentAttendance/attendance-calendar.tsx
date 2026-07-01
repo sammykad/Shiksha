@@ -1,6 +1,7 @@
 'use client';
 
-import { cn, toISTDate, isSameDayIST, isAfterIST } from '@/lib/utils';
+import { cn, toISTDate, isSameDayIST, isAfterIST, IST } from '@/lib/utils';
+import { toZonedTime } from 'date-fns-tz';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -276,7 +277,7 @@ export function StudentAttendanceCalendar({
       const istToday = toISTDate();
       const todayCheck = isSameDayIST(date, istToday);
       const futureCheck = isAfterIST(date, istToday);
-      const isWeekend = weekendDays.includes(getDay(date));
+      const isWeekend = weekendDays.includes(toZonedTime(date, IST).getDay());
 
       const holiday = getHolidayForDate(date);
       const attendance = attendanceRecords.find((record) =>

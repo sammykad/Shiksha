@@ -60,9 +60,13 @@ export async function getWeeklyAttendanceReport(
     orderBy: { date: 'asc' },
   });
 
-  // 5. build daily records (exclude weekend days)
+  // 5. build daily records (exclude weekend days + holidays)
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
-    .filter((d) => !weekendDays.includes(toZonedTime(d, IST).getDay()));
+    .filter((d) => {
+      if (weekendDays.includes(toZonedTime(d, IST).getDay())) return false;
+      const t = d.getTime();
+      return !holidays.some((h) => t >= h.startDate.getTime() && t <= h.endDate.getTime());
+    });
   const weeklyRecords = weekDays.map((d) => {
     const dateStr = format(d, 'yyyy-MM-dd');
     const record = weeklyRows.find(

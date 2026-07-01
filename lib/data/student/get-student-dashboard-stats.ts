@@ -2,6 +2,9 @@
 
 import { getActiveAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
+import { countWorkingDays } from '@/lib/data/attendance/attendance-utils';
+import { toISTDate } from '@/lib/utils';
 
 export const getStudentDashboardStats = async (studentId: string) => {
   const student = await prisma.student.findUnique({
@@ -9,6 +12,7 @@ export const getStudentDashboardStats = async (studentId: string) => {
     select: {
       id: true,
       sectionId: true,
+      organizationId: true,
     },
   });
 
@@ -16,22 +20,35 @@ export const getStudentDashboardStats = async (studentId: string) => {
 
   const academicYearId = await getActiveAcademicYearId()
 
-  // Attendance Rate (last 30 days)
-  const attendanceRecords = await prisma.studentAttendance.findMany({
-    where: {
-      studentId: student.id,
-      academicYearId
-    },
-    select: {
-      status: true,
-    },
-  });
+  // Attendance Rate — using expected working days
+  const [attendanceRecords, weekendDays, holidays, academicYear] = await Promise.all([
+    prisma.studentAttendance.findMany({
+      where: {
+        studentId: student.id,
+        academicYearId
+      },
+      select: {
+        status: true,
+      },
+    }),
+    getOrganizationWeekendDays(),
+    prisma.academicCalendar.findMany({
+      where: { organizationId: student.organizationId, academicYearId },
+      select: { startDate: true, endDate: true },
+    }),
+    prisma.academicYear.findUnique({
+      where: { id: academicYearId },
+      select: { startDate: true },
+    }),
+  ]);
 
-  const total = attendanceRecords.length;
+  const todayIST = toISTDate(new Date());
+  const yearStart = academicYear?.startDate;
+  const workingDays = yearStart ? countWorkingDays(yearStart, todayIST, weekendDays, holidays) : attendanceRecords.length;
   const presentCount = attendanceRecords.filter((a) => a.status === 'PRESENT').length;
   const lateCount = attendanceRecords.filter((a) => a.status === 'LATE').length;
 
-  const attendanceRate = total > 0 ? Math.round(((presentCount + lateCount) / total) * 100) : 0;
+  const attendanceRate = workingDays > 0 ? Math.round(((presentCount + lateCount) / workingDays) * 100) : 0;
 
   // Calculate GPA/Grade from latest ReportCard
   const latestReportCard = await prisma.reportCard.findFirst({
@@ -80,7 +97,7 @@ export const getStudentDashboardStats = async (studentId: string) => {
     attendanceRate,
     attendancePresent: presentCount,
     attendanceLate: lateCount,
-    attendanceTotal: total,
+    attendanceTotal: workingDays,
     gpa,
     grade,
     upcomingExams,
