@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { NotificationChannel } from '@/generated/prisma/enums';
-import { startOfDay, endOfDay, startOfMonth, startOfYear, subDays, isSameDay, addMonths } from 'date-fns';
+import { startOfDay, endOfDay, startOfMonth, startOfYear, subDays, subMonths, isSameDay, addMonths } from 'date-fns';
 import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 export function cn(...inputs: ClassValue[]) {
@@ -55,7 +55,7 @@ export const delay = (ms: number) =>
 // ❌ NEVER add getStartOfDayIST / getEndOfDayIST — not needed
 // ─────────────────────────────────────────────────────────────
 
-const IST = 'Asia/Kolkata';
+export const IST = 'Asia/Kolkata';
 
 /** Core — use for ALL DB writes and queries */
 export function toISTDate(date: Date = new Date()): Date {
@@ -111,6 +111,38 @@ export function isAfterIST(a: Date, b: Date): boolean {
 /** Custom format string in IST — use for one-off display formats */
 export function formatInIST(date: Date | string | number, formatStr: string): string {
   return formatInTimeZone(new Date(date), IST, formatStr);
+}
+
+/** Today's date in IST midnight (as UTC Date) */
+export function getTodayIST(): Date {
+  return toISTDate(new Date());
+}
+
+/** Yesterday's date in IST midnight (as UTC Date) */
+export function getYesterdayIST(): Date {
+  return new Date(getTodayIST().getTime() - 86400000);
+}
+
+/** Check if a date is today in IST */
+export function isTodayIST(date: Date): boolean {
+  return toISTDate(date).getTime() === getTodayIST().getTime();
+}
+
+/** Check if a date is yesterday in IST */
+export function isYesterdayIST(date: Date): boolean {
+  return toISTDate(date).getTime() === getYesterdayIST().getTime();
+}
+
+/** Format a date as a human-readable group label in IST.
+ *  Returns "Today, 15 Aug 2026", "Yesterday, 14 Aug 2026", or "13 Aug 2026". */
+export function getDateGroupLabel(date: Date): string {
+  if (isTodayIST(date)) {
+    return `Today, ${formatInTimeZone(date, IST, 'd MMM yyyy')}`;
+  }
+  if (isYesterdayIST(date)) {
+    return `Yesterday, ${formatInTimeZone(date, IST, 'd MMM yyyy')}`;
+  }
+  return formatInTimeZone(date, IST, 'd MMM yyyy');
 }
 
 export function formatDateIN(date?: string | Date | null): string {

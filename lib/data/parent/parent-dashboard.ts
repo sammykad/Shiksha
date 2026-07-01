@@ -1,8 +1,10 @@
+import { subMonths } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { getActiveAcademicYearId } from "@/lib/academicYear";
 import prisma from "@/lib/db";
 import { getOrganizationId } from "@/lib/organization";
 import { getCurrentUserId } from "@/lib/user";
-import { toISTDate } from "@/lib/utils";
+import { toISTDate, IST } from "@/lib/utils";
 import { getFeesSummary } from "@/lib/data/fee/fee-balance";
 
 export const getParentNotices = async () => {
@@ -42,7 +44,7 @@ export const getMyChildrenOverview = async () => {
             StudentAttendance: {
                 where: {
                     academicYearId,
-                    date: todayIST, // ✅ range instead of exact date
+                    date: todayIST, // exact match — toISTDate() normalizes both writes and queries to IST midnight
                 },
                 select: { status: true, date: true },
                 take: 1, // only need today's record
@@ -69,9 +71,8 @@ export async function getAttendanceSummaryForChild(
     studentId: string,
     months = 6
 ) {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - months);
+    const endDate = toISTDate(new Date());
+    const startDate = toISTDate(subMonths(toZonedTime(new Date(), IST), months));
 
     // Get all attendance records for the period
     const attendanceRecords = await prisma.studentAttendance.findMany({

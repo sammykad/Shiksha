@@ -5,3 +5,4 @@ vidyabharat.in
 infra 
 ecosystem
 pristine
+shikshacloud.in

@@ -1,6 +1,33 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
-import { GuardianType } from '@/generated/prisma/enums';
+import {
+  GuardianType,
+  YearType,
+  Role,
+  MembershipStatus,
+  RoundingRule,
+  PointsMode,
+  EmploymentStatus,
+  AssignmentStatus,
+  BloodGroup,
+  Gender,
+  PaymentMethod,
+  FeeStatus,
+  PaymentStatus,
+  CalendarEventType,
+  NoticeType,
+  NoticePriority,
+  NoticeStatus,
+  EvaluationType,
+  ExamMode,
+  ExamStatus,
+  LeadStatus,
+  LeadSource,
+  LeadPriority,
+  LeadActivityType,
+  Sentiment,
+  NotificationType,
+} from '@/generated/prisma/enums';
 import {
   INDIAN_FIRST_NAMES_MALE, INDIAN_FIRST_NAMES_FEMALE, INDIAN_LAST_NAMES,
   INDIAN_CITIES, INDIAN_ADDRESSES,
@@ -50,13 +77,13 @@ const INDIAN_HOLIDAYS_2025_26 = [
 ];
 
 const SCHOOL_NOTICES = [
-  { title: 'Annual Day Celebration 2026', summary: 'Annual Day function scheduled for 15th March 2026', content: 'Dear Parents and Students,\n\nWe are delighted to invite you all to our Annual Day Celebration on 15th March 2026 at the school auditorium.', type: 'EVENT', priority: 'HIGH' },
-  { title: 'Mid-Term Examination Schedule - March 2026', summary: 'Mid-term exams for all grades starting 10th March 2026', content: 'Dear Parents and Students,\n\nThe Mid-Term Examinations for Academic Year 2025-26 will commence from 10th March 2026.', type: 'EXAM', priority: 'URGENT' },
-  { title: 'Fee Payment Reminder - Q4 2025-26', summary: 'Last date for Q4 fee payment is 15th February 2026', content: 'Dear Parents,\n\nThis is a gentle reminder that the last date for payment of Q4 fees is 15th February 2026.', type: 'DEADLINE', priority: 'HIGH' },
-  { title: 'Republic Day Celebration', summary: 'Republic Day function on 26th January 2026', content: 'Dear Students and Parents,\n\nThe school will celebrate Republic Day on 26th January 2026 with flag hoisting at 8:00 AM.', type: 'EVENT', priority: 'MEDIUM' },
-  { title: 'Revised Timetable - Winter Session', summary: 'New school timings effective from 1st November 2025', content: 'Dear Parents,\n\nPlease note that the school timings will be revised for the winter session effective 1st November 2025.', type: 'TIMETABLE', priority: 'MEDIUM' },
-  { title: 'Science Exhibition - "Innovation 2026"', summary: 'Science exhibition on 20th February 2026', content: 'Dear Students,\n\nThe annual Science Exhibition "Innovation 2026" will be held on 20th February 2026.', type: 'EVENT', priority: 'MEDIUM' },
-  { title: 'Parent-Teacher Meeting - Term 2', summary: 'PTM scheduled for 8th February 2026', content: 'Dear Parents,\n\nA Parent-Teacher Meeting for Term 2 will be held on 8th February 2026 from 9:00 AM to 1:00 PM.', type: 'GENERAL', priority: 'MEDIUM' },
+  { title: 'Annual Day Celebration 2026', summary: 'Annual Day function scheduled for 15th March 2026', content: 'Dear Parents and Students,\n\nWe are delighted to invite you all to our Annual Day Celebration on 15th March 2026 at the school auditorium.', type: NoticeType.EVENT, priority: NoticePriority.HIGH },
+  { title: 'Mid-Term Examination Schedule - March 2026', summary: 'Mid-term exams for all grades starting 10th March 2026', content: 'Dear Parents and Students,\n\nThe Mid-Term Examinations for Academic Year 2025-26 will commence from 10th March 2026.', type: NoticeType.EXAM, priority: NoticePriority.URGENT },
+  { title: 'Fee Payment Reminder - Q4 2025-26', summary: 'Last date for Q4 fee payment is 15th February 2026', content: 'Dear Parents,\n\nThis is a gentle reminder that the last date for payment of Q4 fees is 15th February 2026.', type: NoticeType.DEADLINE, priority: NoticePriority.HIGH },
+  { title: 'Republic Day Celebration', summary: 'Republic Day function on 26th January 2026', content: 'Dear Students and Parents,\n\nThe school will celebrate Republic Day on 26th January 2026 with flag hoisting at 8:00 AM.', type: NoticeType.EVENT, priority: NoticePriority.MEDIUM },
+  { title: 'Revised Timetable - Winter Session', summary: 'New school timings effective from 1st November 2025', content: 'Dear Parents,\n\nPlease note that the school timings will be revised for the winter session effective 1st November 2025.', type: NoticeType.TIMETABLE, priority: NoticePriority.MEDIUM },
+  { title: 'Science Exhibition - "Innovation 2026"', summary: 'Science exhibition on 20th February 2026', content: 'Dear Students,\n\nThe annual Science Exhibition "Innovation 2026" will be held on 20th February 2026.', type: NoticeType.EVENT, priority: NoticePriority.MEDIUM },
+  { title: 'Parent-Teacher Meeting - Term 2', summary: 'PTM scheduled for 8th February 2026', content: 'Dear Parents,\n\nA Parent-Teacher Meeting for Term 2 will be held on 8th February 2026 from 9:00 AM to 1:00 PM.', type: NoticeType.GENERAL, priority: NoticePriority.MEDIUM },
 ];
 
 const CONFIG = {
@@ -162,7 +189,7 @@ async function main() {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       academicYearId, orgId, '2025-26', '2025-04-01', '2026-03-31',
-      'ANNUAL', true, 'Academic Year 2025-26 (April 2025 - March 2026)',
+      YearType.ANNUAL, true, 'Academic Year 2025-26 (April 2025 - March 2026)',
       adminId, now, now
     ]
   );
@@ -183,14 +210,14 @@ async function main() {
   await pool.query(
     `INSERT INTO "Membership" (id, "userId", "organizationId", role, status, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [generateId(), adminUserId, orgId, 'ADMIN', 'ACTIVE', now, now]
+     [generateId(), adminUserId, orgId, Role.ADMIN, MembershipStatus.ACTIVE, now, now]
   );
 
   // Also create membership for original admin
   await pool.query(
     `INSERT INTO "Membership" (id, "userId", "organizationId", role, status, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [generateId(), adminId, orgId, 'ADMIN', 'ACTIVE', now, now]
+     [generateId(), adminId, orgId, Role.ADMIN, MembershipStatus.ACTIVE, now, now]
   );
 
   // ==========================================
@@ -201,7 +228,7 @@ async function main() {
   await pool.query(
     `INSERT INTO "GradingScale" (id, name, "organizationId", "isDefault", rounding, "passThreshold", "pointsMode", "allowGrace", "maxGraceMarks", "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-    [gradingScaleId, 'CBSE Secondary Grading System', orgId, true, 'NEAREST', 33.0, 'GPA', true, 3, now, now]
+     [gradingScaleId, 'CBSE Secondary Grading System', orgId, true, RoundingRule.NEAREST, 33.0, PointsMode.GPA, true, 3, now, now]
   );
 
   const gradeBands = [
@@ -310,7 +337,7 @@ async function main() {
     await pool.query(
       `INSERT INTO "Teacher" (id, "userId", "employeeCode", "organizationId", "employmentStatus", "isActive", "joinedAt", "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [teacherId, userId, `TCH-${String(i + 1).padStart(3, '0')}`, orgId, 'ACTIVE', true, joinedDate, now, now]
+       [teacherId, userId, `TCH-${String(i + 1).padStart(3, '0')}`, orgId, EmploymentStatus.ACTIVE, true, joinedDate, now, now]
     );
 
     // Create Teacher Profile
@@ -338,7 +365,7 @@ async function main() {
     await pool.query(
       `INSERT INTO "Membership" (id, "userId", "organizationId", role, status, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [generateId(), userId, orgId, 'TEACHER', 'ACTIVE', now, now]
+       [generateId(), userId, orgId, Role.TEACHER, MembershipStatus.ACTIVE, now, now]
     );
 
     teacherRecords.push({ id: teacherId, userId });
@@ -364,7 +391,7 @@ async function main() {
             [
               generateId(), academicYearId, orgId, teacher.id,
               subjectRecords[gradeName][subjectName], gradeRecords[gradeName],
-              sectionRecords[gradeName][sectionName], 'ASSIGNED', now, now
+               sectionRecords[gradeName][sectionName], AssignmentStatus.ASSIGNED, now, now
             ]
           );
         } catch (e) {
@@ -400,7 +427,7 @@ async function main() {
   console.log('👨‍🎓 Creating Students...');
   const studentRecords: { id: string; gradeId: string; sectionId: string; rollNumber: string }[] = [];
   let studentGlobalIndex = 1;
-  const bloodGroups = ['A_POSITIVE', 'A_NEGATIVE', 'B_POSITIVE', 'B_NEGATIVE', 'AB_POSITIVE', 'AB_NEGATIVE', 'O_POSITIVE', 'O_NEGATIVE'];
+
   const castes = ['General', 'OBC', 'SC', 'ST', ''];
 
   for (const gradeName of CONFIG.grades) {
@@ -449,10 +476,10 @@ async function main() {
           [
             studentId, userId, orgId, gradeRecords[gradeName], sectionRecords[gradeName][sectionName],
             firstName, lastName, `${firstName} ${lastName}`, randomItem(INDIAN_FIRST_NAMES_FEMALE),
-            dob, randomItem(bloodGroups),
+            dob, randomItem(Object.values(BloodGroup)),
             `${randomItem(INDIAN_ADDRESSES)}, ${city.city}, ${city.state}`,
             randomItem(castes), '', '', rollNumber, phone, phone, email, parentPhone,
-            isMale ? 'MALE' : 'FEMALE', 'ACTIVE',
+            isMale ? Gender.MALE : Gender.FEMALE, 'ACTIVE',
             randomDate(new Date('2025-03-01'), new Date('2025-04-15')),
             now, now
           ]
@@ -469,7 +496,7 @@ async function main() {
         await pool.query(
           `INSERT INTO "Membership" (id, "userId", "organizationId", role, status, "createdAt", "updatedAt")
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [generateId(), userId, orgId, 'STUDENT', 'ACTIVE', now, now]
+          [generateId(), userId, orgId, Role.STUDENT, MembershipStatus.ACTIVE, now, now]
         );
 
         studentRecords.push({ id: studentId, gradeId: gradeRecords[gradeName], sectionId: sectionRecords[gradeName][sectionName], rollNumber });
@@ -512,7 +539,7 @@ async function main() {
   console.log('📄 Creating Fee Records...');
   let feeCount = 0;
   const feeRecordsToPay: Array<{ id: string; paidAmount: number }> = [];
-  const paymentMethods = ['CASH', 'UPI', 'ONLINE', 'BANK_TRANSFER'];
+  const paymentMethods = [PaymentMethod.CASH, PaymentMethod.UPI, PaymentMethod.ONLINE, PaymentMethod.BANK_TRANSFER];
 
   for (const student of studentRecords) {
     const gradeName = CONFIG.grades.find(g => gradeRecords[g] === student.gradeId) || 'Grade 1';
@@ -539,7 +566,7 @@ async function main() {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           feeId, ft.amount, paidAmount, pendingAmount, ft.due,
-          isPaid ? 'PAID' : 'UNPAID', student.id, feeCategoryIds[ft.cat], orgId, academicYearId, now, now
+          isPaid ? FeeStatus.PAID : FeeStatus.UNPAID, student.id, feeCategoryIds[ft.cat], orgId, academicYearId, now, now
         ]
       );
       feeCount++;
@@ -564,7 +591,7 @@ async function main() {
       `INSERT INTO "FeePayment" (id, "feeId", amount, status, "paymentMethod", "paymentDate", "receiptNumber", "payerId", "organizationId", "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
-        payId, fr.id, fr.paidAmount, 'COMPLETED', payMethod,
+        payId, fr.id, fr.paidAmount, PaymentStatus.COMPLETED, payMethod,
         paymentDate, recNum, adminId, orgId, now, now,
       ]
     );
@@ -580,7 +607,7 @@ async function main() {
     await pool.query(
       `INSERT INTO "AcademicCalendar" (id, "organizationId", name, "startDate", "endDate", type, reason, "isRecurring", "createdBy", "createdAt", "updatedAt", "academicYearId")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [generateId(), orgId, holiday.name, holiday.start, holiday.end, 'PLANNED', holiday.reason, true, adminId, now, now, academicYearId]
+      [generateId(), orgId, holiday.name, holiday.start, holiday.end, CalendarEventType.PLANNED, holiday.reason, true, adminId, now, now, academicYearId]
     );
   }
   console.log(`   ✅ ${INDIAN_HOLIDAYS_2025_26.length} Calendar Events created`);
@@ -598,11 +625,11 @@ async function main() {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
       [
         generateId(), orgId, academicYearId, noticeData.title, noticeData.summary, noticeData.content,
-        startDate, endDate, noticeData.type, noticeData.priority, 'PUBLISHED',
-        adminId, adminId, now, adminId, now,
-        noticeData.priority === 'URGENT', noticeData.priority === 'URGENT',
-        true, true, false, false,
-        generatePgArray(['STUDENT', 'PARENT', 'TEACHER']),
+         startDate, endDate, noticeData.type, noticeData.priority, NoticeStatus.PUBLISHED,
+         adminId, adminId, now, adminId, now,
+         noticeData.priority === NoticePriority.URGENT, noticeData.priority === NoticePriority.URGENT,
+         true, true, false, false,
+         generatePgArray([Role.STUDENT, Role.PARENT, Role.TEACHER]),
         generatePgArray([]), generatePgArray([]),
         now, now
       ]
@@ -655,7 +682,7 @@ async function main() {
               [
                 generateId(), `${subjectName} - ${session.title}`, `${subjectName} for ${gradeName} Section ${sectionName}`,
                 sessionId, subjectRecords[gradeName][subjectName], gradeRecords[gradeName], sectionRecords[gradeName][sectionName],
-                orgId, maxMarks, passingMarks, 0.25, 'EXAM', 'OFFLINE', 'UPCOMING',
+                 orgId, maxMarks, passingMarks, 0.25, EvaluationType.EXAM, ExamMode.OFFLINE, ExamStatus.UPCOMING,
                 'Answer all questions. Write neatly.', parseInt(gradeNum) >= 9 ? 180 : 120,
                 `Room ${gradeNum}${sectionName}`, generatePgArray([adminId]),
                 startDate, endDate, now, now
@@ -675,8 +702,8 @@ async function main() {
   // 20. Create Leads
   // ==========================================
   console.log(`🎯 Creating ${CONFIG.leadsCount} Leads...`);
-  const leadStatuses = ['NEW', 'CONTACTED', 'INTERESTED', 'VISITED', 'QUALIFIED', 'NOT_INTERESTED', 'CONVERTED', 'UNRESPONSIVE'];
-  const leadSources = ['WALK_IN', 'WEBSITE', 'WORD_OF_MOUTH', 'FACEBOOK_ADS', 'GOOGLE_ADS', 'REFERRAL_PROGRAM', 'PRINT_MEDIA', 'PHONE_CALL'];
+  const leadStatuses = [LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.INTERESTED, LeadStatus.VISITED, LeadStatus.QUALIFIED, LeadStatus.NOT_INTERESTED, LeadStatus.CONVERTED, LeadStatus.UNRESPONSIVE];
+  const leadSources = [LeadSource.WALK_IN, LeadSource.WEBSITE, LeadSource.WORD_OF_MOUTH, LeadSource.FACEBOOK_ADS, LeadSource.GOOGLE_ADS, LeadSource.REFERRAL_PROGRAM, LeadSource.PRINT_MEDIA, LeadSource.PHONE_CALL];
 
   for (let i = 0; i < CONFIG.leadsCount; i++) {
     const isMale = Math.random() > 0.45;
@@ -695,7 +722,7 @@ async function main() {
         generateIndianPhone(), `Grade ${randomInt(1, 10)} Admission`,
         randomItem(['St. Mary\'s School', 'DAV Public School', 'Kendriya Vidyalaya', 'Ryan International', '']),
         `${randomItem(INDIAN_ADDRESSES)}, ${city.city}`, city.city, city.state, randomItem(city.pinCodes),
-        randomItem(leadSources), status, randomItem(['LOW', 'MEDIUM', 'HIGH']),
+        randomItem(leadSources), status, randomItem([LeadPriority.LOW, LeadPriority.MEDIUM, LeadPriority.HIGH]),
         randomInt(20, 95),
         Math.random() > 0.5 ? randomItem(teacherRecords).userId : null,
         Math.random() > 0.5 ? randomDate(new Date('2025-06-01'), new Date('2025-12-01')) : null,
@@ -706,7 +733,7 @@ async function main() {
         randomItem(['Parent interested in admission.', 'Visited campus during open house.', 'Requested fee structure.', 'Looking for transportation.']),
         generatePgArray(randomItem([['Transportation'], ['Scholarship'], ['Transportation', 'Scholarship'], []])),
         randomItem(['50k-1L', '1L-2L', '2L-3L', '3L+', '']),
-        ['NOT_INTERESTED', 'INVALID', 'UNRESPONSIVE'].includes(status) ? randomItem(['Moved to another city', 'Admitted elsewhere', 'Fee not affordable']) : null,
+        ([LeadStatus.NOT_INTERESTED, LeadStatus.INVALID, LeadStatus.UNRESPONSIVE] as LeadStatus[]).includes(status) ? randomItem(['Moved to another city', 'Admitted elsewhere', 'Fee not affordable']) : null,
         adminId, now, now
       ]
     );
@@ -719,11 +746,11 @@ async function main() {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           generateId(), leadId,
-          randomItem(['CALL', 'WHATSAPP', 'EMAIL', 'VISIT', 'FOLLOW_UP']),
+          randomItem([LeadActivityType.CALL, LeadActivityType.WHATSAPP, LeadActivityType.EMAIL, LeadActivityType.VISIT, LeadActivityType.FOLLOW_UP]),
           randomItem(['Called parent for follow-up', 'Sent brochure via WhatsApp', 'Email sent with fee structure']),
           randomItem(['Parent showed interest.', 'Requested transport details.', 'Asked about scholarship.']),
           randomItem(['Interested', 'Will decide later', 'Positive response']),
-          randomItem(['POSITIVE', 'NEUTRAL']),
+          randomItem([Sentiment.POSITIVE, Sentiment.NEUTRAL]),
           adminId, randomDate(new Date('2025-08-01'), new Date('2025-12-31')), now
         ]
       );
@@ -795,14 +822,14 @@ async function main() {
   // ==========================================
   console.log('🔔 Creating Notification Settings...');
   const notificationTypes = [
-    { type: 'NOTICE', label: 'Notice Alerts', description: 'Notifications for new notices and announcements' },
-    { type: 'FEE', label: 'Fee Reminders', description: 'Fee payment reminders and receipts' },
-    { type: 'ATTENDANCE', label: 'Attendance Alerts', description: 'Daily attendance notifications' },
-    { type: 'DOCUMENT', label: 'Document Requests', description: 'Document submission reminders' },
-    { type: 'EXAM', label: 'Exam Notifications', description: 'Exam schedules and result announcements' },
-    { type: 'LEAVE', label: 'Leave Updates', description: 'Leave application status updates' },
-    { type: 'ACADEMIC_REPORT', label: 'Academic Reports', description: 'Report cards and academic progress' },
-    { type: 'GREETING', label: 'Greetings', description: 'Festival and special occasion greetings' },
+    { type: NotificationType.NOTICE, label: 'Notice Alerts', description: 'Notifications for new notices and announcements' },
+    { type: NotificationType.FEE, label: 'Fee Reminders', description: 'Fee payment reminders and receipts' },
+    { type: NotificationType.ATTENDANCE, label: 'Attendance Alerts', description: 'Daily attendance notifications' },
+    { type: NotificationType.DOCUMENT, label: 'Document Requests', description: 'Document submission reminders' },
+    { type: NotificationType.EXAM, label: 'Exam Notifications', description: 'Exam schedules and result announcements' },
+    { type: NotificationType.LEAVE, label: 'Leave Updates', description: 'Leave application status updates' },
+    { type: NotificationType.ACADEMIC_REPORT, label: 'Academic Reports', description: 'Report cards and academic progress' },
+    { type: NotificationType.GREETING, label: 'Greetings', description: 'Festival and special occasion greetings' },
   ];
 
   for (const nt of notificationTypes) {

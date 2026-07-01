@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import React, { useState, useTransition, useMemo } from 'react';
 import {
   CheckCircle,
   Eye,
@@ -36,12 +36,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
-import { formatDateIN, formatTimeIN } from '@/lib/utils';
+import { formatDateIN, formatTimeIN, getDateGroupLabel, cn } from '@/lib/utils';
+import { calcStats } from '@/lib/data/attendance/attendance-utils';
 import { Badge } from '@/components/ui/badge';
 import { AttendanceStatus } from '@/generated/prisma/enums';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import { AttendanceExport } from './attendance-export';
 import { Organization } from '@/types/attendance-export';
 import {
@@ -56,6 +56,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 interface AttendanceRecord {
   id: string;
@@ -104,60 +105,67 @@ export function AttendanceTable({ records, organization, totalCount }: Attendanc
   const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // Calculate statistics
-  const stats = useMemo(() => {
-    const total = records.length;
-    const present = records.filter(r => r.status === 'PRESENT').length;
-    const absent = records.filter(r => r.status === 'ABSENT').length;
-    const late = records.filter(r => r.status === 'LATE').length;
+  const stats = useMemo(() => calcStats(records), [records]);
 
-    return {
-      total,
-      present,
-      absent,
-      late,
-      presentPercentage: total > 0 ? Math.round(((present + late) / total) * 100) : 0,
-    };
+  // Group records by IST date label
+  const groupedRecords = useMemo(() => {
+    const groups = new Map<string, AttendanceRecord[]>();
+
+    for (const record of records) {
+      const label = getDateGroupLabel(record.date);
+      if (!groups.has(label)) {
+        groups.set(label, []);
+      }
+      groups.get(label)!.push(record);
+    }
+
+    return Array.from(groups.entries()).sort(([aLabel], [bLabel]) => {
+      const aDate = new Date(groups.get(aLabel)![0].date);
+      const bDate = new Date(groups.get(bLabel)![0].date);
+      return bDate.getTime() - aDate.getTime();
+    });
   }, [records]);
 
-  // Sort records
-  const sortedRecords = useMemo(() => {
-    const recordsCopy = [...records];
+  // Sort records within each group
+  const sortedGroupedRecords = useMemo(() => {
+    return groupedRecords.map(([label, groupRecords]) => {
+      const sorted = [...groupRecords].sort((a, b) => {
+        let aValue, bValue;
 
-    return recordsCopy.sort((a, b) => {
-      let aValue, bValue;
+        switch (sortConfig.key) {
+          case 'studentName':
+            aValue = `${a.student.firstName} ${a.student.lastName}`.toLowerCase();
+            bValue = `${b.student.firstName} ${b.student.lastName}`.toLowerCase();
+            break;
+          case 'date':
+            aValue = new Date(a.date).getTime();
+            bValue = new Date(b.date).getTime();
+            break;
+          case 'grade':
+            aValue = a.grade.grade.toLowerCase();
+            bValue = b.grade.grade.toLowerCase();
+            break;
+          case 'status':
+            aValue = a.status;
+            bValue = b.status;
+            break;
+          case 'recordedBy':
+            aValue = a.recordedBy.toLowerCase();
+            bValue = b.recordedBy.toLowerCase();
+            break;
+          default:
+            return 0;
+        }
 
-      switch (sortConfig.key) {
-        case 'studentName':
-          aValue = `${a.student.firstName} ${a.student.lastName}`.toLowerCase();
-          bValue = `${b.student.firstName} ${b.student.lastName}`.toLowerCase();
-          break;
-        case 'date':
-          aValue = new Date(a.date).getTime();
-          bValue = new Date(b.date).getTime();
-          break;
-        case 'grade':
-          aValue = a.grade.grade.toLowerCase();
-          bValue = b.grade.grade.toLowerCase();
-          break;
-        case 'status':
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case 'recordedBy':
-          aValue = a.recordedBy.toLowerCase();
-          bValue = b.recordedBy.toLowerCase();
-          break;
-        default:
-          return 0;
-      }
-
-      if (sortConfig.direction === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
+        if (sortConfig.direction === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+      return [label, sorted] as const;
     });
-  }, [records, sortConfig]);
+  }, [groupedRecords, sortConfig]);
 
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) =>
@@ -255,9 +263,9 @@ export function AttendanceTable({ records, organization, totalCount }: Attendanc
                 <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">{totalCount ?? stats.total}</div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">{totalCount ?? stats.totalDays}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {totalCount ? `Page shows ${stats.total} of ${totalCount}` : 'Attendance records loaded'}
+              {totalCount ? `Page shows ${stats.totalDays} of ${totalCount}` : 'Attendance records loaded'}
             </p>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent pointer-events-none" />
           </CardContent>
@@ -271,7 +279,7 @@ export function AttendanceTable({ records, organization, totalCount }: Attendanc
                 <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
-            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums text-emerald-600">{stats.present}</div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums text-emerald-600">{stats.presentDays}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Students marked present
             </p>
@@ -287,9 +295,9 @@ export function AttendanceTable({ records, organization, totalCount }: Attendanc
                 <CheckCircle className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
             </div>
-            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">{stats.presentPercentage}%</div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums">{stats.percentage}%</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.present + stats.late} of {stats.total} present or late
+              {stats.presentDays + stats.lateDays} of {stats.totalDays} present or late
             </p>
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none" />
           </CardContent>
@@ -303,7 +311,7 @@ export function AttendanceTable({ records, organization, totalCount }: Attendanc
                 <UserX className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
-            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums text-red-600">{stats.absent}</div>
+            <div className="text-xl md:text-lg lg:text-2xl font-bold tabular-nums text-red-600">{stats.absentDays}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Students marked absent
             </p>
@@ -453,7 +461,18 @@ export function AttendanceTable({ records, organization, totalCount }: Attendanc
               </TableHeader>
 
               <TableBody>
-                {sortedRecords.map((record) => (
+                {sortedGroupedRecords.map(([dateLabel, groupRecords]) => (
+                  <React.Fragment key={dateLabel}>
+                    <TableRow className="bg-muted/30 border-b-0">
+                      <TableCell colSpan={8} className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-semibold text-foreground">{dateLabel}</span>
+                          <span className="text-xs text-muted-foreground ml-auto">{groupRecords.length} record{groupRecords.length !== 1 ? 's' : ''}</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {groupRecords.map((record) => (
                   <TableRow
                     key={record.id}
                     className={cn(
@@ -605,6 +624,8 @@ export function AttendanceTable({ records, organization, totalCount }: Attendanc
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
+                ))}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>

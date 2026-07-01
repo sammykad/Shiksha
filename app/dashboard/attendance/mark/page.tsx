@@ -1,10 +1,12 @@
 import prisma from '@/lib/db';
 import AttendanceMark from '@/components/dashboard/StudentAttendance/attendance-mark';
 import { getOrganizationId } from '@/lib/organization';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
 import { sortByNaturalText } from '@/lib/utils';
 
 async function getStudents() {
   const organizationId = await getOrganizationId();
+  const academicYearId = await getActiveAcademicYearId();
   const data = await prisma.student.findMany({
     where: {
       organizationId: organizationId,
@@ -24,6 +26,7 @@ async function getStudents() {
         },
       },
       StudentAttendance: {
+        where: { academicYearId },
         select: {
           id: true,
           date: true,

@@ -22,8 +22,8 @@ export async function getWeeklyAttendanceReport(
   });
   if (!student) return null;
 
-  // 2. Calculate week range with offset for navigation
-  const today = new Date();
+  // 2. Calculate week range with offset for navigation (IST-aware)
+  const today = toISTDate(new Date());
   const targetDate = weekOffset === 0 ? today : addWeeks(today, weekOffset);
   const weekStart = toISTDate(startOfWeek(targetDate, { weekStartsOn: 1 }));
   const weekEnd = toISTDate(addDays(weekStart, 6));

@@ -24,7 +24,8 @@ interface PageProps {
 export default async function AttendanceAnalyticsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const dateParam = params.date as string;
-  const selectedDate = dateParam ? toISTDate(new Date(dateParam)) : toISTDate(new Date());
+  const rawDate = dateParam ? new Date(dateParam) : new Date();
+  const selectedDate = toISTDate(isNaN(rawDate.getTime()) ? new Date() : rawDate);
 
   const organizationId = await getOrganizationId();
   const organization = await getDatabaseOrganization(organizationId);

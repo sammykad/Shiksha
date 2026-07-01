@@ -11,80 +11,73 @@ export async function getAttendanceCompletionStats(
   date: Date = new Date(),
   options: { page?: number; pageSize?: number } = {}
 ) {
-  const { page = 1, pageSize = 50 } = options; // Default pageSize to 50 for analytics
+  const { page = 1, pageSize = 50 } = options;
   const organizationId = await getOrganizationId();
   const istDate = toISTDate(date);
 
-
-  // Fetch all sections with basic info and attendance for the date
-  // This allows us to calculate global stats and then slice for pagination
-  const allSections = await prisma.section.findMany({
-    where: { organizationId },
-    include: {
-      grade: {
-        select: { grade: true },
+  // Lightweight global stats — separate count queries, no student data loaded
+  const [totalSections, totalStudents, todayAttendanceCount, completedSections, sections] = await Promise.all([
+    prisma.section.count({ where: { organizationId } }),
+    prisma.student.count({ where: { organizationId } }),
+    prisma.studentAttendance.count({
+      where: {
+        date: istDate,
+        status: { in: ['PRESENT', 'LATE'] },
+        section: { organizationId },
       },
-      students: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          rollNumber: true,
+    }),
+    // Sections where every student has an attendance record for the date
+    prisma.section.count({
+      where: {
+        organizationId,
+        students: {
+          some: { id: { gt: '' } },
+          none: {
+            StudentAttendance: { none: { date: istDate } },
+          },
         },
       },
-      StudentAttendance: {
-        where: {
-          date: istDate
+    }),
+    prisma.section.findMany({
+      where: { organizationId },
+      include: {
+        grade: { select: { grade: true } },
+        students: {
+          select: { id: true, firstName: true, lastName: true, rollNumber: true },
         },
-        select: {
-          studentId: true,
-          status: true,
-          note: true,
-          recordedBy: true,
+        StudentAttendance: {
+          where: { date: istDate },
+          select: { studentId: true, status: true, note: true, recordedBy: true },
         },
       },
-    },
-    orderBy: [
-      { grade: { grade: 'asc' } },
-      { name: 'asc' }
-    ]
-  });
+      orderBy: [{ grade: { grade: 'asc' } }, { name: 'asc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
 
-  let globalTotalStudents = 0;
-  let globalTotalPresent = 0;
-  let globalCompletedSections = 0;
+  const sectionData: SectionAttendanceDetails[] = sections.map((section) => {
+    const totalStudentsInSection = section.students.length;
 
-  const sectionData = allSections.map((section) => {
-    const totalStudents = section.students.length;
-    globalTotalStudents += totalStudents;
-
-    // Deduplicate attendance records by studentId
-    const attendanceMap = new Map<string, any>();
-    section.StudentAttendance.forEach((a) => attendanceMap.set(a.studentId, a));
+    const attendanceMap = new Map<string, (typeof section.StudentAttendance)[number]>();
+    for (const a of section.StudentAttendance) {
+      attendanceMap.set(a.studentId, a);
+    }
 
     const recordedCount = attendanceMap.size;
     const presentCount = Array.from(attendanceMap.values()).filter(
       (a) => a.status === 'PRESENT' || a.status === 'LATE'
     ).length;
-    globalTotalPresent += presentCount;
 
-
-
-    const completionPercentage = calculatePercentage(recordedCount, totalStudents);
+    const completionPercentage = calculatePercentage(recordedCount, totalStudentsInSection);
     const reportedBy = section.StudentAttendance[0]?.recordedBy ?? 'Not recorded';
 
-    // Determine status
     const status = completionPercentage === 100
       ? 'completed'
       : completionPercentage > 0
         ? 'in-progress'
         : 'pending';
 
-    if (status === 'completed') {
-      globalCompletedSections++;
-    }
-
-    // Map students with their attendance status
     const students: StudentAnalytics[] = section.students.map((student) => {
       const attendance = attendanceMap.get(student.id);
       const attendanceStatus: StudentAnalytics['attendanceStatus'] = attendance
@@ -96,7 +89,7 @@ export async function getAttendanceCompletionStats(
         name: `${student.firstName} ${student.lastName}`,
         rollNumber: student.rollNumber || 'N/A',
         attendanceStatus,
-        note: attendance?.note,
+        note: attendance?.note ?? undefined,
       };
     });
 
@@ -109,30 +102,21 @@ export async function getAttendanceCompletionStats(
       status: status as SectionAttendanceDetails['status'],
       percentage: completionPercentage,
       studentsPresent: presentCount,
-      totalStudents,
+      totalStudents: totalStudentsInSection,
       students,
     };
   });
 
-  const totalSections = allSections.length;
-  const paginatedSections = sectionData.slice((page - 1) * pageSize, page * pageSize);
-
   return {
-    sections: paginatedSections,
+    sections: sectionData,
     stats: {
       totalSections,
-      completedSections: globalCompletedSections,
-      pendingSections: totalSections - globalCompletedSections,
-      totalStudents: globalTotalStudents,
-      totalPresent: globalTotalPresent,
-      completionPercentage: calculatePercentage(
-        globalCompletedSections,
-        totalSections
-      ),
-      attendancePercentage: calculatePercentage(
-        globalTotalPresent,
-        globalTotalStudents
-      ),
+      completedSections,
+      pendingSections: totalSections - completedSections,
+      totalStudents,
+      totalPresent: todayAttendanceCount,
+      completionPercentage: calculatePercentage(completedSections, totalSections),
+      attendancePercentage: calculatePercentage(todayAttendanceCount, totalStudents),
       totalPages: Math.ceil(totalSections / pageSize),
       currentPage: page,
     },

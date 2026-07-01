@@ -6,8 +6,6 @@ import {
   LeadPriority,
   LeadStatus,
   PaymentMethod,
-  PaymentStatus,
-  FeeStatus,
   Gender,
   Severity,
   CalendarEventType,

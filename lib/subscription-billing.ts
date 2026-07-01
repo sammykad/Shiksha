@@ -124,12 +124,12 @@ export type BillingSummary = {
   subscription: {
     id: string;
     status: string;
-    pricingMode: string;
+    pricingMode: PricingMode;
     planName: string;
     planCode: string | null;
     offerName: string | null;
-    billingCycle: string;
-    billingMetric: string;
+    billingCycle: BillingCycle;
+    billingMetric: BillingMetric;
     studentCount: number;
     studentLimit: number | null;
     price: number | null;
@@ -141,15 +141,15 @@ export type BillingSummary = {
     nextInvoiceAmount: number;
     breakdown: string;
   } | null;
-    recentInvoices: Array<{
-      id: string;
-      invoiceNumber: string | null;
-      status: string;
-      total: number;
-      periodStart: string;
-      periodEnd: string;
-      paidAt: string | null;
-    }>;
+  recentInvoices: Array<{
+    id: string;
+    invoiceNumber: string | null;
+    status: string;
+    total: number;
+    periodStart: string;
+    periodEnd: string;
+    paidAt: string | null;
+  }>;
   recentPayments: Array<{
     id: string;
     provider: string;
@@ -926,21 +926,21 @@ export async function generateInvoiceForOrganization({
   const amount = manualAmount !== undefined
     ? { subtotal: manualAmount, discount: 0, total: manualAmount, unitPrice: null, pricingMode: subscription.pricingMode, studentCount, breakdown: `Manual ₹${manualAmount}` }
     : calculateSubscriptionAmount({
-        pricingMode: subscription.pricingMode,
-        billingMetric: subscription.billingMetric,
-        billingCycle: subscription.billingCycle,
-        studentCount,
-        monthlyPrice: subscription.plan?.monthlyPrice,
-        annualPrice: subscription.plan?.annualPrice,
-        customPrice: subscription.customPrice,
-        unitPrice: subscription.unitPrice,
-        offer: subscription.offer,
-        pricingSlabs: subscription.pricingSlabs.map((s) => ({
-          minStudents: s.minStudents,
-          maxStudents: s.maxStudents,
-          pricePerStudent: s.pricePerStudent,
-        })),
-      });
+      pricingMode: subscription.pricingMode,
+      billingMetric: subscription.billingMetric,
+      billingCycle: subscription.billingCycle,
+      studentCount,
+      monthlyPrice: subscription.plan?.monthlyPrice,
+      annualPrice: subscription.plan?.annualPrice,
+      customPrice: subscription.customPrice,
+      unitPrice: subscription.unitPrice,
+      offer: subscription.offer,
+      pricingSlabs: subscription.pricingSlabs.map((s) => ({
+        minStudents: s.minStudents,
+        maxStudents: s.maxStudents,
+        pricePerStudent: s.pricePerStudent,
+      })),
+    });
 
   const invoiceNumber = await generateInvoiceNumber();
 

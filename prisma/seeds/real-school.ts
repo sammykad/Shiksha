@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
-import { GuardianType, InstitutionType, OrganizationType, YearType, BillingMetric, BillingCycle, PricingMode, OfferType, SubscriptionStatus, Role, Gender, StudentStatus, AssignmentStatus, EvaluationType, ExamMode, ExamStatus, StudentExamStatus, PaymentMethod, PaymentStatus, FeeStatus, AttendanceStatus, Severity, ComplaintStatus, NoticeType, NoticePriority, NoticeStatus, DocumentType, ChequeStatus, RoundingRule, PointsMode, ResultStatus, NotificationType, NotificationChannel, NotificationStatus, EmploymentStatus, LeaveStatus, LeaveType, LeadStatus, LeadPriority, LeadSource, LeadActivityType, Sentiment, AIAgentRunFrequency, AIAgentExecutionStatus, CalendarEventType, IdCardOrientation, VehicleType, AiAgentStatus, InvoiceStatus, SubscriptionPaymentStatus, PaymentProvider, MembershipStatus } from '@/generated/prisma/enums';
+import { GuardianType, InstitutionType, OrganizationType, YearType, BillingMetric, BillingCycle, PricingMode, OfferType, SubscriptionStatus, Role, Gender, StudentStatus, AssignmentStatus, EvaluationType, ExamMode, ExamStatus, StudentExamStatus, PaymentMethod, PaymentStatus, FeeStatus, AttendanceStatus, Severity, ComplaintStatus, NoticeType, NoticePriority, NoticeStatus, DocumentType, ChequeStatus, RoundingRule, PointsMode, ResultStatus, NotificationType, NotificationChannel, NotificationStatus, EmploymentStatus, LeaveStatus, LeaveType, LeadStatus, LeadPriority, LeadSource, LeadActivityType, Sentiment, AIAgentRunFrequency, AIAgentExecutionStatus, CalendarEventType, IdCardOrientation, VehicleType, AiAgentStatus, InvoiceStatus, SubscriptionPaymentStatus, PaymentProvider, MembershipStatus, BloodGroup, scheduledJobType } from '@/generated/prisma/enums';
 
 /* ============================================================================
  *  SEED: Shree Gurukul Vidyalaya — Pune
@@ -88,7 +88,7 @@ const LAST_NAMES = [
 
 const CASTES = ['General', 'OBC', 'SC', 'ST', 'NT', 'VJ', 'SBC'];
 
-const BLOOD_GROUPS = ['A_POSITIVE', 'A_NEGATIVE', 'B_POSITIVE', 'B_NEGATIVE', 'AB_POSITIVE', 'AB_NEGATIVE', 'O_POSITIVE', 'O_NEGATIVE'];
+
 
 /* ─── Constants ───────────────────────────────────────────────────────────── */
 
@@ -163,49 +163,49 @@ const NOTICE_CONTENT = [
     title: 'Annual Day Celebration 2027',
     summary: 'Annual Day function on 28th February 2027',
     content: 'Shree Gurukul Vidyalaya proudly invites all parents and students to the Annual Day Celebration on 28th February 2027 at 5:00 PM in the school auditorium. Chief Guest: Dr. Milind Sardesai (Educationist).',
-    type: 'EVENT', priority: 'HIGH',
+    type: NoticeType.EVENT, priority: NoticePriority.HIGH,
   },
   {
     title: 'Parent-Teacher Meeting - Term 1',
     summary: 'PTM scheduled for 22nd November 2026',
     content: 'Dear Parents, the Term 1 Parent-Teacher Meeting will be held on Sunday, 22nd November 2026 from 9:00 AM to 1:00 PM. All parents are requested to attend.',
-    type: 'GENERAL', priority: 'HIGH',
+    type: NoticeType.GENERAL, priority: NoticePriority.HIGH,
   },
   {
     title: 'Winter Uniform Change',
     summary: 'Winter uniform mandatory from 1st November 2026',
     content: 'All students must switch to winter uniform from 1st November 2026. Boys: Navy blue blazer, grey trousers. Girls: Navy blue blazer, grey skirt/trousers.',
-    type: 'GENERAL', priority: 'MEDIUM',
+    type: NoticeType.GENERAL, priority: NoticePriority.MEDIUM,
   },
   {
     title: 'Science Exhibition - Vidnyan 2027',
     summary: 'Science exhibition on 22nd January 2027',
     content: 'The Annual Science Exhibition "Vidnyan 2027" will be held on 22nd January 2027. Students from Grades 5-10 can participate with working models.',
-    type: 'EVENT', priority: 'MEDIUM',
+    type: NoticeType.EVENT, priority: NoticePriority.MEDIUM,
   },
   {
     title: 'Final Exam Schedule - March 2027',
     summary: 'Final examinations from 15th March 2027',
     content: 'Final examinations for Academic Year 2026-27 will commence from 15th March 2027. Detailed schedule has been uploaded to the student portal.',
-    type: 'EXAM', priority: 'URGENT',
+    type: NoticeType.EXAM, priority: NoticePriority.URGENT,
   },
   {
     title: 'Fee Payment Deadline - Q3',
     summary: 'Q3 fees due by 15th December 2026',
     content: 'This is a reminder that Q3 fee payments must be completed by 15th December 2026. Late payment penalty of ₹100/day will apply after the deadline.',
-    type: 'DEADLINE', priority: 'HIGH',
+    type: NoticeType.DEADLINE, priority: NoticePriority.HIGH,
   },
   {
     title: 'Sports Day 2026',
     summary: 'Annual Sports Day on 26th December 2026',
     content: 'Shree Gurukul Vidyalaya Annual Sports Day will be held on 26th December 2026 at the Shiv Chhatrapati Sports Complex. Students are to report at 7:00 AM.',
-    type: 'EVENT', priority: 'MEDIUM',
+    type: NoticeType.EVENT, priority: NoticePriority.MEDIUM,
   },
   {
     title: 'Maharashtra Day Celebration',
     summary: 'Maharashtra Day on 1st May 2027',
     content: 'School will celebrate Maharashtra Day on 1st May 2027 with cultural programs showcasing Marathi heritage.',
-    type: 'EVENT', priority: 'LOW',
+    type: NoticeType.EVENT, priority: NoticePriority.LOW,
   },
 ];
 
@@ -364,7 +364,7 @@ async function main() {
   ]);
   await pool.query(`INSERT INTO "PricingSlab" (id,"subscriptionId","minStudents","maxStudents","pricePerStudent","billingCycle","createdAt")
     VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
-    cuid(), subId, 501, null, 15, 'MONTHLY', $now,
+    cuid(), subId, 501, null, 15, BillingCycle.MONTHLY, $now,
   ]);
   console.log('   ✅ Pricing slab created\n');
 
@@ -553,7 +553,7 @@ async function main() {
     vaishnaviTid = cuid();
     await pool.query(`INSERT INTO "Teacher" (id,"userId","employeeCode","organizationId","employmentStatus","isActive","joinedAt","createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [vaishnaviTid, vaishnaviUid, 'GUR-TCH-SPCL', orgId, 'ACTIVE', true, ts(new Date('2024-06-01')), $now, $now]);
+      [vaishnaviTid, vaishnaviUid, 'GUR-TCH-SPCL', orgId, EmploymentStatus.ACTIVE, true, ts(new Date('2024-06-01')), $now, $now]);
     await pool.query(`INSERT INTO "TeacherProfile" (id,"teacherId","contactEmail","contactPhone",address,city,state,"dateOfBirth",qualification,"experienceInYears","resumeUrl","joinedAt",bio,"teachingPhilosophy","specializedSubjects","preferredGrades","idProofUrl","languagesKnown","certificateUrls")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`, [
       cuid(), vaishnaviTid, 'vaishnaviraykar768@gmail.com', '+919876543200',
@@ -588,7 +588,7 @@ async function main() {
           await pool.query(`INSERT INTO "TeachingAssignment" (id,"academicYearId","organizationId","teacherId","subjectId","gradeId","sectionId",status,"createdAt","updatedAt")
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [
             cuid(), ayId, orgId, teacher.id, subjectMap[g][s], gradeMap[g], sectionMap[g][sec],
-            'ASSIGNED', $now, $now,
+            AssignmentStatus.ASSIGNED, $now, $now,
           ]);
           assignCount++;
         } catch { }
@@ -645,19 +645,24 @@ async function main() {
         const pEmail = email(pFirst, last, 'gmail.com');
         const pPhone = phone();
         const pId = cuid();
+        const pUid = `user_${cuid()}`;
+
+        await pool.query(`INSERT INTO "User" (id,email,"firstName","lastName",name,image,"emailVerified","isActive","createdAt","updatedAt")
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [pUid, pEmail, pFirst, last, `${pFirst} ${last}`, '', false, true, $now, $now]);
 
         await pool.query(`INSERT INTO "Parent" (id,"organizationId","userId","firstName","lastName",email,"phoneNumber","whatsAppNumber","createdAt","updatedAt")
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-          [pId, orgId, null, pFirst, last, pEmail, pPhone, pPhone, $now, $now]);
+          [pId, orgId, pUid, pFirst, last, pEmail, pPhone, pPhone, $now, $now]);
 
         await pool.query(`INSERT INTO "Student" (id,"userId","organizationId","gradeId","sectionId","firstName","lastName","fullName","motherName","dateOfBirth","bloodGroup",address,"caste","subCaste","rollNumber","phoneNumber","whatsAppNumber",email,"emergencyContact",gender,status,"admissionDate","createdAt","updatedAt")
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`, [
           sid, uid, orgId, gradeMap[g], sectionMap[g][sec],
           first, last, `${first} ${last}`, pick(FEMALE_NAMES),
-          dob, pick(BLOOD_GROUPS),
+          dob, pick(Object.values(BloodGroup)),
           `${addrNum}, ${addrStreet}, Pune, Maharashtra`,
           caste, '', roll, phone(), phone(), email(first, last, 'gmail.com'),
-          pPhone, isMale ? 'MALE' : 'FEMALE', 'ACTIVE',
+          pPhone, isMale ? Gender.MALE : Gender.FEMALE, StudentStatus.ACTIVE,
           ts(rngDate(new Date('2026-03-15'), new Date('2026-05-31'))),
           $now, $now,
         ]);
@@ -666,10 +671,13 @@ async function main() {
           VALUES ($1,$2,$3,$4,$5)`, [cuid(), sid, pId, pLink, true]);
 
         await pool.query(`INSERT INTO "Membership" (id,"userId","organizationId",role,status,"createdAt","updatedAt")
-          VALUES ($1,$2,$3,$4,$5,$6,$7)`, [cuid(), uid, orgId, 'STUDENT', 'ACTIVE', $now, $now]);
+          VALUES ($1,$2,$3,$4,$5,$6,$7)`, [cuid(), uid, orgId, Role.STUDENT, MembershipStatus.ACTIVE, $now, $now]);
+
+        await pool.query(`INSERT INTO "Membership" (id,"userId","organizationId",role,status,"createdAt","updatedAt")
+          VALUES ($1,$2,$3,$4,$5,$6,$7)`, [cuid(), pUid, orgId, Role.PARENT, MembershipStatus.ACTIVE, $now, $now]);
 
         studentList.push({ id: sid, userId: uid, gradeId: gradeMap[g], sectionId: sectionMap[g][sec], gradeName: g, sectionName: sec, firstName: first, lastName: last, isMale });
-        parentList.push({ id: pId, userId: null });
+        parentList.push({ id: pId, userId: pUid });
       }
     }
   }
@@ -693,10 +701,10 @@ async function main() {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`, [
       sammySid, sammyUid, orgId, gradeMap['Grade 3'], sectionMap['Grade 3']['A'],
       'Dev', 'Sammy', 'Dev Sammy', 'Palavi',
-      ts(new Date('2018-08-15')), 'A_POSITIVE',
+      ts(new Date('2018-08-15')), BloodGroup.A_POSITIVE,
       '22, Baner Road, Pune, Maharashtra',
       'General', '', '3A-SPCL', '+919876543002', '+919876543002', 'devsammykad@gmail.com',
-      '+919876543001', 'MALE', 'ACTIVE',
+      '+919876543001', Gender.MALE, StudentStatus.ACTIVE,
       ts(new Date('2026-04-01')), $now, $now,
     ]);
   }
@@ -709,11 +717,11 @@ async function main() {
   }
 
   // Memberships (idempotent)
-  for (const [uid, role] of [[palaviUserId, 'PARENT'], [sammyUid, 'STUDENT']] as const) {
+  for (const [uid, role] of [[palaviUserId, Role.PARENT], [sammyUid, Role.STUDENT]] as const) {
     const memExists = await pool.query(`SELECT id FROM "Membership" WHERE "userId"=$1 AND "organizationId"=$2`, [uid, orgId]);
     if (memExists.rows.length === 0) {
       await pool.query(`INSERT INTO "Membership" (id,"userId","organizationId",role,status,"createdAt","updatedAt")
-        VALUES ($1,$2,$3,$4,$5,$6,$7)`, [cuid(), uid, orgId, role, 'ACTIVE', $now, $now]);
+        VALUES ($1,$2,$3,$4,$5,$6,$7)`, [cuid(), uid, orgId, role, MembershipStatus.ACTIVE, $now, $now]);
     }
   }
 
@@ -774,7 +782,7 @@ async function main() {
       const isPaid = Math.random() > 0.3;
       const paidAmount = isPaid ? ft.amount : ft.amount * (Math.random() < 0.3 ? 0.5 : 0);
       const pending = isPaid ? 0 : ft.amount - paidAmount;
-      const status = paidAmount >= ft.amount ? 'PAID' : (paidAmount > 0 ? 'UNPAID' : 'UNPAID');
+      const status = paidAmount >= ft.amount ? FeeStatus.PAID : (paidAmount > 0 ? FeeStatus.UNPAID : FeeStatus.UNPAID);
 
       await pool.query(`INSERT INTO "Fee" (id,"totalFee","paidAmount","pendingAmount","dueDate",status,"studentId","feeCategoryId","organizationId","academicYearId","createdAt","updatedAt")
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
@@ -798,14 +806,14 @@ async function main() {
   let chequeCount = 0;
   for (const fee of allFees) {
     const isCheque = Math.random() < 0.25;
-    const payMethod = isCheque ? 'CHEQUE' : pick(['CASH', 'UPI', 'BANK_TRANSFER', 'ONLINE']);
+    const payMethod = isCheque ? PaymentMethod.CHEQUE : pick([PaymentMethod.CASH, PaymentMethod.UPI, PaymentMethod.BANK_TRANSFER, PaymentMethod.ONLINE]);
     const recNum = `GUR-RCP-${String(rng(1000, 9999))}-${String(payCount + 1).padStart(4, '0')}`;
     const payId = cuid();
     const payer = pick(allAdmins);
 
     await pool.query(`INSERT INTO "FeePayment" (id,"feeId",amount,status,"paymentMethod","paymentDate","receiptNumber","payerId","organizationId","createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [
-      payId, fee.id, fee.paidAmount, 'COMPLETED', payMethod,
+      payId, fee.id, fee.paidAmount, PaymentStatus.COMPLETED, payMethod,
       ts(rngDate(new Date('2026-06-10'), new Date('2027-03-15'))),
       recNum, payer.id, orgId, $now, $now,
     ]);
@@ -821,7 +829,7 @@ async function main() {
         pick(banks), pick(['Kothrud Branch', 'Deccan Gymkhana', 'FC Road']),
         `SBIN000${rng(1000, 9999)}`, `${rng(100000, 999999)}`,
         `${pick(MALE_NAMES)} ${pick(LAST_NAMES)}`, String(rng(1000, 9999)),
-        pick(['PENDING', 'CLEARED']), $now, $now,
+        pick([ChequeStatus.PENDING, ChequeStatus.CLEARED]), $now, $now,
       ]);
       chequeCount++;
     }
@@ -832,8 +840,8 @@ async function main() {
    *  15 — STUDENT ATTENDANCE (~30 days per student)
    * ===================================================================== */
   console.log('📅 Creating Student Attendance...');
-  const attStart = new Date('2026-07-01');
-  const attEnd = new Date('2026-08-15');
+  const attStart = new Date('2026-06-15');
+  const attEnd = new Date('2027-03-15');
   let attCount = 0;
   // Get all students
   const allStudents = (await pool.query(
@@ -842,19 +850,20 @@ async function main() {
   for (let si = 0; si < allStudents.length; si++) {
     const st = allStudents[si];
     const daysThisMonth = rng(25, 30);
+    const studentOffset = rng(0, 180);
     for (let d = 0; d < daysThisMonth; d++) {
       const date = new Date(attStart);
-      date.setDate(date.getDate() + si + d);
+      date.setDate(date.getDate() + studentOffset + d);
       if (date > attEnd) break;
       if (date.getDay() === 0) continue;
-      const status = pick(['PRESENT', 'PRESENT', 'PRESENT', 'PRESENT', 'ABSENT', 'LATE', 'PRESENT', 'PRESENT']);
+      const status = pick([AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.LATE, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT]);
       const recordedBy = pick(teacherList).userId;
 
       try {
         await pool.query(
           `INSERT INTO "StudentAttendance" (id,date,status,note,"recordedBy","studentId","sectionId","academicYearId","createdAt","updatedAt")
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [
-          cuid(), ts(date), status, status === 'ABSENT' ? pick(['Sick', 'Family function', 'Traffic']) : null,
+          cuid(), ts(date), status, status === AttendanceStatus.ABSENT ? pick(['Sick', 'Family function', 'Traffic']) : null,
           recordedBy, st.id, st.sectionId, ayId, $now, $now,
         ]);
         attCount++;
@@ -867,7 +876,7 @@ async function main() {
    *  16 — STUDENT DOCUMENTS
    * ===================================================================== */
   console.log('📁 Creating Student Documents...');
-  const docTypes = ['AADHAAR', 'BIRTH_CERTIFICATE', 'TRANSFER_CERTIFICATE', 'PARENT_ID', 'AGREEMENT'];
+  const docTypes = [DocumentType.AADHAAR, DocumentType.BIRTH_CERTIFICATE, DocumentType.TRANSFER_CERTIFICATE, DocumentType.PARENT_ID, DocumentType.AGREEMENT];
   let docCount = 0;
   const docStudents = allStudents.slice(0, 50);
   for (const st of docStudents) {
@@ -893,7 +902,7 @@ async function main() {
    * ===================================================================== */
   console.log('📝 Creating Exam Sessions & Exams...');
   const examSessionIds: string[] = [];
-  const allExams: { id: string; sessionId: string; gradeId: string; sectionId: string }[] = [];
+  const allExams: { id: string; sessionId: string; gradeId: string; sectionId: string; maxMarks: number }[] = [];
 
   for (const sd of EXAM_SESSIONS) {
     const esId = cuid();
@@ -924,12 +933,12 @@ async function main() {
               eId, `${subName} — ${sd.title}`, `${subName} for ${g} ${sec}`,
               esId, subjectMap[g][subName], gradeMap[g], sectionMap[g][sec],
               orgId, maxMarks, passing, parseFloat((1 / examSubs.length).toFixed(2)),
-              sd.title.includes('Unit Test') ? 'TEST' : 'EXAM', 'OFFLINE', 'UPCOMING',
+              sd.title.includes('Unit Test') ? EvaluationType.TEST : EvaluationType.EXAM, ExamMode.OFFLINE, ExamStatus.UPCOMING,
               'Read all questions carefully before answering.', duration,
               `Room ${g.replace('Grade ', '')}${sec}`, pgArr([owner.id]),
               ts(start), ts(end), $now, $now,
             ]);
-            allExams.push({ id: eId, sessionId: esId, gradeId: gradeMap[g], sectionId: sectionMap[g][sec] });
+            allExams.push({ id: eId, sessionId: esId, gradeId: gradeMap[g], sectionId: sectionMap[g][sec], maxMarks });
           } catch { }
         }
       }
@@ -954,7 +963,7 @@ async function main() {
         `$${j * 7 + 1}`, `$${j * 7 + 2}`, `$${j * 7 + 3}`, `$${j * 7 + 4}`,
         `$${j * 7 + 5}`, `$${j * 7 + 6}`, `$${j * 7 + 7}`,
       ]).join(',');
-      const values = batch.flatMap(st => [cuid(), st.id, exam.id, 'ENROLLED', $now, owner.id, false]);
+      const values = batch.flatMap(st => [cuid(), st.id, exam.id, StudentExamStatus.ENROLLED, $now, owner.id, false]);
       await pool.query(
         `INSERT INTO "ExamEnrollment" (id,"studentId","examId",status,"enrolledAt","enrolledBy","hallTicketIssued") VALUES ${batch.map((_, j) => `($${j * 7 + 1},$${j * 7 + 2},$${j * 7 + 3},$${j * 7 + 4},$${j * 7 + 5},$${j * 7 + 6},$${j * 7 + 7})`).join(',')}`,
         values
@@ -968,10 +977,9 @@ async function main() {
     if (!exam.sessionId) continue;
     const sectionStudents = studentList.filter(s => s.sectionId === exam.sectionId);
     for (const st of picks(sectionStudents, Math.min(sectionStudents.length, rng(8, 15)))) {
-      const obtained = rng(15, 50);
-      const max = 50;
-      const pct = parseFloat(((obtained / max) * 100).toFixed(1));
-      const isPassed = obtained >= Math.ceil(max * 0.33);
+      const obtained = rng(Math.round(exam.maxMarks * 0.3), exam.maxMarks);
+      const pct = parseFloat(((obtained / exam.maxMarks) * 100).toFixed(1));
+      const isPassed = obtained >= Math.ceil(exam.maxMarks * 0.33);
       try {
         await pool.query(`INSERT INTO "ExamResult" (id,"studentId","examId","obtainedMarks",percentage,"gradeLabel",remarks,"isPassed","isAbsent","createdAt","updatedAt")
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [
@@ -1015,7 +1023,7 @@ async function main() {
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, [
         cuid(), st.id, esId, ayId, orgId, totalMax, totalOb, pct, cgpa,
         pct >= 91 ? 'A1' : pct >= 81 ? 'A2' : pct >= 71 ? 'B1' : pct >= 61 ? 'B2' : pct >= 51 ? 'C1' : pct >= 41 ? 'C2' : pct >= 33 ? 'D' : 'E',
-        pct >= 33 ? 'PASSED' : 'FAILED', rng(1, 30),
+        pct >= 33 ? ResultStatus.PASSED : ResultStatus.FAILED, rng(1, 30),
         parseFloat((80 + Math.random() * 18).toFixed(1)),
         pick(['A', 'A', 'A', 'B', 'B', 'C']),
         'Satisfactory progress. Encourage reading habits.',
@@ -1038,11 +1046,11 @@ async function main() {
     await pool.query(`INSERT INTO "Notice" (id,"organizationId","academicYearId",title,summary,content,"startDate","endDate","noticeType",priority,status,"createdBy","approvedBy","approvedAt","publishedBy","publishedAt","isPinned","isUrgent","emailNotification","pushNotification","whatsAppNotification","smsNotification","targetRoles","targetGrades","targetSections","createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)`, [
       nid, orgId, ayId, nd.title, nd.summary, nd.content,
-      ts(start), ts(end), nd.type, nd.priority, 'PUBLISHED',
+      ts(start), ts(end), nd.type, nd.priority, NoticeStatus.PUBLISHED,
       owner.id, owner.id, $now, owner.id, $now,
-      nd.priority === 'URGENT', nd.priority === 'URGENT',
-      true, true, nd.priority === 'URGENT', nd.priority === 'URGENT',
-      pgArr(['STUDENT', 'PARENT', 'TEACHER']),
+      nd.priority === NoticePriority.URGENT, nd.priority === NoticePriority.URGENT,
+      true, true, nd.priority === NoticePriority.URGENT, nd.priority === NoticePriority.URGENT,
+      pgArr([Role.STUDENT, Role.PARENT, Role.TEACHER]),
       pgArr([]), pgArr([]), $now, $now,
     ]);
 
@@ -1063,14 +1071,14 @@ async function main() {
    * ===================================================================== */
   console.log('🔔 Creating Notifications...');
   const notifTypes = [
-    { type: 'NOTICE', label: 'Notice Alerts' },
-    { type: 'FEE', label: 'Fee Reminders' },
-    { type: 'ATTENDANCE', label: 'Attendance Alerts' },
-    { type: 'DOCUMENT', label: 'Document Requests' },
-    { type: 'EXAM', label: 'Exam Notifications' },
-    { type: 'LEAVE', label: 'Leave Updates' },
-    { type: 'ACADEMIC_REPORT', label: 'Academic Reports' },
-    { type: 'GREETING', label: 'Festival Greetings' },
+    { type: NotificationType.NOTICE, label: 'Notice Alerts' },
+    { type: NotificationType.FEE, label: 'Fee Reminders' },
+    { type: NotificationType.ATTENDANCE, label: 'Attendance Alerts' },
+    { type: NotificationType.DOCUMENT, label: 'Document Requests' },
+    { type: NotificationType.EXAM, label: 'Exam Notifications' },
+    { type: NotificationType.LEAVE, label: 'Leave Updates' },
+    { type: NotificationType.ACADEMIC_REPORT, label: 'Academic Reports' },
+    { type: NotificationType.GREETING, label: 'Festival Greetings' },
   ];
   for (const nt of notifTypes) {
     await pool.query(`INSERT INTO "NotificationSetting" (id,"organizationId","notificationType",label,channels,"isActive","createdAt","updatedAt")
@@ -1084,11 +1092,11 @@ async function main() {
   // Sample notifications + logs
   let notifCount = 0;
   const notifMessages = [
-    { type: 'FEE', title: 'Fee Payment Reminder', msg: 'Your ward\'s tuition fee for Q1 is pending. Please pay before 15th July 2026.' },
-    { type: 'ATTENDANCE', title: 'Attendance Alert', msg: 'Your ward was marked absent on 12th July 2026. Please ensure regular attendance.' },
-    { type: 'EXAM', title: 'Exam Schedule', msg: 'Unit Test 1 begins from 10th August 2026. Check timetable on portal.' },
-    { type: 'NOTICE', title: 'Notice Published', msg: 'A new notice has been published regarding Annual Day celebrations.' },
-    { type: 'GREETING', title: 'Ganesh Chaturthi Wishes', msg: 'Shree Gurukul Vidyalaya wishes you and your family a happy Ganesh Chaturthi!' },
+    { type: NotificationType.FEE, title: 'Fee Payment Reminder', msg: 'Your ward\'s tuition fee for Q1 is pending. Please pay before 15th July 2026.' },
+    { type: NotificationType.ATTENDANCE, title: 'Attendance Alert', msg: 'Your ward was marked absent on 12th July 2026. Please ensure regular attendance.' },
+    { type: NotificationType.EXAM, title: 'Exam Schedule', msg: 'Unit Test 1 begins from 10th August 2026. Check timetable on portal.' },
+    { type: NotificationType.NOTICE, title: 'Notice Published', msg: 'A new notice has been published regarding Annual Day celebrations.' },
+    { type: NotificationType.GREETING, title: 'Ganesh Chaturthi Wishes', msg: 'Shree Gurukul Vidyalaya wishes you and your family a happy Ganesh Chaturthi!' },
   ];
 
   for (const nm of notifMessages) {
@@ -1105,7 +1113,7 @@ async function main() {
         // Log
         await pool.query(`INSERT INTO "NotificationLog" (id,"organizationId","notificationId","notificationType",channel,status,cost,units,"idempotencyKey","sentAt","createdAt")
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [
-          cuid(), orgId, nid, nm.type, pick(['EMAIL', 'SMS', 'WHATSAPP', 'PUSH']), 'SENT', rng(5, 50), 1,
+          cuid(), orgId, nid, nm.type, pick([NotificationChannel.EMAIL, NotificationChannel.SMS, NotificationChannel.WHATSAPP, NotificationChannel.PUSH]), NotificationStatus.SENT, rng(5, 50), 1,
           `${key}:${pick(['email', 'sms', 'whatsapp', 'push'])}`, $now, $now,
         ]);
       } catch { }
@@ -1117,8 +1125,8 @@ async function main() {
    *  21 — LEADS (Admissions CRM)
    * ===================================================================== */
   console.log('🎯 Creating Leads...');
-  const leadSources = ['WALK_IN', 'WEBSITE', 'WORD_OF_MOUTH', 'GOOGLE_ADS', 'FACEBOOK_ADS', 'REFERRAL_PROGRAM', 'PHONE_CALL', 'WHATSAPP'];
-  const leadStatuses = ['NEW', 'CONTACTED', 'INTERESTED', 'VISIT_SCHEDULED', 'VISITED', 'QUALIFIED', 'CONVERTED', 'NOT_INTERESTED', 'UNRESPONSIVE'];
+  const leadSources = [LeadSource.WALK_IN, LeadSource.WEBSITE, LeadSource.WORD_OF_MOUTH, LeadSource.GOOGLE_ADS, LeadSource.FACEBOOK_ADS, LeadSource.REFERRAL_PROGRAM, LeadSource.PHONE_CALL, LeadSource.WHATSAPP];
+  const leadStatuses = [LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.INTERESTED, LeadStatus.VISIT_SCHEDULED, LeadStatus.VISITED, LeadStatus.QUALIFIED, LeadStatus.CONVERTED, LeadStatus.NOT_INTERESTED, LeadStatus.UNRESPONSIVE];
   const LEADS_COUNT = 35;
   let leadCount = 0;
   let leadActCount = 0;
@@ -1139,7 +1147,7 @@ async function main() {
       pick(['', 'St. Mary\'s School', 'DAV Public School', 'Kendriya Vidyalaya', 'Ryan International', 'Podar International', 'Jawahar Navodaya']),
       `${rng(1, 99)}, ${pick(['MG Road', 'Station Road', 'Nagras Road', 'Warje', 'Sinhagad Road'])}`,
       'Pune', 'Maharashtra', pick(['411001', '411038', '411057', '411045', '411052']),
-      pick(leadSources), status, pick(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
+      pick(leadSources), status, pick([LeadPriority.LOW, LeadPriority.MEDIUM, LeadPriority.HIGH, LeadPriority.URGENT]),
       rng(15, 95), Math.random() > 0.5 ? pick(teacherList).userId : null,
       Math.random() > 0.4 ? ts(rngDate(new Date('2026-07-01'), new Date('2027-03-01'))) : null,
       rng(0, 5),
@@ -1155,11 +1163,11 @@ async function main() {
       await pool.query(`INSERT INTO "LeadActivity" (id,"leadId",type,title,description,outcome,sentiment,"performedById","performedAt","createdAt")
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [
         cuid(), lid,
-        pick(['CALL', 'WHATSAPP', 'EMAIL', 'VISIT', 'FOLLOW_UP']),
+        pick([LeadActivityType.CALL, LeadActivityType.WHATSAPP, LeadActivityType.EMAIL, LeadActivityType.VISIT, LeadActivityType.FOLLOW_UP]),
         pick(['Called parent for follow-up', 'Sent fee structure via WhatsApp', 'Emailed prospectus', 'Campus tour arranged']),
         pick(['Parent showed interest.', 'Requested scholarship details.', 'Will visit campus next week.']),
         pick(['Positive response', 'Interested', 'Will decide later']),
-        pick(['POSITIVE', 'NEUTRAL']),
+        pick([Sentiment.POSITIVE, Sentiment.NEUTRAL]),
         pick(teacherList).userId,
         ts(rngDate(new Date('2026-07-01'), new Date('2027-02-01'))), $now,
       ]);
@@ -1185,19 +1193,19 @@ async function main() {
   for (const cm of complaintMsgs) {
     const cid = cuid();
     const tid = `GUR-${String(rng(10000, 99999))}`;
-    const sev = pick(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+    const sev = pick([Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL]);
     await pool.query(`INSERT INTO "AnonymousComplaint" (id,"trackingId",category,severity,subject,description,"evidenceUrls","currentStatus","organizationId","academicYearId","createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
       cid, tid, pick(complaintCategories), sev, cm.subject, cm.desc,
       pgArr(Math.random() > 0.7 ? [`https://storage.gurukul.edu.in/complaints/${orgId}/${tid}.jpg`] : []),
-      pick(['PENDING', 'UNDER_REVIEW', 'INVESTIGATING', 'RESOLVED']),
+      pick([ComplaintStatus.PENDING, ComplaintStatus.UNDER_REVIEW, ComplaintStatus.INVESTIGATING, ComplaintStatus.RESOLVED]),
       orgId, ayId, $now, $now,
     ]);
 
     // Status timeline
     await pool.query(`INSERT INTO "ComplaintStatusTimeline" (id,"complaintId",status,note,"changedBy","createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
-      cuid(), cid, 'PENDING', 'Complaint received and logged.', 'system', $now, $now,
+      cuid(), cid, ComplaintStatus.PENDING, 'Complaint received and logged.', 'system', $now, $now,
     ]);
   }
   console.log(`   ✅ ${complaintMsgs.length} anonymous complaints\n`);
@@ -1230,7 +1238,7 @@ async function main() {
    *  24 — LEAVES
    * ===================================================================== */
   console.log('🏖️ Creating Leave Records...');
-  const leaveTypes = ['SICK', 'CASUAL', 'ANNUAL', 'EMERGENCY', 'VACATION', 'STUDY'];
+  const leaveTypes = [LeaveType.SICK, LeaveType.CASUAL, LeaveType.ANNUAL, LeaveType.EMERGENCY, LeaveType.VACATION, LeaveType.STUDY];
   let leaveCount = 0;
   for (const t of picks(teacherList, rng(5, 10))) {
     const start = rngDate(new Date('2026-08-01'), new Date('2027-02-01'));
@@ -1238,19 +1246,20 @@ async function main() {
     const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
     const lid = cuid();
 
+    const leaveStatus = pick([LeaveStatus.APPROVED, LeaveStatus.APPROVED, LeaveStatus.APPROVED, LeaveStatus.PENDING]);
     await pool.query(`INSERT INTO "Leave" (id,"startDate","endDate","totalDays",reason,type,"emergencyContact","currentStatus","approvedBy","approvedAt","userId","organizationId","academicYearId","createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [
       lid, ts(start), ts(end), days,
       pick(['Not feeling well', 'Family function in village', 'Personal work', 'Medical checkup', 'Going out of station']),
       pick(leaveTypes), phone(),
-      pick(['APPROVED', 'APPROVED', 'APPROVED', 'PENDING']),
-      owner.id, $now, t.userId, orgId, ayId, $now, $now,
+      leaveStatus,
+      leaveStatus === LeaveStatus.APPROVED ? owner.id : null, leaveStatus === LeaveStatus.APPROVED ? $now : null, t.userId, orgId, ayId, $now, $now,
     ]);
     leaveCount++;
 
     await pool.query(`INSERT INTO "LeaveStatusTimeline" (id,"leaveId",status,note,"changedBy","changedAt")
       VALUES ($1,$2,$3,$4,$5,$6)`, [
-      cuid(), lid, 'APPROVED', 'Leave approved by Principal.', owner.id, $now,
+      cuid(), lid, leaveStatus, leaveStatus === LeaveStatus.APPROVED ? 'Leave approved by Principal.' : 'Leave submitted, pending approval.', leaveStatus === LeaveStatus.APPROVED ? owner.id : t.userId, $now,
     ]);
   }
   console.log(`   ✅ ${leaveCount} leave records\n`);
@@ -1263,7 +1272,7 @@ async function main() {
     await pool.query(`INSERT INTO "AcademicCalendar" (id,"organizationId",name,"startDate","endDate",type,reason,"isRecurring","createdBy","createdAt","updatedAt","academicYearId")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
       cuid(), orgId, h.name, ts(new Date(h.start)), ts(new Date(h.end)),
-      'PLANNED', h.reason, h.name === 'Diwali Break', owner.id, $now, $now, ayId,
+      CalendarEventType.PLANNED, h.reason, h.name === 'Diwali Break', owner.id, $now, $now, ayId,
     ]);
   }
   console.log(`   ✅ ${HOLIDAYS.length} calendar events\n`);
@@ -1277,7 +1286,7 @@ async function main() {
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [
     agentFeeSense, orgId, 'FeeSense AI',
     'Analyzes overdue fees, payment patterns, risk levels; sends personalized multi-channel reminders.',
-    'ACTIVE', 'DAILY', '23:00', 'google/gemini-2.0-flash-exp', 20, 5, 5, 0, $now, $now,
+    AiAgentStatus.ACTIVE, AIAgentRunFrequency.DAILY, '23:00', 'google/gemini-2.0-flash-exp', 20, 5, 5, 0, $now, $now,
   ]);
   await pool.query(`INSERT INTO "AiAgentConfig" (id,"agentId",config,"createdAt","updatedAt")
     VALUES ($1,$2,$3,$4,$5)`, [
@@ -1294,7 +1303,7 @@ async function main() {
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [
     agentAttend, orgId, 'Attendance Monitor',
     'Detects absentee patterns, frequent lates, and students needing intervention.',
-    'ACTIVE', 'WEEKLY', '22:00', 'google/gemini-2.0-flash-exp', 20, 8, 7, 1, $now, $now,
+    AiAgentStatus.ACTIVE, AIAgentRunFrequency.WEEKLY, '22:00', 'google/gemini-2.0-flash-exp', 20, 8, 7, 1, $now, $now,
   ]);
   await pool.query(`INSERT INTO "AiAgentConfig" (id,"agentId",config,"createdAt","updatedAt")
     VALUES ($1,$2,$3,$4,$5)`, [
@@ -1312,7 +1321,7 @@ async function main() {
       logId, agentFeeSense, orgId,
       ts(new Date(Date.now() - (i + 1) * 86400000)),
       ts(new Date(Date.now() - (i + 1) * 86400000 + 30000)),
-      'SUCCESS', rng(100, 200), rng(20, 50), 0, rng(0, 2),
+      AIAgentExecutionStatus.SUCCESS, rng(100, 200), rng(20, 50), 0, rng(0, 2),
       rng(100, 500), rng(5000, 15000), rng(15000, 45000), $now,
     ]);
 
@@ -1346,7 +1355,7 @@ async function main() {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
       cuid(), cardNo, 1, st.id, orgId, AY_LABEL,
       ts(rngDate(new Date('2026-06-01'), new Date('2026-06-30'))),
-      ts(new Date('2027-04-01')), owner.id, 'default', 'HORIZONTAL', $now, $now,
+      ts(new Date('2027-04-01')), owner.id, 'default', IdCardOrientation.HORIZONTAL, $now, $now,
     ]);
     idCardCount++;
   }
@@ -1355,7 +1364,7 @@ async function main() {
     await pool.query(`INSERT INTO "IdCard" (id,"cardNumber",version,"teacherId","organizationId","academicYear","issuedAt","expiresAt","generatedBy",template,orientation,"createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
       cuid(), cardNo, 1, t.id, orgId, AY_LABEL,
-      $now, ts(new Date('2027-04-01')), owner.id, 'default', 'VERTICAL', $now, $now,
+      $now, ts(new Date('2027-04-01')), owner.id, 'default', IdCardOrientation.VERTICAL, $now, $now,
     ]);
     idCardCount++;
   }
@@ -1393,9 +1402,9 @@ async function main() {
   }
 
   const vehicles = [
-    { reg: 'MH12GH1234', type: 'BUS', capacity: 40 },
-    { reg: 'MH12GH5678', type: 'BUS', capacity: 40 },
-    { reg: 'MH12GH9012', type: 'MINI_BUS', capacity: 20 },
+    { reg: 'MH12GH1234', type: VehicleType.BUS, capacity: 40 },
+    { reg: 'MH12GH5678', type: VehicleType.BUS, capacity: 40 },
+    { reg: 'MH12GH9012', type: VehicleType.MINI_BUS, capacity: 20 },
   ];
   const vehicleIds: string[] = [];
   for (const v of vehicles) {
@@ -1487,16 +1496,16 @@ async function main() {
     await pool.query(`INSERT INTO "Invoice" (id,"subscriptionId","organizationId","invoiceNumber","periodStart","periodEnd","studentCount",subtotal,discount,total,status,"dueAt","paidAt","createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [
       invId, subId, orgId, `INV-GUR-${String(m + 1).padStart(4, '0')}`,
-      ts(invDate), ts(invEnd), rng(180, 200),
+      ts(invDate), ts(invEnd), studentList.length,
       rng(3500, 4000), 0, rng(3500, 4000),
-      'PAID', ts(invDate), ts(new Date(invDate.getTime() + rng(1, 5) * 86400000)),
+      InvoiceStatus.PAID, ts(invDate), ts(new Date(invDate.getTime() + rng(1, 5) * 86400000)),
       $now, $now,
     ]);
 
     // Payment per invoice
     await pool.query(`INSERT INTO "SubscriptionPayment" (id,"subscriptionId","invoiceId",provider,amount,status,"createdAt","updatedAt")
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [
-      cuid(), subId, invId, 'MANUAL', rng(3500, 4000), 'SUCCESS', $now, $now,
+      cuid(), subId, invId, PaymentProvider.MANUAL, rng(3500, 4000), SubscriptionPaymentStatus.SUCCESS, $now, $now,
     ]);
 
     // Billing event
@@ -1543,12 +1552,12 @@ async function main() {
   await pool.query(`INSERT INTO "ScheduledJob" (id,data,type,"scheduledAt",status,"createdBy","organizationId","createdAt","updatedAt")
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [
     cuid(), JSON.stringify({ channels: ['WHATSAPP', 'SMS'], grades: ['Grade 1', 'Grade 2', 'Grade 3'] }),
-    'FEE_REMINDER', ts(new Date('2026-08-01')), 'PENDING', owner.id, orgId, $now, $now,
+    scheduledJobType.FEE_REMINDER, ts(new Date('2026-08-01')), 'PENDING', owner.id, orgId, $now, $now,
   ]);
   await pool.query(`INSERT INTO "ScheduledJob" (id,data,type,"scheduledAt",status,"createdBy","organizationId","createdAt","updatedAt")
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [
     cuid(), JSON.stringify({ noticeId: 'all', channels: ['EMAIL', 'PUSH'] }),
-    'NOTICE', ts(new Date('2026-09-15')), 'PENDING', owner.id, orgId, $now, $now,
+    scheduledJobType.NOTICE, ts(new Date('2026-09-15')), 'PENDING', owner.id, orgId, $now, $now,
   ]);
   console.log('   ✅ Scheduled jobs created\n');
 
@@ -1558,12 +1567,12 @@ async function main() {
   console.log('✉️ Creating Invitations...');
   await pool.query(`INSERT INTO "Invitation" (id,"organizationId",email,role,status,"inviterId","expiresAt","createdAt","updatedAt")
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [
-    cuid(), orgId, 'new.teacher@gurukul.edu.in', 'TEACHER', 'pending', owner.id,
+    cuid(), orgId, 'new.teacher@gurukul.edu.in', Role.TEACHER, 'pending', owner.id,
     ts(new Date('2027-06-01')), $now, $now,
   ]);
   await pool.query(`INSERT INTO "Invitation" (id,"organizationId",email,role,status,"inviterId","expiresAt","createdAt","updatedAt")
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [
-    cuid(), orgId, 'new.parent@gurukul.edu.in', 'PARENT', 'pending', owner.id,
+    cuid(), orgId, 'new.parent@gurukul.edu.in', Role.PARENT, 'pending', owner.id,
     ts(new Date('2027-06-01')), $now, $now,
   ]);
   console.log('   ✅ Invitations created\n');

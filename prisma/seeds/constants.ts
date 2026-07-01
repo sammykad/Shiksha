@@ -43,7 +43,7 @@ export const INDIAN_CITIES = [
   { city: 'Lucknow', state: 'Uttar Pradesh', pinCodes: ['226001', '226010', '226016', '226024'] },
 ]
 
-export const BLOOD_GROUPS = ['A_POSITIVE', 'A_NEGATIVE', 'B_POSITIVE', 'B_NEGATIVE', 'AB_POSITIVE', 'AB_NEGATIVE', 'O_POSITIVE', 'O_NEGATIVE']
+
 export const CASTES = ['General', 'OBC', 'SC', 'ST', '']
 
 export function randomItem<T>(arr: T[]): T {
@@ -79,7 +79,7 @@ export function generateIndianEmail(firstName: string, lastName: string): string
   return `${name}@${randomItem(domains)}`
 }
 
-export let _idCounter = 0
+export const _idCounter = 0
 
 export function generateId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'

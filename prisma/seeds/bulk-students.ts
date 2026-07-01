@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
-import { GuardianType } from '@/generated/prisma/enums';
+import { BloodGroup, GuardianType, Gender, StudentStatus, Role, MembershipStatus, FeeStatus, PaymentMethod, PaymentStatus } from '@/generated/prisma/enums';
 import {
   INDIAN_FIRST_NAMES_MALE, INDIAN_FIRST_NAMES_FEMALE, INDIAN_LAST_NAMES,
   INDIAN_ADDRESSES, INDIAN_CITIES,
   randomItem, randomInt, generateIndianPhone, generateIndianEmail,
-  generateId, pickParentGender, BLOOD_GROUPS, CASTES,
+  CASTES, randomDate,
 } from './constants';
 
 const pool = new Pool({
@@ -16,7 +16,8 @@ const pinCodes = [
   '411001', '411038', '411057', '411045', '411004', '411005', '411009', '411016',
 ];
 
-const FEE_STRUCTURE_BY_GRADE: Record<string, { tuition: number; transport: number; exam: number; lab: number; annual: number }> = { '1': { tuition: 18000, transport: 12000, exam: 2000, lab: 0, annual: 3000 },
+const FEE_STRUCTURE_BY_GRADE: Record<string, { tuition: number; transport: number; exam: number; lab: number; annual: number }> = {
+  '1': { tuition: 18000, transport: 12000, exam: 2000, lab: 0, annual: 3000 },
   '2': { tuition: 18000, transport: 12000, exam: 2000, lab: 0, annual: 3000 },
   '3': { tuition: 20000, transport: 12000, exam: 2500, lab: 0, annual: 3000 },
   '4': { tuition: 22000, transport: 12000, exam: 2500, lab: 1000, annual: 3500 },
@@ -124,7 +125,7 @@ async function main() {
         await pool.query(
           `INSERT INTO "User" (id, email, "firstName", "lastName", name, image, "emailVerified", "isActive", "createdAt", "updatedAt")
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [userId, generateIndianEmail(firstName, lastName, studentCount), firstName, lastName, `${firstName} ${lastName}`, '', false, true, now, now]
+          [userId, generateIndianEmail(firstName, lastName), firstName, lastName, `${firstName} ${lastName}`, '', false, true, now, now]
         );
 
         // Create Parent
@@ -135,7 +136,7 @@ async function main() {
         await pool.query(
           `INSERT INTO "Parent" (id, "organizationId", "userId", "firstName", "lastName", email, "phoneNumber", "whatsAppNumber", "createdAt", "updatedAt")
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [parentId, orgId, null, parentFirstName, lastName, generateIndianEmail(parentFirstName, lastName, studentCount), parentPhone, parentPhone, now, now]
+          [parentId, orgId, null, parentFirstName, lastName, generateIndianEmail(parentFirstName, lastName), parentPhone, parentPhone, now, now]
         );
 
         // Create Student
@@ -145,11 +146,11 @@ async function main() {
           [
             studentId, userId, orgId, grade.id, section.id,
             firstName, lastName, `${firstName} ${lastName}`, randomItem(INDIAN_FIRST_NAMES_FEMALE),
-            dob, randomItem(BLOOD_GROUPS),
+            dob, randomItem(Object.values(BloodGroup)),
             `${randomItem(INDIAN_ADDRESSES)}, ${city.city}, ${city.state} - ${randomItem(city.pinCodes)}`,
             randomItem(CASTES), '', '', rollNumber, generateIndianPhone(), generateIndianPhone(),
-            generateIndianEmail(firstName, lastName, studentCount), parentPhone,
-            isMale ? 'MALE' : 'FEMALE', 'ACTIVE',
+            generateIndianEmail(firstName, lastName), parentPhone,
+            isMale ? Gender.MALE : Gender.FEMALE, StudentStatus.ACTIVE,
             randomDate(new Date('2025-03-01'), new Date('2025-04-15')),
             now, now
           ]
@@ -166,7 +167,7 @@ async function main() {
         await pool.query(
           `INSERT INTO "Membership" (id, "userId", "organizationId", role, status, "createdAt", "updatedAt")
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [generateId(), userId, orgId, 'STUDENT', 'ACTIVE', now, now]
+          [generateId(), userId, orgId, Role.STUDENT, MembershipStatus.ACTIVE, now, now]
         );
 
         // Create Fees
@@ -185,18 +186,18 @@ async function main() {
           const scenario = Math.random();
           let paidAmount = 0;
           let pendingAmount = ft.amount;
-          let status = 'UNPAID';
+          let status: string = FeeStatus.UNPAID;
 
           if (scenario < 0.45) {
             // Fully paid
             paidAmount = ft.amount;
             pendingAmount = 0;
-            status = 'PAID';
+            status = FeeStatus.PAID;
           } else if (scenario < 0.65) {
             // Partially paid
             paidAmount = Math.round(ft.amount * 0.5);
             pendingAmount = ft.amount - paidAmount;
-            status = 'UNPAID';
+            status = FeeStatus.UNPAID;
           }
 
           await pool.query(
@@ -208,15 +209,15 @@ async function main() {
 
           // Create payment if paid
           if (paidAmount > 0) {
-            const paymentMethod = randomItem(['UPI', 'CASH', 'ONLINE', 'BANK_TRANSFER']);
+            const paymentMethod = randomItem([PaymentMethod.UPI, PaymentMethod.CASH, PaymentMethod.ONLINE, PaymentMethod.BANK_TRANSFER]);
             const paymentDate = randomDate(new Date('2025-04-01'), new Date('2025-12-31'));
-            const transactionId = paymentMethod === 'UPI' ? `UPI${randomInt(100000000, 999999999)}` : null;
+            const transactionId = paymentMethod === PaymentMethod.UPI ? `UPI${randomInt(100000000, 999999999)}` : null;
 
             await pool.query(
               `INSERT INTO "FeePayment" (id, "feeId", amount, status, "paymentMethod", "paymentDate", "receiptNumber", "payerId", "organizationId", "transactionId", note, "createdAt", "updatedAt")
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
               [
-                generateId(), feeId, paidAmount, 'COMPLETED', paymentMethod,
+                generateId(), feeId, paidAmount, PaymentStatus.COMPLETED, paymentMethod,
                 paymentDate, generateReceiptNumber(paymentCount), adminId, orgId, transactionId,
                 `Payment for ${ft.cat}`, now, now
               ]
