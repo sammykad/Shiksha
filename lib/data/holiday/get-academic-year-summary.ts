@@ -1,11 +1,15 @@
 import { getActiveAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
-import { eachDayOfInterval, isSaturday, isSunday } from 'date-fns';
+import { eachDayOfInterval } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+import { IST } from '@/lib/utils';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
 
 export const getAcademicYearSummary = async () => {
   const organizationId = await getOrganizationId();
   const academicYearId = await getActiveAcademicYearId();
+  const weekendDays = await getOrganizationWeekendDays();
 
   // ✅ Fetch academic year start and end dates
   const academicYear = await prisma.academicYear.findUnique({
@@ -38,11 +42,11 @@ export const getAcademicYearSummary = async () => {
   });
   const totalDays = allDates.length;
 
-  // ✅ Count weekends
-  const weekendDays = allDates.filter(
-    (date) => isSaturday(date) || isSunday(date)
+  // ✅ Count weekends (using IST timezone)
+  const weekendDates = allDates.filter(
+    (date) => weekendDays.includes(toZonedTime(date, IST).getDay())
   );
-  const totalWeekendDays = weekendDays.length;
+  const totalWeekendDays = weekendDates.length;
 
   // ✅ Flatten holidays into individual dates
   const holidayDates = new Set<string>();
@@ -56,7 +60,7 @@ export const getAcademicYearSummary = async () => {
   const totalHolidays = holidayDates.size;
 
   // ✅ Remove double-counted weekend+holiday dates
-  const overlappingHolidayWeekends = weekendDays.filter((date) =>
+  const overlappingHolidayWeekends = weekendDates.filter((date) =>
     holidayDates.has(date.toDateString())
   ).length;
 

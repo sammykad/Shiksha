@@ -39,6 +39,11 @@ const eslintConfig = [
       '@typescript-eslint/no-unused-vars': 'off', // handled by unused-imports plugin
     },
   },
+  // Allow console.log in seed scripts
+  {
+    files: ['prisma/seeds/**'],
+    rules: { 'no-console': 'off' },
+  },
 ];
 
 export default eslintConfig;

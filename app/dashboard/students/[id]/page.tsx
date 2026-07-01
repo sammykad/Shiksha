@@ -31,6 +31,7 @@ import { StudentDashboardStatsCards } from '@/components/dashboard/Student/Stude
 import { StudentAttendanceCalendar } from '@/components/dashboard/StudentAttendance/attendance-calendar';
 import { getCurrentAcademicYearId } from '@/lib/academicYear';
 import { getOrganizationId } from '@/lib/organization';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
 import { getCurrentUserByRole } from '@/lib/auth';
 import { DocumentCard } from '@/components/dashboard/Student/documents/DocumentCard';
 import StudentAcademicPerformance from '@/components/dashboard/Student/StudentAcademicPerformance';
@@ -148,10 +149,11 @@ const StudentDetailsPage = async ({
   }
 
   // Optimized parallel fetching for student data and org meta
-  const [studentData, orgMeta, performanceData] = await Promise.all([
+  const [studentData, orgMeta, performanceData, weekendDays] = await Promise.all([
     getStudentFullDetails(studentId, organizationId, academicYearId),
     getOrganizationMetaData(organizationId, academicYearId),
     getStudentPerformance(studentId),
+    getOrganizationWeekendDays(),
   ]);
 
   if (!studentData) {
@@ -543,6 +545,7 @@ const StudentDetailsPage = async ({
                       attendanceRecords={student.StudentAttendance}
                       academicCalendarEvents={holidayData}
                       activeAcademicYear={academicYears.find(y => y.id === academicYearId)}
+                      weekendDays={weekendDays}
                     />
                   ) : (
                     <div className="h-64 flex flex-col items-center justify-center text-center">

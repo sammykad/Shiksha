@@ -280,8 +280,8 @@ class WhatsAppProvider implements ChannelProvider {
         };
       }
 
-      // 3b. Image header (YouTube thumbnail for recorded_session_shared)
-      if (tpl.name === "recorded_session_shared") {
+      // 3b. Image header (YouTube thumbnail for recorded_session_link)
+      if (tpl.name === "recorded_session_link") {
         const buttonComp = tpl.components.find(
           (c): c is ButtonComponent => c.type === "button"
         );
@@ -305,7 +305,6 @@ class WhatsAppProvider implements ChannelProvider {
     // 4. Dispatch to Meta
     if (wirePayload.type === "template") {
       wirePayload.template.components = wirePayload.template.components.filter((c: any) => {
-        if (c.type === "footer") return false;
         if ("parameters" in c && (!c.parameters || c.parameters.length === 0)) return false;
         return true;
       });

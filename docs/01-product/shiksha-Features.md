@@ -257,6 +257,7 @@ Pending > All Below
 - Student Portal
 - Parent Portal
 
+
 22. COMMUNICATION CHANNELS
 
 - Multi-Channel Messaging
@@ -501,6 +502,14 @@ Share Recorded Session ; Youtube URl Proview and all the things, Need 100% Dyanm
 - **No `PAST_DUE` handling defined**: Enum value exists but no code transitions subscriptions to PAST_DUE or handles overdue.
 - **Invoice PDF restricted to ADMIN**: `app/api/billing/invoice/[invoiceId]/pdf/route.ts` returns 403 for non-ADMIN roles — students/parents cannot download.
 
+
+Here's the final plan documented parent profile Update:https://reui.io/components/phone-input
+Step	What	Details
+1	npm install react-phone-number-input	Not yet installed
+2	npx shadcn@latest add combobox	Missing dependency for PhoneInput
+3	Create components/ui/phone-input.tsx	The component code you shared
+4	Update lib/schemas.ts	Change phone regex to z.string().min(1) — component handles format
+5	Swap <Input> → <PhoneInput> in parent-profile-	Both phone and WhatsApp fields
 # Decide
 
 - @organizaitonconfig or genralsetting ? which one is correct or why look same ?

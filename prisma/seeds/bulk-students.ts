@@ -186,7 +186,7 @@ async function main() {
           const scenario = Math.random();
           let paidAmount = 0;
           let pendingAmount = ft.amount;
-          let status: string = FeeStatus.UNPAID;
+          let status: FeeStatus = FeeStatus.UNPAID;
 
           if (scenario < 0.45) {
             // Fully paid

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
+import { VehicleType } from '@/generated/prisma/enums';
 
 const pool = new Pool({ connectionString: process.env.DIRECT_URL });
 
@@ -46,7 +47,7 @@ async function seedOneRoute() {
     await client.query(
       `INSERT INTO "Vehicle" (id, "organizationId", "registrationNo", type, capacity, "isActive", "createdAt", "updatedAt")
        VALUES ($1,$2,$3,$4,$5,true,$6,$6)`,
-      [vehicleId, ORGANIZATION_ID, 'MH12PA3456', 'BUS', 40, now]
+      [vehicleId, ORGANIZATION_ID, 'MH12PA3456', VehicleType.BUS, 40, now]
     );
     console.log(`  ✅ Vehicle: MH12PA3456 (${vehicleId})`);
 

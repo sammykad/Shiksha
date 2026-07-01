@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { Pool } from 'pg';
 import {
   GuardianType,
+  InstitutionType,
+  OrganizationType,
   YearType,
   Role,
   MembershipStatus,
@@ -11,6 +13,7 @@ import {
   AssignmentStatus,
   BloodGroup,
   Gender,
+  StudentStatus,
   PaymentMethod,
   FeeStatus,
   PaymentStatus,
@@ -155,7 +158,7 @@ async function main() {
     [
       institutionId, 'Saraswati Vidya Mandir Trust', 'svm-trust',
       'A premier educational trust running quality schools across India since 1985.',
-      'TRUST', 'info@svmtrust.edu.in', '+912012345678', 'https://www.svmtrust.edu.in',
+      InstitutionType.TRUST, 'info@svmtrust.edu.in', '+912012345678', 'https://www.svmtrust.edu.in',
       'Plot No. 45, Education Hub, Kothrud', 'Pune', 'Maharashtra', '411038',
       adminId, now, now
     ]
@@ -173,7 +176,7 @@ async function main() {
     [
       orgId, 'Saraswati Vidya Mandir English Medium School', 'svm-school-pune',
       institutionId, 'admin@svmpune.edu.in', '+912012345679', 'https://www.svmpune.edu.in',
-      true, 500000, 'SCHOOL', 1995,
+      true, 500000, OrganizationType.SCHOOL, 1995,
       adminId, now, now
     ]
   );
@@ -479,7 +482,7 @@ async function main() {
             dob, randomItem(Object.values(BloodGroup)),
             `${randomItem(INDIAN_ADDRESSES)}, ${city.city}, ${city.state}`,
             randomItem(castes), '', '', rollNumber, phone, phone, email, parentPhone,
-            isMale ? Gender.MALE : Gender.FEMALE, 'ACTIVE',
+            isMale ? Gender.MALE : Gender.FEMALE, StudentStatus.ACTIVE,
             randomDate(new Date('2025-03-01'), new Date('2025-04-15')),
             now, now
           ]
@@ -729,7 +732,7 @@ async function main() {
         Math.random() > 0.4 ? randomDate(new Date('2026-01-01'), new Date('2026-03-01')) : null,
         Math.random() > 0.5 ? randomDate(new Date('2025-10-01'), new Date('2025-12-31')) : null,
         randomInt(0, 8),
-        status === 'CONVERTED' ? now : null,
+        status === LeadStatus.CONVERTED ? now : null,
         randomItem(['Parent interested in admission.', 'Visited campus during open house.', 'Requested fee structure.', 'Looking for transportation.']),
         generatePgArray(randomItem([['Transportation'], ['Scholarship'], ['Transportation', 'Scholarship'], []])),
         randomItem(['50k-1L', '1L-2L', '2L-3L', '3L+', '']),

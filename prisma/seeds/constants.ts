@@ -1,5 +1,3 @@
-import { GuardianType } from '../../generated/prisma/enums'
-
 export const INDIAN_FIRST_NAMES_MALE = [
   'Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Arnav', 'Ayaan', 'Krishna', 'Ishaan',
   'Rohan', 'Aryan', 'Reyansh', 'Mohammed', 'Dhruv', 'Kabir', 'Shivansh', 'Atharv', 'Karthik', 'Rahul',
@@ -58,14 +56,6 @@ export function randomDate(start: Date, end: Date): Date {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
 }
 
-export function randomBoolean(): boolean {
-  return Math.random() > 0.5
-}
-
-export function isMale(): boolean {
-  return Math.random() > 0.5
-}
-
 export function generateIndianPhone(): string {
   const prefixes = ['98', '99', '97', '96', '95', '94', '93', '92', '91', '90', '88', '87', '86', '85', '84', '83', '82', '81', '80', '78', '77', '76', '75', '74', '73', '72', '71', '70']
   const prefix = randomItem(prefixes)
@@ -78,8 +68,6 @@ export function generateIndianEmail(firstName: string, lastName: string): string
   const name = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now().toString(36)}${randomInt(1, 999)}`
   return `${name}@${randomItem(domains)}`
 }
-
-export const _idCounter = 0
 
 export function generateId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -94,6 +82,4 @@ export function generatePgArray(arr: string[]): string {
   return `{${arr.map(s => `"${s}"`).join(',')}}`
 }
 
-export function pickParentGender(): GuardianType {
-  return isMale() ? GuardianType.FATHER : GuardianType.MOTHER
-}
+

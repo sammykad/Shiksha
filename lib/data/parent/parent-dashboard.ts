@@ -1,4 +1,4 @@
-import { subMonths } from 'date-fns';
+import { subMonths, startOfWeek } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { getActiveAcademicYearId } from "@/lib/academicYear";
 import prisma from "@/lib/db";
@@ -6,6 +6,8 @@ import { getOrganizationId } from "@/lib/organization";
 import { getCurrentUserId } from "@/lib/user";
 import { toISTDate, IST } from "@/lib/utils";
 import { getFeesSummary } from "@/lib/data/fee/fee-balance";
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
+import { countWorkingDays } from '@/lib/data/attendance/attendance-utils';
 
 export const getParentNotices = async () => {
     const [organizationId, userId, academicYearId] = await Promise.all([getOrganizationId(), getCurrentUserId(), getActiveAcademicYearId()])
@@ -75,22 +77,39 @@ export async function getAttendanceSummaryForChild(
     const startDate = toISTDate(subMonths(toZonedTime(new Date(), IST), months));
 
     // Get all attendance records for the period
+    const [academicYearId, organizationId] = await Promise.all([
+        getActiveAcademicYearId(),
+        getOrganizationId(),
+    ]);
     const attendanceRecords = await prisma.studentAttendance.findMany({
         where: {
             studentId,
+            academicYearId,
             date: { gte: startDate, lte: endDate },
         },
         orderBy: { date: 'asc' },
     });
 
-    // Get student info
-    const student = await prisma.student.findUnique({
-        where: { id: studentId },
-        include: {
-            grade: true,
-            section: true,
-        },
-    });
+    // Get student info, weekend config, and holidays in parallel
+    const [student, weekendDays, holidays] = await Promise.all([
+        prisma.student.findUnique({
+            where: { id: studentId },
+            include: {
+                grade: true,
+                section: true,
+            },
+        }),
+        getOrganizationWeekendDays(),
+        prisma.academicCalendar.findMany({
+            where: {
+                organizationId,
+                academicYearId,
+                startDate: { lte: endDate },
+                endDate: { gte: startDate },
+            },
+            select: { startDate: true, endDate: true },
+        }),
+    ]);
 
     // Group by month for monthly stats
     const monthlyStats = new Map();
@@ -101,7 +120,7 @@ export async function getAttendanceSummaryForChild(
         const date = new Date(record.date);
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
         const weekKey = getWeekKey(date);
-        const dayOfWeek = date.getDay();
+        const dayOfWeek = toZonedTime(date, IST).getDay();
 
         // Monthly stats
         if (!monthlyStats.has(monthKey)) {
@@ -177,12 +196,13 @@ export async function getAttendanceSummaryForChild(
         }))
         .sort((a, b) => a.dayNumber - b.dayNumber);
 
-    // Calculate overall stats
-    const totalDays = attendanceRecords.length;
+    // Calculate overall stats using expected school days
+    const workingDays = countWorkingDays(startDate, endDate, weekendDays, holidays);
+    const totalDays = workingDays;
     const presentDays = attendanceRecords.filter((r) => r.status === 'PRESENT').length;
     const lateDays = attendanceRecords.filter((r) => r.status === 'LATE').length;
     const absentDays = attendanceRecords.filter((r) => r.status === 'ABSENT').length;
-    
+
     const overallPercentage = totalDays > 0 ? Math.round(((presentDays + lateDays) / totalDays) * 100) : 0;
 
     return {
@@ -207,8 +227,5 @@ function getWeekKey(date: Date): string {
 }
 
 function getWeekStart(date: Date): Date {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day;
-    return new Date(d.setDate(diff));
+    return startOfWeek(date, { weekStartsOn: 1 });
 }

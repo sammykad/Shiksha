@@ -3,7 +3,9 @@
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { getActiveAcademicYearId } from '@/lib/academicYear';
-import { compareNaturalText, sortByNaturalText } from '@/lib/utils';
+import { compareNaturalText, sortByNaturalText, toISTDate } from '@/lib/utils';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
+import { countWorkingDays } from '@/lib/data/attendance/attendance-utils';
 import type {
     StudentReportData,
     AttendanceReportData,
@@ -137,6 +139,25 @@ export async function getAttendanceReportData(
         dateFilter.lte = filters.dateRange.to;
     }
 
+    // Fetch config data for school day calculation
+    const [academicYear, weekendDays, holidays] = await Promise.all([
+        prisma.academicYear.findUnique({
+            where: { id: academicYearId },
+            select: { startDate: true, endDate: true },
+        }),
+        getOrganizationWeekendDays(),
+        prisma.academicCalendar.findMany({
+            where: { organizationId, academicYearId },
+            select: { startDate: true, endDate: true },
+        }),
+    ]);
+
+    // Determine report date range
+    const today = toISTDate(new Date());
+    const reportStart = dateFilter.gte ?? academicYear?.startDate ?? today;
+    const reportEnd = dateFilter.lte ?? today;
+    const workingDays = countWorkingDays(reportStart, reportEnd, weekendDays, holidays);
+
     // Get all students with their attendance
     const students = await prisma.student.findMany({
         where: {
@@ -165,7 +186,6 @@ export async function getAttendanceReportData(
     });
 
     return students.map((student) => {
-        const totalDays = student.StudentAttendance.length;
         const presentDays = student.StudentAttendance.filter(
             (a) => a.status === 'PRESENT' || a.status === 'LATE'
         ).length;
@@ -178,11 +198,11 @@ export async function getAttendanceReportData(
             studentName: `${student.firstName} ${student.lastName}`,
             grade: student.grade.grade,
             section: student.section.name,
-            totalDays,
+            totalDays: workingDays,
             presentDays,
             absentDays,
             lateDays,
-            attendancePercentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
+            attendancePercentage: workingDays > 0 ? Math.round((presentDays / workingDays) * 100) : 0,
         };
     }).sort((a, b) =>
         compareNaturalText(a.grade, b.grade) ||

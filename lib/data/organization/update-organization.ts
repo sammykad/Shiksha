@@ -26,6 +26,7 @@ export async function updateOrganization({
       slug: data.slug,
       logo: data.logo,
       establishedYear: data.establishedYear ?? null,
+      weekendDays: data.weekendDays,
     },
   });
 }

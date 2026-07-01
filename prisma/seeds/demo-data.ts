@@ -9,7 +9,7 @@ import {
   Gender,
   Severity,
   CalendarEventType,
-} from '../../generated/prisma/client';
+} from '@/generated/prisma/enums';
 
 /**
  * Returns tailored demo data configurations based on OrganizationType.

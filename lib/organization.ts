@@ -29,6 +29,7 @@ export async function getDatabaseOrganization(organizationId: string) {
       createdBy: true,
       walletBalance: true,
       establishedYear: true,
+      weekendDays: true,
     },
   });
   return organization;

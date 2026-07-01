@@ -58,6 +58,7 @@ export default function GeneralSettings({ organization }: GeneralSettingsProps) 
             organizationType: organization?.organizationType ?? undefined,
             logo: organization?.logo || '',
             establishedYear: organization?.establishedYear ?? undefined,
+            weekendDays: organization?.weekendDays ?? [0, 6],
         },
     });
 
@@ -352,6 +353,46 @@ export default function GeneralSettings({ organization }: GeneralSettingsProps) 
                                         </FormItem>
                                     )}
                                 />
+                            </div>
+
+                            {/* Weekend Days */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 pb-2 border-b">
+                                    <h3 className="font-medium">Weekend Days</h3>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    Select which days of the week are non-working days for your organization.
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {([
+                                        [0, 'Sun'],
+                                        [1, 'Mon'],
+                                        [2, 'Tue'],
+                                        [3, 'Wed'],
+                                        [4, 'Thu'],
+                                        [5, 'Fri'],
+                                        [6, 'Sat'],
+                                    ] as const).map(([value, label]) => {
+                                        const current = form.watch('weekendDays') ?? [0, 6];
+                                        const selected = current.includes(value);
+                                        return (
+                                            <Button
+                                                key={value}
+                                                type="button"
+                                                variant={selected ? 'default' : 'outline'}
+                                                size="sm"
+                                                onClick={() => {
+                                                    const next = selected
+                                                        ? current.filter((d) => d !== value)
+                                                        : [...current, value].sort();
+                                                    form.setValue('weekendDays', next, { shouldDirty: true });
+                                                }}
+                                            >
+                                                {label}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {/* Actions */}

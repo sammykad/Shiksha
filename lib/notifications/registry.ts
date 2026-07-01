@@ -939,7 +939,7 @@ export const NOTIFICATION_REGISTRY: Registry = {
 
   RECORDED_SESSION_SHARED: {
     type: "GENERAL",
-    subKey: "recorded_session_shared",
+    subKey: "recorded_session_link",
     inboxTitle: "Recorded Session: {{title}}",
     inboxMessage: "{{teacherName}} shared a recording — {{title}}",
     channels: {
@@ -948,9 +948,9 @@ export const NOTIFICATION_REGISTRY: Registry = {
         body: "{{teacherName}} shared: {{title}}",
       },
       WHATSAPP: {
-        body: "{{teacherName}} shared a recorded session:\n\n*{{title}}*\n\nWatch here: {{videoUrl}}\n\n{{#if message}}{{message}}\n\n{{/if}}— {{organizationName}}",
+        body: "Hey!, {{teacherName}} shared a recorded session with you.\n\n*{{title}}*\n\n{{message}}\n\nTap the button below to watch.",
         template: (v) => ({
-          name: "recorded_session_shared",
+          name: "recorded_session_link",
           language: { code: "en" },
           components: [
             {
@@ -962,7 +962,7 @@ export const NOTIFICATION_REGISTRY: Registry = {
               parameters: [
                 txt(v.teacherName),
                 txt(v.title),
-                txt(v.organizationName),
+                txt(v.message || "Watch the recorded session now."),
               ],
             },
             { type: "footer", parameters: [] },

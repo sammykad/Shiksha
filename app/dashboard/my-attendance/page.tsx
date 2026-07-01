@@ -16,6 +16,7 @@ import { RecentAttendanceTimelineWidget } from '@/components/dashboard/StudentAt
 import WeeklyAttendanceReportCard from '@/components/dashboard/StudentAttendance/WeeklyAttendanceReportCard';
 import { getWeeklyAttendanceReport } from '@/lib/data/attendance/get-weekly-attendance-report';
 import { getMyAttendance } from '@/lib/data/attendance/my-attendance';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
 import { auth } from '@/lib/auth';
 import { PageHeader } from '@/components/ui/page-header';
 import { getActiveAcademicYear } from '@/lib/academicYear';
@@ -32,9 +33,10 @@ export default async function AttendancePage() {
   }
 
   const attendanceResult = await getMyAttendance(userId);
-  const [weeklyReportData, activeAcademicYear] = await Promise.all([
+  const [weeklyReportData, activeAcademicYear, weekendDays] = await Promise.all([
     getWeeklyAttendanceReport(attendanceResult.student.id),
     getActiveAcademicYear(),
+    getOrganizationWeekendDays(),
   ]);
 
   const {
@@ -87,6 +89,7 @@ export default async function AttendancePage() {
             attendanceRecords={attendanceData}
             academicCalendarEvents={holidayData}
             activeAcademicYear={activeAcademicYear}
+            weekendDays={weekendDays}
           />
           {/* <AttendanceSkyline attendanceData={attendanceData} weeks={20} /> */}
         </div>

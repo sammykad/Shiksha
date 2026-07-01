@@ -78,6 +78,19 @@ export const gradeSchema = z.object({
 
 export type GradeFormData = z.infer<typeof gradeSchema>;
 
+export const parentProfileSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  phoneNumber: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
+  whatsAppNumber: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
+  profileImage: z.string().optional(),
+});
+export type ParentProfileFormData = z.infer<typeof parentProfileSchema>;
+
 export const sectionSchema = z.object({
   gradeId: z.string(),
   name: z.string().min(1, 'Section name is required'),
@@ -264,6 +277,7 @@ export const organizationSchema = z.object({
     .optional()
     .or(z.literal(''))
     .transform((val) => (val === '' ? undefined : val)),
+  weekendDays: z.array(z.number()).default([0, 6]),
 });
 
 export type OrganizationFormData = z.infer<typeof organizationSchema>;

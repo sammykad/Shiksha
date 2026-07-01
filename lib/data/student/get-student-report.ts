@@ -6,6 +6,9 @@ import { getOrganizationId } from "@/lib/organization";
 import { getActiveAcademicYearId } from "@/lib/academicYear";
 import { Prisma } from "@/generated/prisma/client";
 import { getFeeBalance } from "@/lib/data/fee/fee-balance";
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
+import { countWorkingDays } from '@/lib/data/attendance/attendance-utils';
+import { toISTDate } from '@/lib/utils';
 
 interface GetStudentReportOptions {
   studentId: string;
@@ -343,6 +346,8 @@ export const getStudentReport = async ({
     attendance,
     examResults,
     leaves,
+    weekendDays,
+    holidays,
   ] = await Promise.all([
     organizationQuery,
     studentQuery,
@@ -351,6 +356,11 @@ export const getStudentReport = async ({
     attendanceQuery,
     examResultsQuery,
     leavesQuery,
+    getOrganizationWeekendDays(),
+    prisma.academicCalendar.findMany({
+      where: { organizationId, academicYearId },
+      select: { startDate: true, endDate: true },
+    }),
   ]);
 
   // Calculate fee summary with proper null checks
@@ -363,18 +373,15 @@ export const getStudentReport = async ({
     return summary;
   }, { totalFees: 0, totalPaid: 0, totalPending: 0, totalOverDue: 0 });
 
-  const attendanceSummaryValues = attendance.reduce((summary, record) => {
-    summary.totalDays++;
-    if (record.status === 'PRESENT') summary.presentDays++;
-    if (record.status === 'ABSENT') summary.absentDays++;
-    if (record.status === 'LATE') summary.lateDays++;
-    return summary;
-  }, { totalDays: 0, presentDays: 0, absentDays: 0, lateDays: 0 });
+  const presentDays = attendance.filter((r) => r.status === 'PRESENT').length;
+  const lateDays = attendance.filter((r) => r.status === 'LATE').length;
+  const absentDays = attendance.filter((r) => r.status === 'ABSENT').length;
 
-  const totalDays = attendanceSummaryValues.totalDays;
-  const presentDays = attendanceSummaryValues.presentDays;
-  const lateDays = attendanceSummaryValues.lateDays;
-  const absentDays = attendanceSummaryValues.absentDays;
+  const yearStart = academicYear?.startDate;
+  const today = toISTDate(new Date());
+  const totalDays = yearStart
+    ? countWorkingDays(yearStart, today, weekendDays, holidays)
+    : attendance.length;
   const percentage = totalDays > 0 ? Math.round(((presentDays + lateDays) / totalDays) * 100) : 0;
 
   return {

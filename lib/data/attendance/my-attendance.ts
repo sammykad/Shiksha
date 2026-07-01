@@ -4,8 +4,9 @@ import { getActiveAcademicYearId } from '@/lib/academicYear';
 import prisma from '@/lib/db';
 import { getOrganizationId } from '@/lib/organization';
 import { toISTDate, getStartOfMonthIST, getStartOfYearIST, isSameDayIST } from '@/lib/utils';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
 import { StudentAttendance, AcademicCalendar } from '@/types/attendance-export';
-import { calcStats, calcCurrentStreak, type AttendanceStats } from './attendance-utils';
+import { calcStats, calcCurrentStreak, countWorkingDays, type AttendanceStats } from './attendance-utils';
 
 export interface MyAttendanceData {
   student: {
@@ -25,9 +26,10 @@ export interface MyAttendanceData {
 }
 
 export async function getMyAttendance(userId: string): Promise<MyAttendanceData> {
-  const [organizationId, academicYearId] = await Promise.all([
+  const [organizationId, academicYearId, weekendDays] = await Promise.all([
     getOrganizationId(),
     getActiveAcademicYearId(),
+    getOrganizationWeekendDays(),
   ]);
 
   const student = await prisma.student.findFirst({
@@ -41,13 +43,17 @@ export async function getMyAttendance(userId: string): Promise<MyAttendanceData>
   const monthStartIST = getStartOfMonthIST();
   const yearStartIST = getStartOfYearIST();
 
-  const [attendanceData, holidayData] = await Promise.all([
+  const [attendanceData, holidayData, academicYear] = await Promise.all([
     prisma.studentAttendance.findMany({
       where: { studentId: student.id, academicYearId },
       orderBy: { date: 'desc' },
     }),
     prisma.academicCalendar.findMany({
       where: { organizationId, academicYearId },
+    }),
+    prisma.academicYear.findUnique({
+      where: { id: academicYearId },
+      select: { startDate: true },
     }),
   ]);
 
@@ -57,15 +63,23 @@ export async function getMyAttendance(userId: string): Promise<MyAttendanceData>
   const monthlyRecords = attendanceData.filter((r) => new Date(r.date) >= monthStartIST);
   const annualRecords = attendanceData.filter((r) => new Date(r.date) >= yearStartIST);
 
+  const holidays = holidayData.map((h) => ({ startDate: h.startDate, endDate: h.endDate }));
+
+  const monthlyWorkingDays = countWorkingDays(monthStartIST, todayIST, weekendDays, holidays);
+  const annualWorkingDays = countWorkingDays(yearStartIST, todayIST, weekendDays, holidays);
+  const overallWorkingDays = academicYear
+    ? countWorkingDays(academicYear.startDate, todayIST, weekendDays, holidays)
+    : undefined;
+
   return {
     student,
     attendanceData,
     holidayData,
     recentAttendance: attendanceData.slice(0, 10),
     todayStatus,
-    monthlyStats: calcStats(monthlyRecords),
-    annualStats: calcStats(annualRecords),
-    overallStats: calcStats(attendanceData),
+    monthlyStats: calcStats(monthlyRecords, monthlyWorkingDays),
+    annualStats: calcStats(annualRecords, annualWorkingDays),
+    overallStats: calcStats(attendanceData, overallWorkingDays),
     currentStreak: calcCurrentStreak(attendanceData),
   };
 }

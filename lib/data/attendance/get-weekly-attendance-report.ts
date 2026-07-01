@@ -9,26 +9,46 @@ import {
   format,
   addWeeks,
 } from 'date-fns';
-import { toISTDate } from '@/lib/utils';
+import { toISTDate, IST } from '@/lib/utils';
+import { toZonedTime } from 'date-fns-tz';
+import { getActiveAcademicYearId } from '@/lib/academicYear';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
+import { countWorkingDays } from './attendance-utils';
 
 export async function getWeeklyAttendanceReport(
   studentId: string,
   weekOffset: number = 0
 ) {
   // 1. student profile
-  const student = await prisma.student.findUnique({
-    where: { id: studentId },
-    include: { grade: true, section: true, organization: true },
-  });
+  const [student, academicYearId] = await Promise.all([
+    prisma.student.findUnique({
+      where: { id: studentId },
+      include: { grade: true, section: true, organization: true },
+    }),
+    getActiveAcademicYearId(),
+  ]);
   if (!student) return null;
 
-  // 2. Calculate week range with offset for navigation (IST-aware)
+  // 2. Fetch weekend config, academic year, and holidays in parallel
+  const [weekendDays, academicYear, holidays] = await Promise.all([
+    getOrganizationWeekendDays(),
+    prisma.academicYear.findUnique({
+      where: { id: academicYearId },
+      select: { startDate: true },
+    }),
+    prisma.academicCalendar.findMany({
+      where: { organizationId: student.organization.id, academicYearId },
+      select: { startDate: true, endDate: true },
+    }),
+  ]);
+
+  // 3. Calculate week range with offset for navigation (IST-aware)
   const today = toISTDate(new Date());
   const targetDate = weekOffset === 0 ? today : addWeeks(today, weekOffset);
   const weekStart = toISTDate(startOfWeek(targetDate, { weekStartsOn: 1 }));
   const weekEnd = toISTDate(addDays(weekStart, 6));
 
-  // 3. fetch rows for the week
+  // 4. fetch rows for the week
   const weeklyRows = await prisma.studentAttendance.findMany({
     where: {
       studentId,
@@ -40,8 +60,9 @@ export async function getWeeklyAttendanceReport(
     orderBy: { date: 'asc' },
   });
 
-  // 4. build daily records
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  // 5. build daily records (exclude weekend days)
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
+    .filter((d) => !weekendDays.includes(toZonedTime(d, IST).getDay()));
   const weeklyRecords = weekDays.map((d) => {
     const dateStr = format(d, 'yyyy-MM-dd');
     const record = weeklyRows.find(
@@ -56,19 +77,24 @@ export async function getWeeklyAttendanceReport(
       note: record?.note ?? null,
     };
   });
+
+  // 6. Year-to-date cumulative stats (using expected school days)
+  const yearStart = academicYear?.startDate ?? weekStart;
+  const yearWorkingDays = countWorkingDays(yearStart, today, weekendDays, holidays);
+
   const yearRows = await prisma.studentAttendance.findMany({
     where: {
       studentId,
+      academicYearId,
     },
   });
 
-  const totalPossibleYear = yearRows.length;
   const totalPresentYear = yearRows.filter((r) => r.status === 'PRESENT').length;
   const totalLateYear = yearRows.filter((r) => r.status === 'LATE').length;
-  
+
   const yearPercentage =
-    totalPossibleYear > 0
-      ? Math.round(((totalPresentYear + totalLateYear) / totalPossibleYear) * 100)
+    yearWorkingDays > 0
+      ? Math.round(((totalPresentYear + totalLateYear) / yearWorkingDays) * 100)
       : 0;
 
   return {
@@ -96,7 +122,7 @@ export async function getWeeklyAttendanceReport(
     cumulativeStats: {
       totalDaysPresent: totalPresentYear,
       totalDaysLate: totalLateYear,
-      totalPossibleDays: totalPossibleYear,
+      totalPossibleDays: yearWorkingDays,
       attendancePercentage: yearPercentage,
     },
     weekOffset, // Return current week offset for navigation

@@ -16,12 +16,12 @@ Data source: `lib/data/changelog/changelog-entries.ts`
 
 ### Changed
 - WhatsApp media header injection unified — `injectIntoHeader` handles both document and image
-- `recorded_session_shared` Meta template: body params now match template definition (3 params), URL button with video ID
+- `recorded_session_link` Meta template: body params now match template definition (3 params), URL button with video ID
 - `payment_success` WhatsApp template hard-fails on PDF upload error instead of silent fallback
 
 ### Removed
 - `stripHeader` function from WhatsApp provider (unused)
-- Extra `videoUrl` body parameter from `recorded_session_shared` template (mismatched Meta template)
+- Extra `videoUrl` body parameter from `recorded_session_link` template (mismatched Meta template)
 
 ## [0.2.1] — 2026-06-29
 

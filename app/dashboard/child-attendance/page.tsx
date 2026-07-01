@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ChildSwitcher } from '@/components/dashboard/parent/child-switcher';
 import { StudentAttendanceCalendar } from '@/components/dashboard/StudentAttendance/attendance-calendar';
 import { getChildAttendanceData } from '@/lib/data/attendance/get-child-attendance-data';
+import { getOrganizationWeekendDays } from '@/lib/data/organization/get-organization-weekend-days';
 import { getActiveAcademicYear } from '@/lib/academicYear';
 
 export default async function ChildAttendancePage() {
@@ -31,7 +32,10 @@ export default async function ChildAttendancePage() {
 
   const { attendanceData, holidayData, student } = childData;
 
-  const activeAcademicYear = await getActiveAcademicYear();
+  const [activeAcademicYear, weekendDays] = await Promise.all([
+    getActiveAcademicYear(),
+    getOrganizationWeekendDays(),
+  ]);
 
   return (
     <main className="px-2 pb-6 space-y-4">
@@ -53,6 +57,7 @@ export default async function ChildAttendancePage() {
         attendanceRecords={attendanceData}
         academicCalendarEvents={holidayData}
         activeAcademicYear={activeAcademicYear}
+        weekendDays={weekendDays}
       />
     </main>
   );

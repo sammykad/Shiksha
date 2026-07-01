@@ -782,7 +782,7 @@ async function main() {
       const isPaid = Math.random() > 0.3;
       const paidAmount = isPaid ? ft.amount : ft.amount * (Math.random() < 0.3 ? 0.5 : 0);
       const pending = isPaid ? 0 : ft.amount - paidAmount;
-      const status = paidAmount >= ft.amount ? FeeStatus.PAID : (paidAmount > 0 ? FeeStatus.UNPAID : FeeStatus.UNPAID);
+      const status = paidAmount >= ft.amount ? FeeStatus.PAID : FeeStatus.UNPAID;
 
       await pool.query(`INSERT INTO "Fee" (id,"totalFee","paidAmount","pendingAmount","dueDate",status,"studentId","feeCategoryId","organizationId","academicYearId","createdAt","updatedAt")
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
@@ -855,7 +855,7 @@ async function main() {
       const date = new Date(attStart);
       date.setDate(date.getDate() + studentOffset + d);
       if (date > attEnd) break;
-      if (date.getDay() === 0) continue;
+      if ([0, 6].includes(date.getDay())) continue;
       const status = pick([AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.LATE, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT]);
       const recordedBy = pick(teacherList).userId;
 

@@ -67,6 +67,7 @@ interface AttendanceCalendarProps {
   attendanceRecords: StudentAttendanceRecord[];
   academicCalendarEvents?: AcademicCalendarEvent[];
   activeAcademicYear?: { startDate: Date; endDate: Date } | null;
+  weekendDays?: number[];
   onDateClick?: (
     date: Date,
     record?: StudentAttendanceRecord,
@@ -95,7 +96,7 @@ interface CalendarDay {
 }
 
 interface MonthlyStats {
-  totalSchoolDays: number;
+  totalWorkingDays: number;
   presentDays: number;
   absentDays: number;
   lateDays: number;
@@ -190,6 +191,7 @@ export function StudentAttendanceCalendar({
   attendanceRecords,
   academicCalendarEvents = [],
   activeAcademicYear,
+  weekendDays = [0, 6],
   onDateClick,
   onExportData,
   className,
@@ -274,7 +276,7 @@ export function StudentAttendanceCalendar({
       const istToday = toISTDate();
       const todayCheck = isSameDayIST(date, istToday);
       const futureCheck = isAfterIST(date, istToday);
-      const isWeekend = getDay(date) === 0 || getDay(date) === 6;
+      const isWeekend = weekendDays.includes(getDay(date));
 
       const holiday = getHolidayForDate(date);
       const attendance = attendanceRecords.find((record) =>
@@ -342,9 +344,9 @@ export function StudentAttendanceCalendar({
     const monthEnd = endOfMonth(currentDate);
     const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-    let totalSchoolDays = 0;
+    let totalWorkingDays = 0;
     allDays.forEach(day => {
-      const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+      const isWeekend = weekendDays.includes(getDay(day));
       const istToday = toISTDate();
       const isFuture = isAfterIST(day, istToday);
 
@@ -355,7 +357,7 @@ export function StudentAttendanceCalendar({
             end: new Date(event.endDate)
           })
         );
-        if (!isHoliday) totalSchoolDays++;
+        if (!isHoliday) totalWorkingDays++;
       }
     });
 
@@ -364,16 +366,16 @@ export function StudentAttendanceCalendar({
     const absentDays = currentMonthRecords.filter((r) => r.status === 'ABSENT').length;
 
     // Attendance rate = (Present + Late) / Total School Days so far
-    const attendanceRate = totalSchoolDays > 0
-      ? Math.round(((presentDays + lateDays) / totalSchoolDays) * 100)
+    const attendanceRate = totalWorkingDays > 0
+      ? Math.round(((presentDays + lateDays) / totalWorkingDays) * 100)
       : 0;
 
     return {
-      totalSchoolDays,
+      totalWorkingDays,
       presentDays,
       absentDays,
       lateDays,
-      holidayDays: 0, // Simplified as it's factored into totalSchoolDays now
+      holidayDays: 0, // Simplified as it's factored into totalWorkingDays now
       attendanceRate,
     };
 
